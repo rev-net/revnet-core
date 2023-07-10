@@ -59,7 +59,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         JBPayDelegateAllocation3_1_1[] memory _buybackDelegateAllocations;
 
         // Set the values to be those returned by the Buyback Data Source.
-        (weight, memo, _buybackDelegateAllocations) = buybackDelegateDataSourceOf[_data.projectId].payParams(_data);
+        (weight, , _buybackDelegateAllocations) = buybackDelegateDataSourceOf[_data.projectId].payParams(_data);
 
         // Cache the delegate allocations.
         JBPayDelegateAllocation3_1_1[] memory _delegateAllocations = delegateAllocationsOf[_data.projectId];
@@ -80,6 +80,9 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
 
         // Add the buyback delegate as the last element.
         delegateAllocations[_numberOfDelegateAllocations] = _buybackDelegateAllocations[0];
+
+        // Set the default memo.
+        memo = _data.memo;
     }
 
     /// @notice This function is never called, it needs to be included to adhere to the interface.
