@@ -8,7 +8,7 @@ import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleSto
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayoutRedemptionPaymentTerminal.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBProjects.sol";
 
-import "../src/Empty.sol";
+// import "../src/Empty.sol";
 
 contract EmptyTest_Fork is Test {
     IJBController JBController;

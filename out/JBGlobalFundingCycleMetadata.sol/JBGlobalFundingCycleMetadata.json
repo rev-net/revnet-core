@@ -1,0 +1,138 @@
+{
+  "abi": [],
+  "bytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "ast": {
+    "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBGlobalFundingCycleMetadata.sol",
+    "id": 29607,
+    "exportedSymbols": {
+      "JBGlobalFundingCycleMetadata": [
+        29606
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:530:61",
+    "nodes": [
+      {
+        "id": 29598,
+        "nodeType": "PragmaDirective",
+        "src": "32:23:61",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".0"
+        ]
+      },
+      {
+        "id": 29606,
+        "nodeType": "StructDefinition",
+        "src": "446:115:61",
+        "nodes": [],
+        "canonicalName": "JBGlobalFundingCycleMetadata",
+        "documentation": {
+          "id": 29599,
+          "nodeType": "StructuredDocumentation",
+          "src": "57:389:61",
+          "text": "@custom:member allowSetTerminals A flag indicating if setting terminals should be allowed during this funding cycle.\n @custom:member allowSetController A flag indicating if setting a new controller should be allowed during this funding cycle.\n @custom:member pauseTransfers A flag indicating if the project token transfer functionality should be paused during the funding cycle."
+        },
+        "members": [
+          {
+            "constant": false,
+            "id": 29601,
+            "mutability": "mutable",
+            "name": "allowSetTerminals",
+            "nameLocation": "491:17:61",
+            "nodeType": "VariableDeclaration",
+            "scope": 29606,
+            "src": "486:22:61",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bool",
+              "typeString": "bool"
+            },
+            "typeName": {
+              "id": 29600,
+              "name": "bool",
+              "nodeType": "ElementaryTypeName",
+              "src": "486:4:61",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bool",
+                "typeString": "bool"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 29603,
+            "mutability": "mutable",
+            "name": "allowSetController",
+            "nameLocation": "517:18:61",
+            "nodeType": "VariableDeclaration",
+            "scope": 29606,
+            "src": "512:23:61",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bool",
+              "typeString": "bool"
+            },
+            "typeName": {
+              "id": 29602,
+              "name": "bool",
+              "nodeType": "ElementaryTypeName",
+              "src": "512:4:61",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bool",
+                "typeString": "bool"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 29605,
+            "mutability": "mutable",
+            "name": "pauseTransfers",
+            "nameLocation": "544:14:61",
+            "nodeType": "VariableDeclaration",
+            "scope": 29606,
+            "src": "539:19:61",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bool",
+              "typeString": "bool"
+            },
+            "typeName": {
+              "id": 29604,
+              "name": "bool",
+              "nodeType": "ElementaryTypeName",
+              "src": "539:4:61",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bool",
+                "typeString": "bool"
+              }
+            },
+            "visibility": "internal"
+          }
+        ],
+        "name": "JBGlobalFundingCycleMetadata",
+        "nameLocation": "453:28:61",
+        "scope": 29607,
+        "visibility": "public"
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 61
+}

@@ -1,0 +1,259 @@
+{
+  "abi": [],
+  "bytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "ast": {
+    "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBSplitAllocationData.sol",
+    "id": 29678,
+    "exportedSymbols": {
+      "JBSplit": [
+        29658
+      ],
+      "JBSplitAllocationData": [
+        29677
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:636:66",
+    "nodes": [
+      {
+        "id": 29660,
+        "nodeType": "PragmaDirective",
+        "src": "32:23:66",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".0"
+        ]
+      },
+      {
+        "id": 29662,
+        "nodeType": "ImportDirective",
+        "src": "57:38:66",
+        "nodes": [],
+        "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBSplit.sol",
+        "file": "./JBSplit.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 29678,
+        "sourceUnit": 29659,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 29661,
+              "name": "JBSplit",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 29658,
+              "src": "65:7:66",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 29677,
+        "nodeType": "StructDefinition",
+        "src": "525:142:66",
+        "nodes": [],
+        "canonicalName": "JBSplitAllocationData",
+        "documentation": {
+          "id": 29663,
+          "nodeType": "StructuredDocumentation",
+          "src": "97:428:66",
+          "text": "@custom:member token The token being sent to the split allocator.\n @custom:member amount The amount being sent to the split allocator, as a fixed point number.\n @custom:member decimals The number of decimals in the amount.\n @custom:member projectId The project to which the split belongs.\n @custom:member group The group to which the split belongs.\n @custom:member split The split that caused the allocation."
+        },
+        "members": [
+          {
+            "constant": false,
+            "id": 29665,
+            "mutability": "mutable",
+            "name": "token",
+            "nameLocation": "566:5:66",
+            "nodeType": "VariableDeclaration",
+            "scope": 29677,
+            "src": "558:13:66",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address",
+              "typeString": "address"
+            },
+            "typeName": {
+              "id": 29664,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "558:7:66",
+              "stateMutability": "nonpayable",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 29667,
+            "mutability": "mutable",
+            "name": "amount",
+            "nameLocation": "583:6:66",
+            "nodeType": "VariableDeclaration",
+            "scope": 29677,
+            "src": "575:14:66",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 29666,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "575:7:66",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 29669,
+            "mutability": "mutable",
+            "name": "decimals",
+            "nameLocation": "601:8:66",
+            "nodeType": "VariableDeclaration",
+            "scope": 29677,
+            "src": "593:16:66",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 29668,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "593:7:66",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 29671,
+            "mutability": "mutable",
+            "name": "projectId",
+            "nameLocation": "621:9:66",
+            "nodeType": "VariableDeclaration",
+            "scope": 29677,
+            "src": "613:17:66",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 29670,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "613:7:66",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 29673,
+            "mutability": "mutable",
+            "name": "group",
+            "nameLocation": "642:5:66",
+            "nodeType": "VariableDeclaration",
+            "scope": 29677,
+            "src": "634:13:66",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 29672,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "634:7:66",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 29676,
+            "mutability": "mutable",
+            "name": "split",
+            "nameLocation": "659:5:66",
+            "nodeType": "VariableDeclaration",
+            "scope": 29677,
+            "src": "651:13:66",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_struct$_JBSplit_$29658_storage_ptr",
+              "typeString": "struct JBSplit"
+            },
+            "typeName": {
+              "id": 29675,
+              "nodeType": "UserDefinedTypeName",
+              "pathNode": {
+                "id": 29674,
+                "name": "JBSplit",
+                "nameLocations": [
+                  "651:7:66"
+                ],
+                "nodeType": "IdentifierPath",
+                "referencedDeclaration": 29658,
+                "src": "651:7:66"
+              },
+              "referencedDeclaration": 29658,
+              "src": "651:7:66",
+              "typeDescriptions": {
+                "typeIdentifier": "t_struct$_JBSplit_$29658_storage_ptr",
+                "typeString": "struct JBSplit"
+              }
+            },
+            "visibility": "internal"
+          }
+        ],
+        "name": "JBSplitAllocationData",
+        "nameLocation": "532:21:66",
+        "scope": 29678,
+        "visibility": "public"
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 66
+}

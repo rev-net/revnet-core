@@ -1,0 +1,166 @@
+{
+  "abi": [],
+  "bytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "ast": {
+    "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBTokenAmount.sol",
+    "id": 29690,
+    "exportedSymbols": {
+      "JBTokenAmount": [
+        29689
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:427:67",
+    "nodes": [
+      {
+        "id": 29679,
+        "nodeType": "PragmaDirective",
+        "src": "32:23:67",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".0"
+        ]
+      },
+      {
+        "id": 29689,
+        "nodeType": "StructDefinition",
+        "src": "360:98:67",
+        "nodes": [],
+        "canonicalName": "JBTokenAmount",
+        "documentation": {
+          "id": 29680,
+          "nodeType": "StructuredDocumentation",
+          "src": "57:303:67",
+          "text": "@custom:member token The token the payment was made in.\n @custom:member value The amount of tokens that was paid, as a fixed point number.\n @custom:member decimals The number of decimals included in the value fixed point number.\n @custom:member currency The expected currency of the value."
+        },
+        "members": [
+          {
+            "constant": false,
+            "id": 29682,
+            "mutability": "mutable",
+            "name": "token",
+            "nameLocation": "393:5:67",
+            "nodeType": "VariableDeclaration",
+            "scope": 29689,
+            "src": "385:13:67",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address",
+              "typeString": "address"
+            },
+            "typeName": {
+              "id": 29681,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "385:7:67",
+              "stateMutability": "nonpayable",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 29684,
+            "mutability": "mutable",
+            "name": "value",
+            "nameLocation": "410:5:67",
+            "nodeType": "VariableDeclaration",
+            "scope": 29689,
+            "src": "402:13:67",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 29683,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "402:7:67",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 29686,
+            "mutability": "mutable",
+            "name": "decimals",
+            "nameLocation": "427:8:67",
+            "nodeType": "VariableDeclaration",
+            "scope": 29689,
+            "src": "419:16:67",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 29685,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "419:7:67",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 29688,
+            "mutability": "mutable",
+            "name": "currency",
+            "nameLocation": "447:8:67",
+            "nodeType": "VariableDeclaration",
+            "scope": 29689,
+            "src": "439:16:67",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 29687,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "439:7:67",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          }
+        ],
+        "name": "JBTokenAmount",
+        "nameLocation": "367:13:67",
+        "scope": 29690,
+        "visibility": "public"
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 67
+}

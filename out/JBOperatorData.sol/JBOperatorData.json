@@ -1,0 +1,148 @@
+{
+  "abi": [],
+  "bytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "ast": {
+    "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBOperatorData.sol",
+    "id": 29630,
+    "exportedSymbols": {
+      "JBOperatorData": [
+        29629
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:448:63",
+    "nodes": [
+      {
+        "id": 29620,
+        "nodeType": "PragmaDirective",
+        "src": "32:23:63",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".0"
+        ]
+      },
+      {
+        "id": 29629,
+        "nodeType": "StructDefinition",
+        "src": "385:94:63",
+        "nodes": [],
+        "canonicalName": "JBOperatorData",
+        "documentation": {
+          "id": 29621,
+          "nodeType": "StructuredDocumentation",
+          "src": "57:328:63",
+          "text": "@custom:member operator The address of the operator.\n @custom:member domain The domain within which the operator is being given permissions. A domain of 0 is a wildcard domain, which gives an operator access to all domains.\n @custom:member permissionIndexes The indexes of the permissions the operator is being given."
+        },
+        "members": [
+          {
+            "constant": false,
+            "id": 29623,
+            "mutability": "mutable",
+            "name": "operator",
+            "nameLocation": "419:8:63",
+            "nodeType": "VariableDeclaration",
+            "scope": 29629,
+            "src": "411:16:63",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address",
+              "typeString": "address"
+            },
+            "typeName": {
+              "id": 29622,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "411:7:63",
+              "stateMutability": "nonpayable",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 29625,
+            "mutability": "mutable",
+            "name": "domain",
+            "nameLocation": "439:6:63",
+            "nodeType": "VariableDeclaration",
+            "scope": 29629,
+            "src": "431:14:63",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 29624,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "431:7:63",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 29628,
+            "mutability": "mutable",
+            "name": "permissionIndexes",
+            "nameLocation": "459:17:63",
+            "nodeType": "VariableDeclaration",
+            "scope": 29629,
+            "src": "449:27:63",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_array$_t_uint256_$dyn_storage_ptr",
+              "typeString": "uint256[]"
+            },
+            "typeName": {
+              "baseType": {
+                "id": 29626,
+                "name": "uint256",
+                "nodeType": "ElementaryTypeName",
+                "src": "449:7:63",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_uint256",
+                  "typeString": "uint256"
+                }
+              },
+              "id": 29627,
+              "nodeType": "ArrayTypeName",
+              "src": "449:9:63",
+              "typeDescriptions": {
+                "typeIdentifier": "t_array$_t_uint256_$dyn_storage_ptr",
+                "typeString": "uint256[]"
+              }
+            },
+            "visibility": "internal"
+          }
+        ],
+        "name": "JBOperatorData",
+        "nameLocation": "392:14:63",
+        "scope": 29630,
+        "visibility": "public"
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 63
+}
