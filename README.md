@@ -1,11 +1,13 @@
-# juice-contract-template
-Template used to code juicy solidity stuff - includes forge, libs, etc. 
+# Retailism Template
 
-This template is a good starting point for building solidity extensions to the Juicebox Protocol. Forking this template may help you to avoid submodule related dependency issues down the road.
+This repo provides tools to make deployabling Retailistic projects easy.
 
-Do not push straight on main, rather create a new branch and open a PR - your reviewer will love you for this.
+For a Retailism TLDR, see https://jango.eth.limo/9E01E72C-6028-48B7-AD04-F25393307132/.
 
-# Getting started
+Currently there is just a basic retailistic design implemented in BasicRetailismTreasuryDeployer. You can use this contract to deploy treasuries from etherscan.
+
+# Dev
+
 ## Prerequisites
 ### Install & Update Foundry
 Install Forge with `curl -L https://foundry.paradigm.xyz | bash`. If you already have Foundry installed, run `foundryup` to update to the latest version. More detailed instructions can be found in the [Foundry Book](https://book.getfoundry.sh/getting-started/installation).
