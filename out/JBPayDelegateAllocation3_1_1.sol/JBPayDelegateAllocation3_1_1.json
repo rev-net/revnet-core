@@ -1,0 +1,177 @@
+{
+  "abi": [],
+  "bytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "ast": {
+    "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayDelegateAllocation3_1_1.sol",
+    "id": 25754,
+    "exportedSymbols": {
+      "IJBPayDelegate3_1_1": [
+        24325
+      ],
+      "JBPayDelegateAllocation3_1_1": [
+        25753
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:407:57",
+    "nodes": [
+      {
+        "id": 25742,
+        "nodeType": "PragmaDirective",
+        "src": "32:23:57",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".0"
+        ]
+      },
+      {
+        "id": 25744,
+        "nodeType": "ImportDirective",
+        "src": "57:74:57",
+        "nodes": [],
+        "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayDelegate3_1_1.sol",
+        "file": "../interfaces/IJBPayDelegate3_1_1.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 25754,
+        "sourceUnit": 24326,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 25743,
+              "name": "IJBPayDelegate3_1_1",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 24325,
+              "src": "65:19:57",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 25753,
+        "nodeType": "StructDefinition",
+        "src": "331:107:57",
+        "nodes": [],
+        "canonicalName": "JBPayDelegateAllocation3_1_1",
+        "documentation": {
+          "id": 25745,
+          "nodeType": "StructuredDocumentation",
+          "src": "133:198:57",
+          "text": "@custom:member delegate A delegate contract to use for subsequent calls.\n @custom:member amount The amount to send to the delegate.\n @custom:member metadata Metadata to pass the delegate."
+        },
+        "members": [
+          {
+            "constant": false,
+            "id": 25748,
+            "mutability": "mutable",
+            "name": "delegate",
+            "nameLocation": "391:8:57",
+            "nodeType": "VariableDeclaration",
+            "scope": 25753,
+            "src": "371:28:57",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_contract$_IJBPayDelegate3_1_1_$24325",
+              "typeString": "contract IJBPayDelegate3_1_1"
+            },
+            "typeName": {
+              "id": 25747,
+              "nodeType": "UserDefinedTypeName",
+              "pathNode": {
+                "id": 25746,
+                "name": "IJBPayDelegate3_1_1",
+                "nameLocations": [
+                  "371:19:57"
+                ],
+                "nodeType": "IdentifierPath",
+                "referencedDeclaration": 24325,
+                "src": "371:19:57"
+              },
+              "referencedDeclaration": 24325,
+              "src": "371:19:57",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_IJBPayDelegate3_1_1_$24325",
+                "typeString": "contract IJBPayDelegate3_1_1"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 25750,
+            "mutability": "mutable",
+            "name": "amount",
+            "nameLocation": "411:6:57",
+            "nodeType": "VariableDeclaration",
+            "scope": 25753,
+            "src": "403:14:57",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 25749,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "403:7:57",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 25752,
+            "mutability": "mutable",
+            "name": "metadata",
+            "nameLocation": "427:8:57",
+            "nodeType": "VariableDeclaration",
+            "scope": 25753,
+            "src": "421:14:57",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bytes_storage_ptr",
+              "typeString": "bytes"
+            },
+            "typeName": {
+              "id": 25751,
+              "name": "bytes",
+              "nodeType": "ElementaryTypeName",
+              "src": "421:5:57",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bytes_storage_ptr",
+                "typeString": "bytes"
+              }
+            },
+            "visibility": "internal"
+          }
+        ],
+        "name": "JBPayDelegateAllocation3_1_1",
+        "nameLocation": "338:28:57",
+        "scope": 25754,
+        "visibility": "public"
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 57
+}

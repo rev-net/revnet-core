@@ -426,10 +426,10 @@
     "@ethersproject/properties" "^5.7.0"
     "@ethersproject/strings" "^5.7.0"
 
-"@jbx-protocol/juice-contracts-v3@^4.0.1":
-  version "4.0.1"
-  resolved "https://registry.yarnpkg.com/@jbx-protocol/juice-contracts-v3/-/juice-contracts-v3-4.0.1.tgz#24291a9fb5813442fc0e82429eceb1e76069b963"
-  integrity sha512-ObBzoSqVTYzRkQDnO2th8sHN9y/96MoIC/s9TcrhzlnNJ7Mzq/2Qf14HHImvF5Tz0omFnx2FJW/6+ZIExldKWw==
+"@jbx-protocol/juice-contracts-v3@^4.0.2":
+  version "4.0.2"
+  resolved "https://registry.yarnpkg.com/@jbx-protocol/juice-contracts-v3/-/juice-contracts-v3-4.0.2.tgz#82f0360951a4c2fe60d1eb268834e9c4922c960e"
+  integrity sha512-X6m5/CUAY7N0dLknavdYJEJ6R349JXM/elXHyyx33liQg5oBK31BByzkFHTLOpP2+bBusHlr1v0rDy1XyCp7HQ==
   dependencies:
     "@chainlink/contracts" "^0.1.6"
     "@openzeppelin/contracts" "^4.5.0-rc.0"

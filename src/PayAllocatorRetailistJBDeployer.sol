@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IJBPaymentTerminal} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPaymentTerminal.sol";
 import {IJBController3_1} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController3_1.sol";
 import {IJBPayoutRedemptionPaymentTerminal3_1_1} from
@@ -10,12 +11,17 @@ import {IJBFundingCycleBallot} from "@jbx-protocol/juice-contracts-v3/contracts/
 import {IJBOperatable} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBOperatable.sol";
 import {IJBSplitAllocator} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBSplitAllocator.sol";
 import {IJBToken} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBToken.sol";
+import {IJBFundingCycleDataSource3_1_1} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleDataSource3_1_1.sol";
 import {JBOperations} from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBOperations.sol";
 import {JBConstants} from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBConstants.sol";
 import {JBSplitsGroups} from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBSplitsGroups.sol";
 import {JBFundingCycleData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycleData.sol";
 import {JBFundingCycleMetadata} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycleMetadata.sol";
 import {JBFundingCycle} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycle.sol";
+import {JBPayDelegateAllocation3_1_1} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayDelegateAllocation3_1_1.sol";
+import {JBRedemptionDelegateAllocation3_1_1} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedemptionDelegateAllocation3_1_1.sol";
+import {JBPayParamsData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayParamsData.sol";
+import {JBRedeemParamsData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedeemParamsData.sol";
 import {JBGlobalFundingCycleMetadata} from
     "@jbx-protocol/juice-contracts-v3/contracts/structs/JBGlobalFundingCycleMetadata.sol";
 import {JBGroupedSplits} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBGroupedSplits.sol";
@@ -23,57 +29,82 @@ import {JBSplit} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBSpli
 import {JBOperatorData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBOperatorData.sol";
 import {JBFundAccessConstraints} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundAccessConstraints.sol";
 import {JBProjectMetadata} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBProjectMetadata.sol";
+import {BasicRetailistJBParams, BasicRetailistJBDeployer} from "./BasicRetailistJBDeployer.sol";
 
-/// @custom:member initialIssuanceRate The number of tokens that should be minted initially per 1 ETH contributed to the treasury. This should _not_ be specified as a fixed point number with 18 decimals, this will be applied internally.
-/// @custom:member premintTokenAmount The number of tokens that should be preminted to the _operator. This should _not_ be specified as a fixed point number with 18 decimals, this will be applied internally.
-/// @custom:member discountRate The rate at which the issuance rate should decrease over time.
-/// @custom:member discountPeriod The number of days between applied discounts.
-/// @custom:member redemptionRate The bonding curve rate determining how much each token can access from the treasury at any current total supply. This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE).
-/// @custom:member reservedRate The percentage of newly issued tokens that should be reserved for the _operator. This percentage is out of 10_000 (JBConstants.MAX_RESERVED_RATE).
-/// @custom:member reservedRateDuration The number of seconds the reserved rate should be active for.
-struct BasicRetailistJBParams {
-    uint256 initialIssuanceRate;
-    uint256 premintTokenAmount;
-    uint256 discountRate;
-    uint256 discountPeriod;
-    uint256 redemptionRate;
-    uint256 reservedRate;
-    uint48 reservedRateDuration;
-}
+/// @notice A contract that facilitates deploying a basic Retailist treasury that also calls other pay delegates that are specified when the project is deployed.
+contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFundingCycleDataSource3_1_1 {
+    /// @notice The data source that returns the correct values for the Buyback Delegate of each project.
+    /// @custom:param projectId The ID of the project to which the Buyback Delegate allocations apply.
+    mapping(uint256 => IJBFundingCycleDataSource3_1_1) public buybackDelegateDataSourceOf;
 
-/// @notice A contract that facilitates deploying a basic Retailist treasury.
-contract BasicRetailistJBDeployer is IERC721Receiver {
-    error RECONFIGURATION_ALREADY_SCHEDULED();
+    /// @notice The delegate allocations to include during payments to projects.
+    /// @custom:param projectId The ID of the project to which the delegate allocations apply.
+    mapping(uint256 => JBPayDelegateAllocation3_1_1[]) public delegateAllocationsOf;
 
-    /// @notice The controller that projects are made from.
-    IJBController3_1 public immutable controller;
+    /// @notice This function gets called when the project receives a payment.
+    /// @dev Part of IJBFundingCycleDataSource.
+    /// @dev This implementation just sets this contract up to receive a `didPay` call.
+    /// @param _data The Juicebox standard project payment data. See https://docs.juicebox.money/dev/api/data-structures/jbpayparamsdata/.
+    /// @return weight The weight that project tokens should get minted relative to. This is useful for optionally customizing how many tokens are issued per payment.
+    /// @return memo A memo to be forwarded to the event. Useful for describing any new actions that are being taken.
+    /// @return delegateAllocations Amount to be sent to delegates instead of adding to local balance. Useful for auto-routing funds from a treasury as payment come in.
+    function payParams(JBPayParamsData calldata _data)
+        external
+        view
+        virtual
+        override
+        returns (uint256 weight, string memory memo, JBPayDelegateAllocation3_1_1[] memory delegateAllocations)
+    {
+        // Keep a reference to the delegate allocatios that the Buyback Data Source provides.
+        JBPayDelegateAllocation3_1_1[] memory _buybackDelegateAllocations;
 
-    /// @notice The terminals that projects use to accept payments from. This is set once in the constructor to be the 3.1.1 payment terminal.
-    IJBPaymentTerminal[] public terminals;
+        // Set the values to be those returned by the Buyback Data Source.
+        (weight, memo, _buybackDelegateAllocations) = buybackDelegateDataSourceOf[_data.projectId].payParams(_data);
 
-    /// @notice The permissions that the provided _operator should be granted. This is set once in the constructor to contain only the SET_SPLITS operation.
-    uint256[] public permissionIndexes;
+        // Cache the delegate allocations.
+        JBPayDelegateAllocation3_1_1[] memory _delegateAllocations = delegateAllocationsOf[_data.projectId];
 
-    /// @notice The start time of the reconfigurations for each project.
-    /// @dev A basic retailist treasury consists of two funding cycles, one created on launch with a reserved rate, and another that starts at some point in the future that removes the reserved rate.
-    /// @custom:param projectId The ID of the project to which the reconfiguration start time applies.
-    mapping(uint256 projectId => uint256) public reconfigurationStartTimestampOf;
+        // Keep a reference to the number of delegate allocations;
+        uint256 _numberOfDelegateAllocations = _delegateAllocations.length;
+
+        // Each delegate allocation must run, plus the buyback delegate.
+        delegateAllocations = new JBPayDelegateAllocation3_1_1[](_numberOfDelegateAllocations + 1);
+
+        // All the rest of the delegate allocations the project expects.
+        for (uint256 _i; _i < _numberOfDelegateAllocations; ) {
+          delegateAllocations[_i] = _delegateAllocations[_i];
+          unchecked {
+            ++_i;
+          }
+        }
+
+        // Add the buyback delegate as the last element.
+        delegateAllocations[_numberOfDelegateAllocations] = _buybackDelegateAllocations[0];
+    }
+
+    /// @notice This function is never called, it needs to be included to adhere to the interface.
+    function redeemParams(JBRedeemParamsData calldata _data)
+        external
+        view
+        virtual
+        override
+        returns (uint256, string memory, JBRedemptionDelegateAllocation3_1_1[] memory)
+    {
+      _data; // Unused.
+      return (0, '', new JBRedemptionDelegateAllocation3_1_1[](0));
+    }
 
     /// @notice Indicates if this contract adheres to the specified interface.
     /// @dev See {IERC165-supportsInterface}.
     /// @param _interfaceId The ID of the interface to check for adherence to.
     /// @return A flag indicating if the provided interface ID is supported.
-    function supportsInterface(bytes4 _interfaceId) public view virtual returns (bool) {
-        return _interfaceId == type(IERC721Receiver).interfaceId;
+    function supportsInterface(bytes4 _interfaceId) public view virtual override(BasicRetailistJBDeployer, IERC165) returns (bool) {
+        return _interfaceId == type(IJBFundingCycleDataSource3_1_1).interfaceId || super.supportsInterface(_interfaceId);
     }
 
     /// @param _controller The controller that projects are made from.
     /// @param _terminal The terminal that projects use to accept payments from.
-    constructor(IJBController3_1 _controller, IJBPayoutRedemptionPaymentTerminal3_1_1 _terminal) {
-        controller = _controller;
-        terminals.push(_terminal);
-        permissionIndexes.push(JBOperations.SET_SPLITS);
-    }
+    constructor(IJBController3_1 _controller, IJBPayoutRedemptionPaymentTerminal3_1_1 _terminal) BasicRetailistJBDeployer(_controller, _terminal) {}
 
     /// @notice Deploy a project with basic Retailism constraints.
     /// @param _operator The address that will receive the token premint, initial reserved token allocations, and who is allowed to change the allocated reserved rate distribution.
@@ -81,14 +112,16 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
     /// @param _name The name of the ERC-20 token being create for the project.
     /// @param _symbol The symbol of the ERC-20 token being created for the project.
     /// @param _data The data needed to deploy a basic retailist project.
+    /// @param _delegateAllocations Any pay delegate allocations that should run when the project is paid.
     /// @return projectId The ID of the newly created Retailist project.
     function deployProjectFor(
         address _operator,
-        JBProjectMetadata calldata _projectMetadata,
-        string calldata _name,
-        string calldata _symbol,
-        BasicRetailistJBParams calldata _data
-    ) public returns (uint256 projectId) {
+        JBProjectMetadata memory _projectMetadata,
+        string memory _name,
+        string memory _symbol,
+        BasicRetailistJBParams calldata _data,
+        JBPayDelegateAllocation3_1_1[] calldata _delegateAllocations
+    ) external returns (uint256 projectId) {
         // Package the reserved token splits.
         JBGroupedSplits[] memory _groupedSplits = new JBGroupedSplits[](1);
 
@@ -124,6 +157,9 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
         address _buybackDelegate = address(0);
         _token;
 
+        // Keep a reference to this data source.
+        buybackDelegateDataSourceOf[projectId] = IJBFundingCycleDataSource3_1_1(_buybackDelegate);
+
         // Configure the project's funding cycles using BBD. 
         controller.launchFundingCyclesFor({
             projectId: projectId,
@@ -154,7 +190,8 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
                 useTotalOverflowForRedemptions: false,
                 useDataSourceForPay: true, // Use the buyback delegate data source.
                 useDataSourceForRedeem: false,
-                dataSource: _buybackDelegate,
+                // This contract should be the data source.
+                dataSource: address(this),
                 metadata: 0
             }),
             mustStartAtOrAfter: 0,
@@ -181,72 +218,15 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
 
         // Store the timestamp after which the project's reconfigurd funding cycles can start. A separate transaction to `scheduledReconfigurationOf` must be called to formally scheduled it.
         reconfigurationStartTimestampOf[projectId] = block.timestamp + _data.reservedRateDuration;
-    }
 
-    /// @notice Schedules the funding cycle reconfiguration that removes the reserved rate based on the _reservedRateDuration timestamp passed when the project was deployed.
-    /// @param _projectId The ID of the project who is having its funding cycle reconfigation scheduled.
-    function scheduleReconfigurationOf(uint256 _projectId) external {
-        // Get a reference to the latest configured funding cycle and its metadata.
-        (JBFundingCycle memory _latestFundingCycleConfiguration, JBFundingCycleMetadata memory _metadata,) =
-            controller.latestConfiguredFundingCycleOf(_projectId);
+        // Store the pay delegate allocations.
+        uint256 _numberOfDelegateAllocations = _delegateAllocations.length;
 
-        // Make sure the latest funding cycle scheduled was the first funding cycle.
-        if (_latestFundingCycleConfiguration.number != 1) revert RECONFIGURATION_ALREADY_SCHEDULED();
-
-        // Schedule a funding cycle reconfiguration.
-        controller.reconfigureFundingCyclesOf({
-            projectId: _projectId,
-            data: JBFundingCycleData({
-                duration: _latestFundingCycleConfiguration.duration,
-                weight: 0, // Inherit the weight of the current funding cycle.
-                discountRate: _latestFundingCycleConfiguration.discountRate,
-                ballot: IJBFundingCycleBallot(address(0))
-            }),
-            metadata: JBFundingCycleMetadata({
-                global: JBGlobalFundingCycleMetadata({
-                    allowSetTerminals: false,
-                    allowSetController: false,
-                    pauseTransfers: false
-                }),
-                reservedRate: 0, // No more reserved rate.
-                redemptionRate: _metadata.redemptionRate, // Set the same redemption rate.
-                ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
-                pausePay: false,
-                pauseDistributions: false,
-                pauseRedeem: false,
-                pauseBurn: false,
-                allowMinting: false,
-                allowTerminalMigration: false,
-                allowControllerMigration: false,
-                holdFees: false,
-                preferClaimedTokenOverride: false,
-                useTotalOverflowForRedemptions: false,
-                useDataSourceForPay: false,
-                useDataSourceForRedeem: false,
-                dataSource: _metadata.dataSource,
-                metadata: _metadata.metadata
-            }),
-            mustStartAtOrAfter: reconfigurationStartTimestampOf[_projectId],
-            groupedSplits: new JBGroupedSplits[](0), // No more splits.
-            fundAccessConstraints: new JBFundAccessConstraints[](0),
-            memo: "Scheduled reserved rate expiry of Retailist treasury"
-        });
-    }
-
-    /// @dev Make sure only mints can be received.
-    function onERC721Received(address _operator, address _from, uint256 _tokenId, bytes calldata _data)
-        external
-        view
-        returns (bytes4)
-    {
-        _data;
-        _tokenId;
-        _operator;
-
-        // Make sure the 721 received is the JBProjects contract.
-        if (msg.sender != address(controller.projects())) revert();
-        // Make sure the 721 is being received as a mint.
-        if (_from != address(0)) revert();
-        return IERC721Receiver.onERC721Received.selector;
+        for (uint256 _i; _i < _numberOfDelegateAllocations;) {
+          delegateAllocationsOf[projectId] [_i] = _delegateAllocations[_i];
+          unchecked {
+            ++_i;
+          }
+        }
     }
 }
