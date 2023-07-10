@@ -31,7 +31,7 @@ import {JBProjectMetadata} from "@jbx-protocol/juice-contracts-v3/contracts/stru
 /// @custom:member redemptionRate The bonding curve rate determining how much each token can access from the treasury at any current total supply. This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE).
 /// @custom:member reservedRate The percentage of newly issued tokens that should be reserved for the _operator. This percentage is out of 10_000 (JBConstants.MAX_RESERVED_RATE).
 /// @custom:member reservedRateDuration The number of seconds the reserved rate should be active for.
-struct BasicRetailistDeployParams {
+struct BasicRetailistJBParams {
     uint256 initialIssuanceRate;
     uint256 premintTokenAmount;
     uint256 discountRate;
@@ -42,7 +42,7 @@ struct BasicRetailistDeployParams {
 }
 
 /// @notice A contract that facilitates deploying a basic Retailist treasury.
-contract BasicRetailismTreasuryDeployer is IERC721Receiver {
+contract BasicRetailistJBDeployer is IERC721Receiver {
     error RECONFIGURATION_ALREADY_SCHEDULED();
 
     /// @notice The controller that projects are made from.
@@ -79,7 +79,7 @@ contract BasicRetailismTreasuryDeployer is IERC721Receiver {
         JBProjectMetadata calldata _projectMetadata,
         string calldata _name,
         string calldata _symbol,
-        BasicRetailistDeployParams calldata _data
+        BasicRetailistJBParams calldata _data
     ) external returns (uint256 projectId) {
         // Package the reserved token splits.
         JBGroupedSplits[] memory _groupedSplits = new JBGroupedSplits[](1);

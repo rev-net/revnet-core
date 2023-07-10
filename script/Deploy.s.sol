@@ -5,13 +5,13 @@ import "forge-std/Script.sol";
 import {
     IJBController3_1,
     IJBPayoutRedemptionPaymentTerminal3_1_1,
-    BasicRetailismTreasuryDeployer
-} from "./../src/BasicRetailismTreasuryDeployer.sol";
+    BasicRetailistJBDeployer
+} from "./../src/BasicRetailistJBDeployer.sol";
 
 contract Deploy is Script {
     function _run(IJBController3_1 _controller, IJBPayoutRedemptionPaymentTerminal3_1_1 _terminal) internal {
         vm.broadcast();
-        new BasicRetailismTreasuryDeployer(_controller, _terminal);
+        new BasicRetailistJBDeployer(_controller, _terminal);
     }
 }
 
