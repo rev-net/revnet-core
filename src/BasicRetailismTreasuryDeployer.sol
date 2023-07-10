@@ -9,6 +9,7 @@ import {IJBPayoutRedemptionPaymentTerminal3_1_1} from
 import {IJBFundingCycleBallot} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleBallot.sol";
 import {IJBOperatable} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBOperatable.sol";
 import {IJBSplitAllocator} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBSplitAllocator.sol";
+import {IJBToken} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBToken.sol";
 import {JBOperations} from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBOperations.sol";
 import {JBConstants} from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBConstants.sol";
 import {JBSplitsGroups} from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBSplitsGroups.sol";
@@ -103,9 +104,21 @@ contract BasicRetailismTreasuryDeployer is IERC721Receiver {
         }
 
         // Deploy a project.
-        projectId = controller.launchProjectFor({
-            owner: address(this), // This contract should remain the owner, forever.
-            projectMetadata: _projectMetadata,
+        projectId = controller.projects().createFor({
+          owner: address(this), // This contract should remain the owner, forever.
+          metadata: _projectMetadata
+        });
+
+        // Issue the project's ERC-20 token.
+        IJBToken _token = controller.tokenStore().issueFor({projectId: projectId, name: _name, symbol: _symbol});
+
+        // TODO: Deploy BBD. 
+        address buybackDelegate = address(0);
+        _token;
+
+        // Configure the project's funding cycles using BBD. 
+        controller.launchFundingCyclesFor({
+            projectId: projectId,
             data: JBFundingCycleData({
                 duration: _data.discountPeriod,
                 weight: _data.initialIssuanceRate ** 18,
@@ -131,9 +144,9 @@ contract BasicRetailismTreasuryDeployer is IERC721Receiver {
                 holdFees: false,
                 preferClaimedTokenOverride: false,
                 useTotalOverflowForRedemptions: false,
-                useDataSourceForPay: false,
+                useDataSourceForPay: true, // Use the buyback delegate data source.
                 useDataSourceForRedeem: false,
-                dataSource: address(0),
+                dataSource: buybackDelegate,
                 metadata: 0
             }),
             mustStartAtOrAfter: 0,
@@ -142,9 +155,6 @@ contract BasicRetailismTreasuryDeployer is IERC721Receiver {
             terminals: terminals,
             memo: "Deployed Retailist treasury"
         });
-
-        // Issue the project's ERC-20 token.
-        controller.tokenStore().issueFor({projectId: projectId, name: _name, symbol: _symbol});
 
         // Premint tokens to the Operator.
         controller.mintTokensOf({
