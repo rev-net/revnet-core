@@ -1,0 +1,9 @@
+.env
+.vscode
+cache/
+node_modules/
+*.txt
+.DS_Store
+node_modules
+lib/forge-std/
+yarn-error.log
