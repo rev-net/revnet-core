@@ -180,7 +180,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         controller.launchFundingCyclesFor({
             projectId: projectId,
             data: JBFundingCycleData({
-                duration: _data.discountPeriod,
+                duration: _data.cycleDurations,
                 weight: _data.initialIssuanceRate ** 18,
                 discountRate: _data.discountRate,
                 ballot: IJBFundingCycleBallot(address(0))
