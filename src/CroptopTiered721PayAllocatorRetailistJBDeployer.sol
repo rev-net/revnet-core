@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { CroptopPublisher } from "@croptop/publisher/src/CroptopPublisher.sol";
+import { CroptopPublisher, AllowedPost } from "@croptop/publisher/src/CroptopPublisher.sol";
 import { JB721Operations } from "@jbx-protocol/juice-721-delegate/contracts/libraries/JB721Operations.sol"; 
 import {IJBTiered721DelegateDeployer} from
     "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721DelegateDeployer.sol";
@@ -51,6 +51,7 @@ contract CroptopTiered721PayAllocatorRetailistJBDeployer is Tiered721PayAllocato
     /// @param _deployTiered721DelegateData Structure containing data necessary for delegate deployment.
     /// @param _otherDelegateAllocations Any pay delegate allocations that should run when the project is paid.
     /// @param _extraFundingCycleMetadata Extra metadata to attach to the funding cycle for the delegates to use.
+    /// @param _allowedPosts The type of posts that the project should allow.
     /// @return projectId The ID of the newly created Retailist project.
     function deployCroptopTiered721PayAllocatorProjectFor(
         address _operator,
@@ -60,11 +61,15 @@ contract CroptopTiered721PayAllocatorRetailistJBDeployer is Tiered721PayAllocato
         BasicRetailistJBParams calldata _data,
         JBDeployTiered721DelegateData calldata _deployTiered721DelegateData,
         JBPayDelegateAllocation3_1_1[] calldata _otherDelegateAllocations,
-        uint8 _extraFundingCycleMetadata
+        uint8 _extraFundingCycleMetadata,
+        AllowedPost[] calldata _allowedPosts
     ) public returns (uint256 projectId) {
         projectId = super.deployTiered721PayAllocatorProjectFor(
             _operator, _projectMetadata, _name, _symbol, _data, _deployTiered721DelegateData, _otherDelegateAllocations, _extraFundingCycleMetadata
         );
+
+        // Configure allowed posts.
+        if (_allowedPosts.length > 0) publisher.configureFor(projectId, _allowedPosts);
 
         // Give the croptop publisher permission to post on this contract's behalf.
         IJBOperatable(address(directory)).operatorStore().setOperator(JBOperatorData({
