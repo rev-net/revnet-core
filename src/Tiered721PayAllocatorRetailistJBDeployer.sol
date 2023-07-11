@@ -59,8 +59,9 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
     /// @param _projectMetadata The metadata containing project info.
     /// @param _name The name of the ERC-20 token being create for the project.
     /// @param _symbol The symbol of the ERC-20 token being created for the project.
-    /// @param _data The data needed to deploy a basic retailist project.
     /// @param _delegateAllocations Any pay delegate allocations that should run when the project is paid.
+    /// @param _deployTiered721DelegateData Structure containing data necessary for delegate deployment.
+    /// @param _data The data needed to deploy a basic retailist project.
     /// @return projectId The ID of the newly created Retailist project.
     function deployTiered721PayAllocatorProjectFor(
         address _operator,
@@ -69,8 +70,8 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
         string memory _symbol,
         BasicRetailistJBParams calldata _data,
         JBPayDelegateAllocation3_1_1[] calldata _delegateAllocations,
-        uint8 _metadata,
-        JBDeployTiered721DelegateData calldata _deployTiered721DelegateData
+        JBDeployTiered721DelegateData calldata _deployTiered721DelegateData,
+        uint8 _metadata
     ) external returns (uint256 projectId) {
       // Get the project ID, optimistically knowing it will be one greater than the current count.
       projectId = directory.projects().count() + 1;
