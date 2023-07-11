@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "version": "0.0.0",
+  "name": "@breadfruit/retailism",
+  "version": "0.0.1",
   "dependencies": {
     "@jbx-protocol/juice-contracts-v3": "^4.0.2",
     "@jbx-protocol/juice-721-delegate": "^7.0.0",
