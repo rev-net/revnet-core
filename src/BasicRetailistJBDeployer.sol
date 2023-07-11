@@ -113,18 +113,18 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
 
         // Deploy a project.
         projectId = controller.projects().createFor({
-          owner: address(this), // This contract should remain the owner, forever.
-          metadata: _projectMetadata
+            owner: address(this), // This contract should remain the owner, forever.
+            metadata: _projectMetadata
         });
 
         // Issue the project's ERC-20 token.
         IJBToken _token = controller.tokenStore().issueFor({projectId: projectId, name: _name, symbol: _symbol});
 
-        // TODO: Deploy BBD. 
+        // TODO: Deploy BBD.
         address _buybackDelegate = address(0);
         _token;
 
-        // Configure the project's funding cycles using BBD. 
+        // Configure the project's funding cycles using BBD.
         controller.launchFundingCyclesFor({
             projectId: projectId,
             data: JBFundingCycleData({

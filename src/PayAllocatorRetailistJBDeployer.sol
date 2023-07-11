@@ -11,15 +11,18 @@ import {IJBFundingCycleBallot} from "@jbx-protocol/juice-contracts-v3/contracts/
 import {IJBOperatable} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBOperatable.sol";
 import {IJBSplitAllocator} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBSplitAllocator.sol";
 import {IJBToken} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBToken.sol";
-import {IJBFundingCycleDataSource3_1_1} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleDataSource3_1_1.sol";
+import {IJBFundingCycleDataSource3_1_1} from
+    "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleDataSource3_1_1.sol";
 import {JBOperations} from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBOperations.sol";
 import {JBConstants} from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBConstants.sol";
 import {JBSplitsGroups} from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBSplitsGroups.sol";
 import {JBFundingCycleData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycleData.sol";
 import {JBFundingCycleMetadata} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycleMetadata.sol";
 import {JBFundingCycle} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycle.sol";
-import {JBPayDelegateAllocation3_1_1} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayDelegateAllocation3_1_1.sol";
-import {JBRedemptionDelegateAllocation3_1_1} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedemptionDelegateAllocation3_1_1.sol";
+import {JBPayDelegateAllocation3_1_1} from
+    "@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayDelegateAllocation3_1_1.sol";
+import {JBRedemptionDelegateAllocation3_1_1} from
+    "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedemptionDelegateAllocation3_1_1.sol";
 import {JBPayParamsData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayParamsData.sol";
 import {JBRedeemParamsData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedeemParamsData.sol";
 import {JBGlobalFundingCycleMetadata} from
@@ -59,7 +62,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         JBPayDelegateAllocation3_1_1[] memory _buybackDelegateAllocations;
 
         // Set the values to be those returned by the Buyback Data Source.
-        (weight, , _buybackDelegateAllocations) = buybackDelegateDataSourceOf[_data.projectId].payParams(_data);
+        (weight,, _buybackDelegateAllocations) = buybackDelegateDataSourceOf[_data.projectId].payParams(_data);
 
         // Cache the delegate allocations.
         JBPayDelegateAllocation3_1_1[] memory _delegateAllocations = delegateAllocationsOf[_data.projectId];
@@ -71,11 +74,11 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         delegateAllocations = new JBPayDelegateAllocation3_1_1[](_numberOfDelegateAllocations + 1);
 
         // All the rest of the delegate allocations the project expects.
-        for (uint256 _i; _i < _numberOfDelegateAllocations; ) {
-          delegateAllocations[_i] = _delegateAllocations[_i];
-          unchecked {
-            ++_i;
-          }
+        for (uint256 _i; _i < _numberOfDelegateAllocations;) {
+            delegateAllocations[_i] = _delegateAllocations[_i];
+            unchecked {
+                ++_i;
+            }
         }
 
         // Add the buyback delegate as the last element.
@@ -93,21 +96,29 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         override
         returns (uint256, string memory, JBRedemptionDelegateAllocation3_1_1[] memory)
     {
-      _data; // Unused.
-      return (0, '', new JBRedemptionDelegateAllocation3_1_1[](0));
+        _data; // Unused.
+        return (0, "", new JBRedemptionDelegateAllocation3_1_1[](0));
     }
 
     /// @notice Indicates if this contract adheres to the specified interface.
     /// @dev See {IERC165-supportsInterface}.
     /// @param _interfaceId The ID of the interface to check for adherence to.
     /// @return A flag indicating if the provided interface ID is supported.
-    function supportsInterface(bytes4 _interfaceId) public view virtual override(BasicRetailistJBDeployer, IERC165) returns (bool) {
+    function supportsInterface(bytes4 _interfaceId)
+        public
+        view
+        virtual
+        override(BasicRetailistJBDeployer, IERC165)
+        returns (bool)
+    {
         return _interfaceId == type(IJBFundingCycleDataSource3_1_1).interfaceId || super.supportsInterface(_interfaceId);
     }
 
     /// @param _controller The controller that projects are made from.
     /// @param _terminal The terminal that projects use to accept payments from.
-    constructor(IJBController3_1 _controller, IJBPayoutRedemptionPaymentTerminal3_1_1 _terminal) BasicRetailistJBDeployer(_controller, _terminal) {}
+    constructor(IJBController3_1 _controller, IJBPayoutRedemptionPaymentTerminal3_1_1 _terminal)
+        BasicRetailistJBDeployer(_controller, _terminal)
+    {}
 
     /// @notice Deploy a project with basic Retailism constraints that also calls other pay delegates that are specified.
     /// @param _operator The address that will receive the token premint, initial reserved token allocations, and who is allowed to change the allocated reserved rate distribution.
@@ -116,7 +127,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
     /// @param _symbol The symbol of the ERC-20 token being created for the project.
     /// @param _data The data needed to deploy a basic retailist project.
     /// @param _delegateAllocations Any pay delegate allocations that should run when the project is paid.
-    /// @param _metadata Metadata to attach to the funding cycle for the delegates to use.
+    /// @param _extraFundingCycleMetadata Extra metadata to attach to the funding cycle for the delegates to use.
     /// @return projectId The ID of the newly created Retailist project.
     function deployPayAllocatorProjectFor(
         address _operator,
@@ -125,7 +136,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         string memory _symbol,
         BasicRetailistJBParams calldata _data,
         JBPayDelegateAllocation3_1_1[] memory _delegateAllocations,
-        uint8 _metadata
+        uint8 _extraFundingCycleMetadata
     ) public returns (uint256 projectId) {
         // Package the reserved token splits.
         JBGroupedSplits[] memory _groupedSplits = new JBGroupedSplits[](1);
@@ -151,21 +162,21 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
 
         // Deploy a project.
         projectId = controller.projects().createFor({
-          owner: address(this), // This contract should remain the owner, forever.
-          metadata: _projectMetadata
+            owner: address(this), // This contract should remain the owner, forever.
+            metadata: _projectMetadata
         });
 
         // Issue the project's ERC-20 token.
         IJBToken _token = controller.tokenStore().issueFor({projectId: projectId, name: _name, symbol: _symbol});
 
-        // TODO: Deploy BBD. 
+        // TODO: Deploy BBD.
         address _buybackDelegate = address(0);
         _token;
 
         // Keep a reference to this data source.
         buybackDelegateDataSourceOf[projectId] = IJBFundingCycleDataSource3_1_1(_buybackDelegate);
 
-        // Configure the project's funding cycles using BBD. 
+        // Configure the project's funding cycles using BBD.
         controller.launchFundingCyclesFor({
             projectId: projectId,
             data: JBFundingCycleData({
@@ -197,7 +208,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
                 useDataSourceForRedeem: false,
                 // This contract should be the data source.
                 dataSource: address(this),
-                metadata: _metadata
+                metadata: _extraFundingCycleMetadata
             }),
             mustStartAtOrAfter: 0,
             groupedSplits: _groupedSplits,
@@ -228,10 +239,10 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         uint256 _numberOfDelegateAllocations = _delegateAllocations.length;
 
         for (uint256 _i; _i < _numberOfDelegateAllocations;) {
-          delegateAllocationsOf[projectId] [_i] = _delegateAllocations[_i];
-          unchecked {
-            ++_i;
-          }
+            delegateAllocationsOf[projectId][_i] = _delegateAllocations[_i];
+            unchecked {
+                ++_i;
+            }
         }
     }
 }
