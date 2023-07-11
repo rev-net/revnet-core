@@ -1,0 +1,355 @@
+{
+  "abi": [],
+  "bytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "ast": {
+    "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/structs/JB721TierParams.sol",
+    "id": 24062,
+    "exportedSymbols": {
+      "JB721TierParams": [
+        24061
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:1531:20",
+    "nodes": [
+      {
+        "id": 24037,
+        "nodeType": "PragmaDirective",
+        "src": "32:23:20",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".0"
+        ]
+      },
+      {
+        "id": 24061,
+        "nodeType": "StructDefinition",
+        "src": "1221:341:20",
+        "nodes": [],
+        "canonicalName": "JB721TierParams",
+        "documentation": {
+          "id": 24038,
+          "nodeType": "StructuredDocumentation",
+          "src": "57:1164:20",
+          "text": "@custom:member price The minimum contribution to qualify for this tier.\n @custom:member initialQuantity The initial `remainingAllowance` value when the tier was set.\n @custom:member votingUnits The amount of voting significance to give this tier compared to others.\n @custom:member reservedRate The number of minted tokens needed in the tier to allow for minting another reserved token.\n @custom:member reservedRateBeneficiary The beneificary of the reserved tokens for this tier.\n @custom:member encodedIPFSUri The URI to use for each token within the tier.\n @custom:member category A category to group NFT tiers by.\n @custom:member allowManualMint A flag indicating if the contract's owner can mint from this tier on demand.\n @custom:member shouldUseReservedRateBeneficiaryAsDefault A flag indicating if the `reservedTokenBeneficiary` should be stored as the default beneficiary for all tiers.\n @custom:member transfersPausable A flag indicating if transfers from this tier can be pausable. \n @custom:member useVotingUnits A flag indicating if the voting units override should be used over the price as the tier's voting units."
+        },
+        "members": [
+          {
+            "constant": false,
+            "id": 24040,
+            "mutability": "mutable",
+            "name": "price",
+            "nameLocation": "1258:5:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 24061,
+            "src": "1250:13:20",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint104",
+              "typeString": "uint104"
+            },
+            "typeName": {
+              "id": 24039,
+              "name": "uint104",
+              "nodeType": "ElementaryTypeName",
+              "src": "1250:7:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint104",
+                "typeString": "uint104"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24042,
+            "mutability": "mutable",
+            "name": "initialQuantity",
+            "nameLocation": "1276:15:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 24061,
+            "src": "1269:22:20",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint32",
+              "typeString": "uint32"
+            },
+            "typeName": {
+              "id": 24041,
+              "name": "uint32",
+              "nodeType": "ElementaryTypeName",
+              "src": "1269:6:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint32",
+                "typeString": "uint32"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24044,
+            "mutability": "mutable",
+            "name": "votingUnits",
+            "nameLocation": "1304:11:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 24061,
+            "src": "1297:18:20",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint32",
+              "typeString": "uint32"
+            },
+            "typeName": {
+              "id": 24043,
+              "name": "uint32",
+              "nodeType": "ElementaryTypeName",
+              "src": "1297:6:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint32",
+                "typeString": "uint32"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24046,
+            "mutability": "mutable",
+            "name": "reservedRate",
+            "nameLocation": "1328:12:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 24061,
+            "src": "1321:19:20",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint16",
+              "typeString": "uint16"
+            },
+            "typeName": {
+              "id": 24045,
+              "name": "uint16",
+              "nodeType": "ElementaryTypeName",
+              "src": "1321:6:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint16",
+                "typeString": "uint16"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24048,
+            "mutability": "mutable",
+            "name": "reservedTokenBeneficiary",
+            "nameLocation": "1354:24:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 24061,
+            "src": "1346:32:20",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address",
+              "typeString": "address"
+            },
+            "typeName": {
+              "id": 24047,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "1346:7:20",
+              "stateMutability": "nonpayable",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24050,
+            "mutability": "mutable",
+            "name": "encodedIPFSUri",
+            "nameLocation": "1392:14:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 24061,
+            "src": "1384:22:20",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bytes32",
+              "typeString": "bytes32"
+            },
+            "typeName": {
+              "id": 24049,
+              "name": "bytes32",
+              "nodeType": "ElementaryTypeName",
+              "src": "1384:7:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bytes32",
+                "typeString": "bytes32"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24052,
+            "mutability": "mutable",
+            "name": "category",
+            "nameLocation": "1419:8:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 24061,
+            "src": "1412:15:20",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint24",
+              "typeString": "uint24"
+            },
+            "typeName": {
+              "id": 24051,
+              "name": "uint24",
+              "nodeType": "ElementaryTypeName",
+              "src": "1412:6:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint24",
+                "typeString": "uint24"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24054,
+            "mutability": "mutable",
+            "name": "allowManualMint",
+            "nameLocation": "1438:15:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 24061,
+            "src": "1433:20:20",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bool",
+              "typeString": "bool"
+            },
+            "typeName": {
+              "id": 24053,
+              "name": "bool",
+              "nodeType": "ElementaryTypeName",
+              "src": "1433:4:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bool",
+                "typeString": "bool"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24056,
+            "mutability": "mutable",
+            "name": "shouldUseReservedTokenBeneficiaryAsDefault",
+            "nameLocation": "1464:42:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 24061,
+            "src": "1459:47:20",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bool",
+              "typeString": "bool"
+            },
+            "typeName": {
+              "id": 24055,
+              "name": "bool",
+              "nodeType": "ElementaryTypeName",
+              "src": "1459:4:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bool",
+                "typeString": "bool"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24058,
+            "mutability": "mutable",
+            "name": "transfersPausable",
+            "nameLocation": "1517:17:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 24061,
+            "src": "1512:22:20",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bool",
+              "typeString": "bool"
+            },
+            "typeName": {
+              "id": 24057,
+              "name": "bool",
+              "nodeType": "ElementaryTypeName",
+              "src": "1512:4:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bool",
+                "typeString": "bool"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24060,
+            "mutability": "mutable",
+            "name": "useVotingUnits",
+            "nameLocation": "1545:14:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 24061,
+            "src": "1540:19:20",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bool",
+              "typeString": "bool"
+            },
+            "typeName": {
+              "id": 24059,
+              "name": "bool",
+              "nodeType": "ElementaryTypeName",
+              "src": "1540:4:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bool",
+                "typeString": "bool"
+              }
+            },
+            "visibility": "internal"
+          }
+        ],
+        "name": "JB721TierParams",
+        "nameLocation": "1228:15:20",
+        "scope": 24062,
+        "visibility": "public"
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 20
+}

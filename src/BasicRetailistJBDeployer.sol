@@ -82,7 +82,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
     /// @param _symbol The symbol of the ERC-20 token being created for the project.
     /// @param _data The data needed to deploy a basic retailist project.
     /// @return projectId The ID of the newly created Retailist project.
-    function deployProjectFor(
+    function deployBasicProjectFor(
         address _operator,
         JBProjectMetadata calldata _projectMetadata,
         string calldata _name,

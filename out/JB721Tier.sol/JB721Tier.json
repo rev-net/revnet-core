@@ -1,0 +1,382 @@
+{
+  "abi": [],
+  "bytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "ast": {
+    "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/structs/JB721Tier.sol",
+    "id": 24036,
+    "exportedSymbols": {
+      "JB721Tier": [
+        24035
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:1558:19",
+    "nodes": [
+      {
+        "id": 24009,
+        "nodeType": "PragmaDirective",
+        "src": "32:24:19",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".16"
+        ]
+      },
+      {
+        "id": 24035,
+        "nodeType": "StructDefinition",
+        "src": "1257:332:19",
+        "nodes": [],
+        "canonicalName": "JB721Tier",
+        "documentation": {
+          "id": 24010,
+          "nodeType": "StructuredDocumentation",
+          "src": "58:1199:19",
+          "text": "@custom:member id The tier's ID.\n @custom:member price The price that must be paid to qualify for this tier.\n @custom:member remainingQuantity Remaining number of tokens in this tier. Together with idCeiling this enables for consecutive, increasing token ids to be issued to contributors.\n @custom:member initialQuantity The initial `remainingAllowance` value when the tier was set.\n @custom:member votingUnits The amount of voting significance to give this tier compared to others.\n @custom:member reservedRate The number of minted tokens needed in the tier to allow for minting another reserved token.\n @custom:member reservedRateBeneficiary The beneificary of the reserved tokens for this tier.\n @custom:member encodedIPFSUri The URI to use for each token within the tier.\n @custom:member category A category to group NFT tiers by.\n @custom:member allowManualMint A flag indicating if the contract's owner can mint from this tier on demand.\n @custom:member transfersPausable A flag indicating if transfers from this tier can be pausable. \n @custom:member resolvedTokenUri A resolved token URI if a resolver is included for the NFT to which this tier belongs."
+        },
+        "members": [
+          {
+            "constant": false,
+            "id": 24012,
+            "mutability": "mutable",
+            "name": "id",
+            "nameLocation": "1288:2:19",
+            "nodeType": "VariableDeclaration",
+            "scope": 24035,
+            "src": "1280:10:19",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 24011,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "1280:7:19",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24014,
+            "mutability": "mutable",
+            "name": "price",
+            "nameLocation": "1304:5:19",
+            "nodeType": "VariableDeclaration",
+            "scope": 24035,
+            "src": "1296:13:19",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 24013,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "1296:7:19",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24016,
+            "mutability": "mutable",
+            "name": "remainingQuantity",
+            "nameLocation": "1323:17:19",
+            "nodeType": "VariableDeclaration",
+            "scope": 24035,
+            "src": "1315:25:19",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 24015,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "1315:7:19",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24018,
+            "mutability": "mutable",
+            "name": "initialQuantity",
+            "nameLocation": "1354:15:19",
+            "nodeType": "VariableDeclaration",
+            "scope": 24035,
+            "src": "1346:23:19",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 24017,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "1346:7:19",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24020,
+            "mutability": "mutable",
+            "name": "votingUnits",
+            "nameLocation": "1383:11:19",
+            "nodeType": "VariableDeclaration",
+            "scope": 24035,
+            "src": "1375:19:19",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 24019,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "1375:7:19",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24022,
+            "mutability": "mutable",
+            "name": "reservedRate",
+            "nameLocation": "1408:12:19",
+            "nodeType": "VariableDeclaration",
+            "scope": 24035,
+            "src": "1400:20:19",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 24021,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "1400:7:19",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24024,
+            "mutability": "mutable",
+            "name": "reservedTokenBeneficiary",
+            "nameLocation": "1434:24:19",
+            "nodeType": "VariableDeclaration",
+            "scope": 24035,
+            "src": "1426:32:19",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address",
+              "typeString": "address"
+            },
+            "typeName": {
+              "id": 24023,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "1426:7:19",
+              "stateMutability": "nonpayable",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address",
+                "typeString": "address"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24026,
+            "mutability": "mutable",
+            "name": "encodedIPFSUri",
+            "nameLocation": "1472:14:19",
+            "nodeType": "VariableDeclaration",
+            "scope": 24035,
+            "src": "1464:22:19",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bytes32",
+              "typeString": "bytes32"
+            },
+            "typeName": {
+              "id": 24025,
+              "name": "bytes32",
+              "nodeType": "ElementaryTypeName",
+              "src": "1464:7:19",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bytes32",
+                "typeString": "bytes32"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24028,
+            "mutability": "mutable",
+            "name": "category",
+            "nameLocation": "1500:8:19",
+            "nodeType": "VariableDeclaration",
+            "scope": 24035,
+            "src": "1492:16:19",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 24027,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "1492:7:19",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24030,
+            "mutability": "mutable",
+            "name": "allowManualMint",
+            "nameLocation": "1519:15:19",
+            "nodeType": "VariableDeclaration",
+            "scope": 24035,
+            "src": "1514:20:19",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bool",
+              "typeString": "bool"
+            },
+            "typeName": {
+              "id": 24029,
+              "name": "bool",
+              "nodeType": "ElementaryTypeName",
+              "src": "1514:4:19",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bool",
+                "typeString": "bool"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24032,
+            "mutability": "mutable",
+            "name": "transfersPausable",
+            "nameLocation": "1545:17:19",
+            "nodeType": "VariableDeclaration",
+            "scope": 24035,
+            "src": "1540:22:19",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bool",
+              "typeString": "bool"
+            },
+            "typeName": {
+              "id": 24031,
+              "name": "bool",
+              "nodeType": "ElementaryTypeName",
+              "src": "1540:4:19",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bool",
+                "typeString": "bool"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24034,
+            "mutability": "mutable",
+            "name": "resolvedUri",
+            "nameLocation": "1575:11:19",
+            "nodeType": "VariableDeclaration",
+            "scope": 24035,
+            "src": "1568:18:19",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_string_storage_ptr",
+              "typeString": "string"
+            },
+            "typeName": {
+              "id": 24033,
+              "name": "string",
+              "nodeType": "ElementaryTypeName",
+              "src": "1568:6:19",
+              "typeDescriptions": {
+                "typeIdentifier": "t_string_storage_ptr",
+                "typeString": "string"
+              }
+            },
+            "visibility": "internal"
+          }
+        ],
+        "name": "JB721Tier",
+        "nameLocation": "1264:9:19",
+        "scope": 24036,
+        "visibility": "public"
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 19
+}

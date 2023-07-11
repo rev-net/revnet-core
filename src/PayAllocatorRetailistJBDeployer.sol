@@ -109,22 +109,24 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
     /// @param _terminal The terminal that projects use to accept payments from.
     constructor(IJBController3_1 _controller, IJBPayoutRedemptionPaymentTerminal3_1_1 _terminal) BasicRetailistJBDeployer(_controller, _terminal) {}
 
-    /// @notice Deploy a project with basic Retailism constraints.
+    /// @notice Deploy a project with basic Retailism constraints that also calls other pay delegates that are specified.
     /// @param _operator The address that will receive the token premint, initial reserved token allocations, and who is allowed to change the allocated reserved rate distribution.
     /// @param _projectMetadata The metadata containing project info.
     /// @param _name The name of the ERC-20 token being create for the project.
     /// @param _symbol The symbol of the ERC-20 token being created for the project.
     /// @param _data The data needed to deploy a basic retailist project.
     /// @param _delegateAllocations Any pay delegate allocations that should run when the project is paid.
+    /// @param _metadata Metadata to attach to the funding cycle for the delegates to use.
     /// @return projectId The ID of the newly created Retailist project.
-    function deployProjectFor(
+    function deployPayAllocatorProjectFor(
         address _operator,
         JBProjectMetadata memory _projectMetadata,
         string memory _name,
         string memory _symbol,
         BasicRetailistJBParams calldata _data,
-        JBPayDelegateAllocation3_1_1[] calldata _delegateAllocations
-    ) external returns (uint256 projectId) {
+        JBPayDelegateAllocation3_1_1[] memory _delegateAllocations,
+        uint256 _metadata
+    ) public returns (uint256 projectId) {
         // Package the reserved token splits.
         JBGroupedSplits[] memory _groupedSplits = new JBGroupedSplits[](1);
 
@@ -195,7 +197,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
                 useDataSourceForRedeem: false,
                 // This contract should be the data source.
                 dataSource: address(this),
-                metadata: 0
+                metadata: _metadata
             }),
             mustStartAtOrAfter: 0,
             groupedSplits: _groupedSplits,

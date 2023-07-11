@@ -1,0 +1,165 @@
+{
+  "abi": [],
+  "bytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "ast": {
+    "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/structs/JBTiered721Flags.sol",
+    "id": 24113,
+    "exportedSymbols": {
+      "JBTiered721Flags": [
+        24112
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:780:22",
+    "nodes": [
+      {
+        "id": 24102,
+        "nodeType": "PragmaDirective",
+        "src": "32:23:22",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".0"
+        ]
+      },
+      {
+        "id": 24112,
+        "nodeType": "StructDefinition",
+        "src": "652:159:22",
+        "nodes": [],
+        "canonicalName": "JBTiered721Flags",
+        "documentation": {
+          "id": 24103,
+          "nodeType": "StructuredDocumentation",
+          "src": "57:595:22",
+          "text": "@custom:member lockReservedTokenChanges A flag indicating if reserved tokens can change over time by adding new tiers with a reserved rate.\n @custom:member lockVotingUnitChanges A flag indicating if voting unit expectations can change over time by adding new tiers with voting units.\n @custom:member lockManualMintingChanges A flag indicating if manual minting expectations can change over time by adding new tiers with manual minting.\n @custom:member preventOverspending A flag indicating if payments sending more than the value the NFTs being minted are worth should be reverted."
+        },
+        "members": [
+          {
+            "constant": false,
+            "id": 24105,
+            "mutability": "mutable",
+            "name": "lockReservedTokenChanges",
+            "nameLocation": "687:24:22",
+            "nodeType": "VariableDeclaration",
+            "scope": 24112,
+            "src": "682:29:22",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bool",
+              "typeString": "bool"
+            },
+            "typeName": {
+              "id": 24104,
+              "name": "bool",
+              "nodeType": "ElementaryTypeName",
+              "src": "682:4:22",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bool",
+                "typeString": "bool"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24107,
+            "mutability": "mutable",
+            "name": "lockVotingUnitChanges",
+            "nameLocation": "722:21:22",
+            "nodeType": "VariableDeclaration",
+            "scope": 24112,
+            "src": "717:26:22",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bool",
+              "typeString": "bool"
+            },
+            "typeName": {
+              "id": 24106,
+              "name": "bool",
+              "nodeType": "ElementaryTypeName",
+              "src": "717:4:22",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bool",
+                "typeString": "bool"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24109,
+            "mutability": "mutable",
+            "name": "lockManualMintingChanges",
+            "nameLocation": "754:24:22",
+            "nodeType": "VariableDeclaration",
+            "scope": 24112,
+            "src": "749:29:22",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bool",
+              "typeString": "bool"
+            },
+            "typeName": {
+              "id": 24108,
+              "name": "bool",
+              "nodeType": "ElementaryTypeName",
+              "src": "749:4:22",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bool",
+                "typeString": "bool"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24111,
+            "mutability": "mutable",
+            "name": "preventOverspending",
+            "nameLocation": "789:19:22",
+            "nodeType": "VariableDeclaration",
+            "scope": 24112,
+            "src": "784:24:22",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_bool",
+              "typeString": "bool"
+            },
+            "typeName": {
+              "id": 24110,
+              "name": "bool",
+              "nodeType": "ElementaryTypeName",
+              "src": "784:4:22",
+              "typeDescriptions": {
+                "typeIdentifier": "t_bool",
+                "typeString": "bool"
+              }
+            },
+            "visibility": "internal"
+          }
+        ],
+        "name": "JBTiered721Flags",
+        "nameLocation": "659:16:22",
+        "scope": 24113,
+        "visibility": "public"
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 22
+}

@@ -1,0 +1,229 @@
+{
+  "abi": [],
+  "bytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "ast": {
+    "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/structs/JB721PricingParams.sol",
+    "id": 24008,
+    "exportedSymbols": {
+      "IJBPriceFeed": [
+        25601
+      ],
+      "IJBPrices": [
+        25646
+      ],
+      "JB721PricingParams": [
+        24007
+      ],
+      "JB721TierParams": [
+        24061
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:728:18",
+    "nodes": [
+      {
+        "id": 23992,
+        "nodeType": "PragmaDirective",
+        "src": "32:23:18",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".0"
+        ]
+      },
+      {
+        "id": 23993,
+        "nodeType": "ImportDirective",
+        "src": "57:77:18",
+        "nodes": [],
+        "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPrices.sol",
+        "file": "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPrices.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 24008,
+        "sourceUnit": 25647,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 23994,
+        "nodeType": "ImportDirective",
+        "src": "135:31:18",
+        "nodes": [],
+        "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/structs/JB721TierParams.sol",
+        "file": "./JB721TierParams.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 24008,
+        "sourceUnit": 24062,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 24007,
+        "nodeType": "StructDefinition",
+        "src": "637:122:18",
+        "nodes": [],
+        "canonicalName": "JB721PricingParams",
+        "documentation": {
+          "id": 23995,
+          "nodeType": "StructuredDocumentation",
+          "src": "168:469:18",
+          "text": "@custom:member tiers The tiers to set.\n @custom:member currency The currency that the tier contribution floors are denoted in.\n @custom:member decimals The number of decimals included in the tier contribution floor fixed point numbers.\n @custom:member prices A contract that exposes price feeds that can be used to resolved the value of a contributions that are sent in different currencies. Set to the zero address if payments must be made in `currency`."
+        },
+        "members": [
+          {
+            "constant": false,
+            "id": 23999,
+            "mutability": "mutable",
+            "name": "tiers",
+            "nameLocation": "687:5:18",
+            "nodeType": "VariableDeclaration",
+            "scope": 24007,
+            "src": "669:23:18",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_array$_t_struct$_JB721TierParams_$24061_storage_$dyn_storage_ptr",
+              "typeString": "struct JB721TierParams[]"
+            },
+            "typeName": {
+              "baseType": {
+                "id": 23997,
+                "nodeType": "UserDefinedTypeName",
+                "pathNode": {
+                  "id": 23996,
+                  "name": "JB721TierParams",
+                  "nameLocations": [
+                    "669:15:18"
+                  ],
+                  "nodeType": "IdentifierPath",
+                  "referencedDeclaration": 24061,
+                  "src": "669:15:18"
+                },
+                "referencedDeclaration": 24061,
+                "src": "669:15:18",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_struct$_JB721TierParams_$24061_storage_ptr",
+                  "typeString": "struct JB721TierParams"
+                }
+              },
+              "id": 23998,
+              "nodeType": "ArrayTypeName",
+              "src": "669:17:18",
+              "typeDescriptions": {
+                "typeIdentifier": "t_array$_t_struct$_JB721TierParams_$24061_storage_$dyn_storage_ptr",
+                "typeString": "struct JB721TierParams[]"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24001,
+            "mutability": "mutable",
+            "name": "currency",
+            "nameLocation": "705:8:18",
+            "nodeType": "VariableDeclaration",
+            "scope": 24007,
+            "src": "698:15:18",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint48",
+              "typeString": "uint48"
+            },
+            "typeName": {
+              "id": 24000,
+              "name": "uint48",
+              "nodeType": "ElementaryTypeName",
+              "src": "698:6:18",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint48",
+                "typeString": "uint48"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24003,
+            "mutability": "mutable",
+            "name": "decimals",
+            "nameLocation": "726:8:18",
+            "nodeType": "VariableDeclaration",
+            "scope": 24007,
+            "src": "719:15:18",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint48",
+              "typeString": "uint48"
+            },
+            "typeName": {
+              "id": 24002,
+              "name": "uint48",
+              "nodeType": "ElementaryTypeName",
+              "src": "719:6:18",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint48",
+                "typeString": "uint48"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "constant": false,
+            "id": 24006,
+            "mutability": "mutable",
+            "name": "prices",
+            "nameLocation": "750:6:18",
+            "nodeType": "VariableDeclaration",
+            "scope": 24007,
+            "src": "740:16:18",
+            "stateVariable": false,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_contract$_IJBPrices_$25646",
+              "typeString": "contract IJBPrices"
+            },
+            "typeName": {
+              "id": 24005,
+              "nodeType": "UserDefinedTypeName",
+              "pathNode": {
+                "id": 24004,
+                "name": "IJBPrices",
+                "nameLocations": [
+                  "740:9:18"
+                ],
+                "nodeType": "IdentifierPath",
+                "referencedDeclaration": 25646,
+                "src": "740:9:18"
+              },
+              "referencedDeclaration": 25646,
+              "src": "740:9:18",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_IJBPrices_$25646",
+                "typeString": "contract IJBPrices"
+              }
+            },
+            "visibility": "internal"
+          }
+        ],
+        "name": "JB721PricingParams",
+        "nameLocation": "644:18:18",
+        "scope": 24008,
+        "visibility": "public"
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 18
+}
