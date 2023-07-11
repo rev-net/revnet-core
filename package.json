@@ -5,7 +5,7 @@
     "@jbx-protocol/juice-contracts-v3": "^4.0.2",
     "@jbx-protocol/juice-721-delegate": "^7.0.0",
     "@openzeppelin/contracts": "^4.8.1",
-    "@croptop/publisher": "ˆ0.0.1"
+    "@croptop/publisher": "ˆ0.0.0"
   },
   "scripts": {
     "preinstall": "forge install",
