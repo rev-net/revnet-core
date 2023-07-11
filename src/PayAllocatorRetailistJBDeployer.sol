@@ -125,7 +125,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         string memory _symbol,
         BasicRetailistJBParams calldata _data,
         JBPayDelegateAllocation3_1_1[] memory _delegateAllocations,
-        uint256 _metadata
+        uint8 _metadata
     ) public returns (uint256 projectId) {
         // Package the reserved token splits.
         JBGroupedSplits[] memory _groupedSplits = new JBGroupedSplits[](1);

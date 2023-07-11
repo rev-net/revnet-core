@@ -69,7 +69,7 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
         string memory _symbol,
         BasicRetailistJBParams calldata _data,
         JBPayDelegateAllocation3_1_1[] calldata _delegateAllocations,
-        uint256 _metadata,
+        uint8 _metadata,
         JBDeployTiered721DelegateData calldata _deployTiered721DelegateData
     ) external returns (uint256 projectId) {
       // Get the project ID, optimistically knowing it will be one greater than the current count.
