@@ -5,7 +5,9 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Recei
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IJBTiered721Delegate} from "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721Delegate.sol";
 import {IJBTiered721DelegateDeployer} from "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721DelegateDeployer.sol";
+import {JBTiered721FundingCycleMetadataResolver} from "@jbx-protocol/juice-721-delegate/contracts/libraries/JBTiered721FundingCycleMetadataResolver.sol";
 import {JBDeployTiered721DelegateData} from "@jbx-protocol/juice-721-delegate/contracts/structs/JBDeployTiered721DelegateData.sol";
+import {JBTiered721FundingCycleMetadata} from "@jbx-protocol/juice-721-delegate/contracts/structs/JBTiered721FundingCycleMetadata.sol";
 import {IJBPaymentTerminal} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPaymentTerminal.sol";
 import {IJBController3_1} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController3_1.sol";
 import {IJBDirectory} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol";
@@ -37,7 +39,7 @@ import {JBProjectMetadata} from "@jbx-protocol/juice-contracts-v3/contracts/stru
 import {BasicRetailistJBParams, PayAllocatorRetailistJBDeployer} from "./PayAllocatorRetailistJBDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic Retailist treasury that also can mint tiered 721s.
-contract Tiered721RetailistJBDeployer is PayAllocatorRetailistJBDeployer {
+contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDeployer {
 
     /// @notice The directory of terminals and controllers for projects.
     IJBDirectory public immutable directory;
@@ -61,6 +63,8 @@ contract Tiered721RetailistJBDeployer is PayAllocatorRetailistJBDeployer {
     /// @param _symbol The symbol of the ERC-20 token being created for the project.
     /// @param _data The data needed to deploy a basic retailist project.
     /// @param _delegateAllocations Any pay delegate allocations that should run when the project is paid.
+    /// @param _metadata Optional metadata to attach to a funding cycle that's relevant to 721 delegates.
+    /// @param _deployTiered721DelegateData Data necessary to deploy the delegate.
     /// @return projectId The ID of the newly created Retailist project.
     function deployTiered721PayAllocatorProjectFor(
         address _operator,
@@ -69,7 +73,7 @@ contract Tiered721RetailistJBDeployer is PayAllocatorRetailistJBDeployer {
         string memory _symbol,
         BasicRetailistJBParams calldata _data,
         JBPayDelegateAllocation3_1_1[] calldata _delegateAllocations,
-        uint256 _metadata,
+        JBTiered721FundingCycleMetadata calldata _metadata,
         JBDeployTiered721DelegateData calldata _deployTiered721DelegateData
     ) external returns (uint256 projectId) {
       // Get the project ID, optimistically knowing it will be one greater than the current count.
@@ -107,7 +111,7 @@ contract Tiered721RetailistJBDeployer is PayAllocatorRetailistJBDeployer {
         _symbol,
         _data,
         _updatedDelegateAllocations,
-        _metadata
+        JBTiered721FundingCycleMetadataResolver.packFundingCycleGlobalMetadata(_metadata)
       );
     }
 }
