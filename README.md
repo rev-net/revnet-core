@@ -4,7 +4,13 @@ This repo provides tools to make deployabling Retailistic projects easy.
 
 For a Retailism TLDR, see https://jango.eth.limo/9E01E72C-6028-48B7-AD04-F25393307132/.
 
-Currently there is just a basic retailistic design implemented in BasicRetailismTreasuryDeployer. You can use this contract to deploy treasuries from etherscan.
+In this repo, you'll find:
+- a basic retailistic design implemented in `BasicRetailistJBDeployer`.
+- a Pay Allocator design implemented in `PayAllocatorRetailistJBDeployer` which accepts other Pay Allocators that'll get used throughout the project's lifetime.
+- a Tiered 721 Pay Allocator design implemented in `Tiered721PayAllocatorRetailistJBDeployer` which accepts data to deploy a Tiered 721 Delegate that'll get used throughout the project's lifetime, alongside other Pay Allocators that may also be specified.
+- a Croptop Tiered 721 Pay Allocator design implemented in `CroptopTiered721PayAllocatorRetailistJBDeployer` which accepts data to deploy a Tiered 721 Delegate that'll get used throughut the project's lifetime that can be posted to by the public through the Croptop Publisher contract, alongside other Pay Allocators that may also be specified.
+
+ You can use these contracts to deploy treasuries from etherscan, or wherever else they've been exposed from.
 
 # Dev
 
