@@ -11,4 +11,14 @@ sizes = true
 fs_permissions = [{ access = "read", path = "./node_modules/@jbx-protocol/juice-contracts-v3/deployments/mainnet"}] # Get the deployment addresses for forking
 match_contract = "Unit || Fork" 
 
+[fmt]
+  bracket_spacing = true
+  int_types = "long"
+  line_length = 120
+  multiline_func_header = "all"
+  number_underscore = "thousands"
+  quote_style = "double"
+  tab_width = 4
+  wrap_comments = true
+  
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
