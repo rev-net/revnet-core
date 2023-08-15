@@ -4,6 +4,21 @@ This repo provides tools to make deployabling Retailistic projects easy.
 
 For a Retailism TLDR, see https://jango.eth.limo/9E01E72C-6028-48B7-AD04-F25393307132/.
 
+For follow on Retailism information, see:
+
+A Retailistic View on CAC and LTV
+https://jango.eth.limo/572BD957-0331-4977-8B2D-35F84D693276/
+
+Modeling Retailism
+https://jango.eth.limo/B762F3CC-AEFE-4DE0-B08C-7C16400AF718/
+
+Retailism for Devs, Investors, and Customers 
+https://jango.eth.limo/3EB05292-0376-4B7D-AFCF-042B70673C3D/
+
+Observations: Network dynamics similar between atoms, cells, organisms, groups, dance parties.
+https://jango.eth.limo/CF40F5D2-7BFE-43A3-9C15-1C6547FBD15C/
+
+
 In this repo, you'll find:
 - a basic retailistic design implemented in `BasicRetailistJBDeployer`.
 - a Pay Allocator design implemented in `PayAllocatorRetailistJBDeployer` which accepts other Pay Allocators that'll get used throughout the project's lifetime.
