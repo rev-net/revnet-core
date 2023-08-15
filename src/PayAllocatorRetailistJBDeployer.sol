@@ -235,7 +235,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
             projectId: projectId,
             tokenCount: _data.premintTokenAmount ** 18,
             beneficiary: _operator,
-            memo: string.concat("Preminted ", _symbol, " tokens."),
+            memo: string.concat("Preminted $", _symbol),
             preferClaimedTokens: false,
             useReservedRate: false
         });
