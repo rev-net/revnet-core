@@ -123,19 +123,19 @@
   },
   "ast": {
     "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/interfaces/IJB721TokenUriResolver.sol",
-    "id": 27626,
+    "id": 44100,
     "exportedSymbols": {
       "IJB721TokenUriResolver": [
-        27625
+        44099
       ]
     },
     "nodeType": "SourceUnit",
-    "src": "32:164:19",
+    "src": "32:164:22",
     "nodes": [
       {
-        "id": 27615,
+        "id": 44089,
         "nodeType": "PragmaDirective",
-        "src": "32:23:19",
+        "src": "32:23:22",
         "nodes": [],
         "literals": [
           "solidity",
@@ -145,34 +145,34 @@
         ]
       },
       {
-        "id": 27625,
+        "id": 44099,
         "nodeType": "ContractDefinition",
-        "src": "57:138:19",
+        "src": "57:138:22",
         "nodes": [
           {
-            "id": 27624,
+            "id": 44098,
             "nodeType": "FunctionDefinition",
-            "src": "96:97:19",
+            "src": "96:97:22",
             "nodes": [],
             "functionSelector": "5e703e71",
             "implemented": false,
             "kind": "function",
             "modifiers": [],
             "name": "tokenUriOf",
-            "nameLocation": "105:10:19",
+            "nameLocation": "105:10:22",
             "parameters": {
-              "id": 27620,
+              "id": 44094,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 27617,
+                  "id": 44091,
                   "mutability": "mutable",
                   "name": "nft",
-                  "nameLocation": "124:3:19",
+                  "nameLocation": "124:3:22",
                   "nodeType": "VariableDeclaration",
-                  "scope": 27624,
-                  "src": "116:11:19",
+                  "scope": 44098,
+                  "src": "116:11:22",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -180,10 +180,10 @@
                     "typeString": "address"
                   },
                   "typeName": {
-                    "id": 27616,
+                    "id": 44090,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
-                    "src": "116:7:19",
+                    "src": "116:7:22",
                     "stateMutability": "nonpayable",
                     "typeDescriptions": {
                       "typeIdentifier": "t_address",
@@ -194,13 +194,13 @@
                 },
                 {
                   "constant": false,
-                  "id": 27619,
+                  "id": 44093,
                   "mutability": "mutable",
                   "name": "tokenId",
-                  "nameLocation": "137:7:19",
+                  "nameLocation": "137:7:22",
                   "nodeType": "VariableDeclaration",
-                  "scope": 27624,
-                  "src": "129:15:19",
+                  "scope": 44098,
+                  "src": "129:15:22",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -208,10 +208,10 @@
                     "typeString": "uint256"
                   },
                   "typeName": {
-                    "id": 27618,
+                    "id": 44092,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
-                    "src": "129:7:19",
+                    "src": "129:7:22",
                     "typeDescriptions": {
                       "typeIdentifier": "t_uint256",
                       "typeString": "uint256"
@@ -220,21 +220,21 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "115:30:19"
+              "src": "115:30:22"
             },
             "returnParameters": {
-              "id": 27623,
+              "id": 44097,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 27622,
+                  "id": 44096,
                   "mutability": "mutable",
                   "name": "tokenUri",
-                  "nameLocation": "183:8:19",
+                  "nameLocation": "183:8:22",
                   "nodeType": "VariableDeclaration",
-                  "scope": 27624,
-                  "src": "169:22:19",
+                  "scope": 44098,
+                  "src": "169:22:22",
                   "stateVariable": false,
                   "storageLocation": "memory",
                   "typeDescriptions": {
@@ -242,10 +242,10 @@
                     "typeString": "string"
                   },
                   "typeName": {
-                    "id": 27621,
+                    "id": 44095,
                     "name": "string",
                     "nodeType": "ElementaryTypeName",
-                    "src": "169:6:19",
+                    "src": "169:6:22",
                     "typeDescriptions": {
                       "typeIdentifier": "t_string_storage_ptr",
                       "typeString": "string"
@@ -254,9 +254,9 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "168:24:19"
+              "src": "168:24:22"
             },
-            "scope": 27625,
+            "scope": 44099,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
@@ -269,16 +269,16 @@
         "contractKind": "interface",
         "fullyImplemented": false,
         "linearizedBaseContracts": [
-          27625
+          44099
         ],
         "name": "IJB721TokenUriResolver",
-        "nameLocation": "67:22:19",
-        "scope": 27626,
+        "nameLocation": "67:22:22",
+        "scope": 44100,
         "usedErrors": [],
         "usedEvents": []
       }
     ],
     "license": "MIT"
   },
-  "id": 19
+  "id": 22
 }

@@ -369,25 +369,25 @@
   },
   "ast": {
     "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayDelegate.sol",
-    "id": 29983,
+    "id": 46457,
     "exportedSymbols": {
       "IERC165": [
-        32574
+        49048
       ],
       "IJBPayDelegate": [
-        29982
+        46456
       ],
       "JBDidPayData": [
-        31557
+        48031
       ]
     },
     "nodeType": "SourceUnit",
-    "src": "32:675:49",
+    "src": "32:675:52",
     "nodes": [
       {
-        "id": 29967,
+        "id": 46441,
         "nodeType": "PragmaDirective",
-        "src": "32:23:49",
+        "src": "32:23:52",
         "nodes": [],
         "literals": [
           "solidity",
@@ -397,24 +397,24 @@
         ]
       },
       {
-        "id": 29969,
+        "id": 46443,
         "nodeType": "ImportDirective",
-        "src": "57:80:49",
+        "src": "57:80:52",
         "nodes": [],
         "absolutePath": "node_modules/@openzeppelin/contracts/utils/introspection/IERC165.sol",
         "file": "@openzeppelin/contracts/utils/introspection/IERC165.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 29983,
-        "sourceUnit": 32575,
+        "scope": 46457,
+        "sourceUnit": 49049,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 29968,
+              "id": 46442,
               "name": "IERC165",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 32574,
-              "src": "65:7:49",
+              "referencedDeclaration": 49048,
+              "src": "65:7:52",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -423,24 +423,24 @@
         "unitAlias": ""
       },
       {
-        "id": 29971,
+        "id": 46445,
         "nodeType": "ImportDirective",
-        "src": "138:59:49",
+        "src": "138:59:52",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidPayData.sol",
         "file": "./../structs/JBDidPayData.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 29983,
-        "sourceUnit": 31558,
+        "scope": 46457,
+        "sourceUnit": 48032,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 29970,
+              "id": 46444,
               "name": "JBDidPayData",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 31557,
-              "src": "146:12:49",
+              "referencedDeclaration": 48031,
+              "src": "146:12:52",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -449,19 +449,19 @@
         "unitAlias": ""
       },
       {
-        "id": 29982,
+        "id": 46456,
         "nodeType": "ContractDefinition",
-        "src": "337:369:49",
+        "src": "337:369:52",
         "nodes": [
           {
-            "id": 29981,
+            "id": 46455,
             "nodeType": "FunctionDefinition",
-            "src": "643:61:49",
+            "src": "643:61:52",
             "nodes": [],
             "documentation": {
-              "id": 29975,
+              "id": 46449,
               "nodeType": "StructuredDocumentation",
-              "src": "377:263:49",
+              "src": "377:263:52",
               "text": "@notice This function is called by JBPaymentTerminal.pay(..), after the execution of its logic\n @dev Critical business logic should be protected by an appropriate access control\n @param data the data passed by the terminal, as a JBDidPayData struct:"
             },
             "functionSelector": "da9ee8b7",
@@ -469,58 +469,58 @@
             "kind": "function",
             "modifiers": [],
             "name": "didPay",
-            "nameLocation": "652:6:49",
+            "nameLocation": "652:6:52",
             "parameters": {
-              "id": 29979,
+              "id": 46453,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 29978,
+                  "id": 46452,
                   "mutability": "mutable",
                   "name": "data",
-                  "nameLocation": "681:4:49",
+                  "nameLocation": "681:4:52",
                   "nodeType": "VariableDeclaration",
-                  "scope": 29981,
-                  "src": "659:26:49",
+                  "scope": 46455,
+                  "src": "659:26:52",
                   "stateVariable": false,
                   "storageLocation": "calldata",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_struct$_JBDidPayData_$31557_calldata_ptr",
+                    "typeIdentifier": "t_struct$_JBDidPayData_$48031_calldata_ptr",
                     "typeString": "struct JBDidPayData"
                   },
                   "typeName": {
-                    "id": 29977,
+                    "id": 46451,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 29976,
+                      "id": 46450,
                       "name": "JBDidPayData",
                       "nameLocations": [
-                        "659:12:49"
+                        "659:12:52"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 31557,
-                      "src": "659:12:49"
+                      "referencedDeclaration": 48031,
+                      "src": "659:12:52"
                     },
-                    "referencedDeclaration": 31557,
-                    "src": "659:12:49",
+                    "referencedDeclaration": 48031,
+                    "src": "659:12:52",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_struct$_JBDidPayData_$31557_storage_ptr",
+                      "typeIdentifier": "t_struct$_JBDidPayData_$48031_storage_ptr",
                       "typeString": "struct JBDidPayData"
                     }
                   },
                   "visibility": "internal"
                 }
               ],
-              "src": "658:28:49"
+              "src": "658:28:52"
             },
             "returnParameters": {
-              "id": 29980,
+              "id": 46454,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "703:0:49"
+              "src": "703:0:52"
             },
-            "scope": 29982,
+            "scope": 46456,
             "stateMutability": "payable",
             "virtual": false,
             "visibility": "external"
@@ -530,42 +530,42 @@
         "baseContracts": [
           {
             "baseName": {
-              "id": 29973,
+              "id": 46447,
               "name": "IERC165",
               "nameLocations": [
-                "365:7:49"
+                "365:7:52"
               ],
               "nodeType": "IdentifierPath",
-              "referencedDeclaration": 32574,
-              "src": "365:7:49"
+              "referencedDeclaration": 49048,
+              "src": "365:7:52"
             },
-            "id": 29974,
+            "id": 46448,
             "nodeType": "InheritanceSpecifier",
-            "src": "365:7:49"
+            "src": "365:7:52"
           }
         ],
         "canonicalName": "IJBPayDelegate",
         "contractDependencies": [],
         "contractKind": "interface",
         "documentation": {
-          "id": 29972,
+          "id": 46446,
           "nodeType": "StructuredDocumentation",
-          "src": "199:138:49",
+          "src": "199:138:52",
           "text": "@title Pay delegate\n @notice Delegate called after JBTerminal.pay(..) logic completion (if passed by the funding cycle datasource)"
         },
         "fullyImplemented": false,
         "linearizedBaseContracts": [
-          29982,
-          32574
+          46456,
+          49048
         ],
         "name": "IJBPayDelegate",
-        "nameLocation": "347:14:49",
-        "scope": 29983,
+        "nameLocation": "347:14:52",
+        "scope": 46457,
         "usedErrors": [],
         "usedEvents": []
       }
     ],
     "license": "MIT"
   },
-  "id": 49
+  "id": 52
 }

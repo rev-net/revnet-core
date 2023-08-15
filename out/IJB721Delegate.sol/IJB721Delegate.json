@@ -278,22 +278,22 @@
   },
   "ast": {
     "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/interfaces/IJB721Delegate.sol",
-    "id": 27614,
+    "id": 44088,
     "exportedSymbols": {
       "IJB721Delegate": [
-        27613
+        44087
       ],
       "IJBDirectory": [
-        29621
+        46095
       ]
     },
     "nodeType": "SourceUnit",
-    "src": "32:423:18",
+    "src": "32:423:21",
     "nodes": [
       {
-        "id": 27589,
+        "id": 44063,
         "nodeType": "PragmaDirective",
-        "src": "32:23:18",
+        "src": "32:23:21",
         "nodes": [],
         "literals": [
           "solidity",
@@ -303,24 +303,24 @@
         ]
       },
       {
-        "id": 27591,
+        "id": 44065,
         "nodeType": "ImportDirective",
-        "src": "57:102:18",
+        "src": "57:102:21",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol",
         "file": "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 27614,
-        "sourceUnit": 29622,
+        "scope": 44088,
+        "sourceUnit": 46096,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 27590,
+              "id": 44064,
               "name": "IJBDirectory",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 29621,
-              "src": "66:12:18",
+              "referencedDeclaration": 46095,
+              "src": "66:12:21",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -329,40 +329,40 @@
         "unitAlias": ""
       },
       {
-        "id": 27613,
+        "id": 44087,
         "nodeType": "ContractDefinition",
-        "src": "161:293:18",
+        "src": "161:293:21",
         "nodes": [
           {
-            "id": 27596,
+            "id": 44070,
             "nodeType": "FunctionDefinition",
-            "src": "192:53:18",
+            "src": "192:53:21",
             "nodes": [],
             "functionSelector": "3fafa127",
             "implemented": false,
             "kind": "function",
             "modifiers": [],
             "name": "projectId",
-            "nameLocation": "201:9:18",
+            "nameLocation": "201:9:21",
             "parameters": {
-              "id": 27592,
+              "id": 44066,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "210:2:18"
+              "src": "210:2:21"
             },
             "returnParameters": {
-              "id": 27595,
+              "id": 44069,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 27594,
+                  "id": 44068,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 27596,
-                  "src": "236:7:18",
+                  "scope": 44070,
+                  "src": "236:7:21",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -370,10 +370,10 @@
                     "typeString": "uint256"
                   },
                   "typeName": {
-                    "id": 27593,
+                    "id": 44067,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
-                    "src": "236:7:18",
+                    "src": "236:7:21",
                     "typeDescriptions": {
                       "typeIdentifier": "t_uint256",
                       "typeString": "uint256"
@@ -382,109 +382,109 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "235:9:18"
+              "src": "235:9:21"
             },
-            "scope": 27613,
+            "scope": 44087,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 27602,
+            "id": 44076,
             "nodeType": "FunctionDefinition",
-            "src": "251:58:18",
+            "src": "251:58:21",
             "nodes": [],
             "functionSelector": "c41c2f24",
             "implemented": false,
             "kind": "function",
             "modifiers": [],
             "name": "directory",
-            "nameLocation": "260:9:18",
+            "nameLocation": "260:9:21",
             "parameters": {
-              "id": 27597,
+              "id": 44071,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "269:2:18"
+              "src": "269:2:21"
             },
             "returnParameters": {
-              "id": 27601,
+              "id": 44075,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 27600,
+                  "id": 44074,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 27602,
-                  "src": "295:12:18",
+                  "scope": 44076,
+                  "src": "295:12:21",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_contract$_IJBDirectory_$29621",
+                    "typeIdentifier": "t_contract$_IJBDirectory_$46095",
                     "typeString": "contract IJBDirectory"
                   },
                   "typeName": {
-                    "id": 27599,
+                    "id": 44073,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 27598,
+                      "id": 44072,
                       "name": "IJBDirectory",
                       "nameLocations": [
-                        "295:12:18"
+                        "295:12:21"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 29621,
-                      "src": "295:12:18"
+                      "referencedDeclaration": 46095,
+                      "src": "295:12:21"
                     },
-                    "referencedDeclaration": 29621,
-                    "src": "295:12:18",
+                    "referencedDeclaration": 46095,
+                    "src": "295:12:21",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_contract$_IJBDirectory_$29621",
+                      "typeIdentifier": "t_contract$_IJBDirectory_$46095",
                       "typeString": "contract IJBDirectory"
                     }
                   },
                   "visibility": "internal"
                 }
               ],
-              "src": "294:14:18"
+              "src": "294:14:21"
             },
-            "scope": 27613,
+            "scope": 44087,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 27607,
+            "id": 44081,
             "nodeType": "FunctionDefinition",
-            "src": "315:64:18",
+            "src": "315:64:21",
             "nodes": [],
             "functionSelector": "46a6d981",
             "implemented": false,
             "kind": "function",
             "modifiers": [],
             "name": "payMetadataDelegateId",
-            "nameLocation": "324:21:18",
+            "nameLocation": "324:21:21",
             "parameters": {
-              "id": 27603,
+              "id": 44077,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "345:2:18"
+              "src": "345:2:21"
             },
             "returnParameters": {
-              "id": 27606,
+              "id": 44080,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 27605,
+                  "id": 44079,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 27607,
-                  "src": "371:6:18",
+                  "scope": 44081,
+                  "src": "371:6:21",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -492,10 +492,10 @@
                     "typeString": "bytes4"
                   },
                   "typeName": {
-                    "id": 27604,
+                    "id": 44078,
                     "name": "bytes4",
                     "nodeType": "ElementaryTypeName",
-                    "src": "371:6:18",
+                    "src": "371:6:21",
                     "typeDescriptions": {
                       "typeIdentifier": "t_bytes4",
                       "typeString": "bytes4"
@@ -504,43 +504,43 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "370:8:18"
+              "src": "370:8:21"
             },
-            "scope": 27613,
+            "scope": 44087,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 27612,
+            "id": 44086,
             "nodeType": "FunctionDefinition",
-            "src": "385:67:18",
+            "src": "385:67:21",
             "nodes": [],
             "functionSelector": "4853f5e8",
             "implemented": false,
             "kind": "function",
             "modifiers": [],
             "name": "redeemMetadataDelegateId",
-            "nameLocation": "394:24:18",
+            "nameLocation": "394:24:21",
             "parameters": {
-              "id": 27608,
+              "id": 44082,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "418:2:18"
+              "src": "418:2:21"
             },
             "returnParameters": {
-              "id": 27611,
+              "id": 44085,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 27610,
+                  "id": 44084,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 27612,
-                  "src": "444:6:18",
+                  "scope": 44086,
+                  "src": "444:6:21",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -548,10 +548,10 @@
                     "typeString": "bytes4"
                   },
                   "typeName": {
-                    "id": 27609,
+                    "id": 44083,
                     "name": "bytes4",
                     "nodeType": "ElementaryTypeName",
-                    "src": "444:6:18",
+                    "src": "444:6:21",
                     "typeDescriptions": {
                       "typeIdentifier": "t_bytes4",
                       "typeString": "bytes4"
@@ -560,9 +560,9 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "443:8:18"
+              "src": "443:8:21"
             },
-            "scope": 27613,
+            "scope": 44087,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
@@ -575,16 +575,16 @@
         "contractKind": "interface",
         "fullyImplemented": false,
         "linearizedBaseContracts": [
-          27613
+          44087
         ],
         "name": "IJB721Delegate",
-        "nameLocation": "171:14:18",
-        "scope": 27614,
+        "nameLocation": "171:14:21",
+        "scope": 44088,
         "usedErrors": [],
         "usedEvents": []
       }
     ],
     "license": "MIT"
   },
-  "id": 18
+  "id": 21
 }

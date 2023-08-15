@@ -697,31 +697,31 @@
   },
   "ast": {
     "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721DelegateDeployer.sol",
-    "id": 27897,
+    "id": 44371,
     "exportedSymbols": {
       "IJBDirectory": [
-        29621
+        46095
       ],
       "IJBTiered721Delegate": [
-        27864
+        44338
       ],
       "IJBTiered721DelegateDeployer": [
-        27896
+        44370
       ],
       "JB721GovernanceType": [
-        27587
+        44061
       ],
       "JBDeployTiered721DelegateData": [
-        28322
+        44796
       ]
     },
     "nodeType": "SourceUnit",
-    "src": "32:756:21",
+    "src": "32:756:24",
     "nodes": [
       {
-        "id": 27866,
+        "id": 44340,
         "nodeType": "PragmaDirective",
-        "src": "32:23:21",
+        "src": "32:23:24",
         "nodes": [],
         "literals": [
           "solidity",
@@ -731,24 +731,24 @@
         ]
       },
       {
-        "id": 27868,
+        "id": 44342,
         "nodeType": "ImportDirective",
-        "src": "57:102:21",
+        "src": "57:102:24",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol",
         "file": "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 27897,
-        "sourceUnit": 29622,
+        "scope": 44371,
+        "sourceUnit": 46096,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 27867,
+              "id": 44341,
               "name": "IJBDirectory",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 29621,
-              "src": "66:12:21",
+              "referencedDeclaration": 46095,
+              "src": "66:12:24",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -757,24 +757,24 @@
         "unitAlias": ""
       },
       {
-        "id": 27870,
+        "id": 44344,
         "nodeType": "ImportDirective",
-        "src": "161:71:21",
+        "src": "161:71:24",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/enums/JB721GovernanceType.sol",
         "file": "../enums/JB721GovernanceType.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 27897,
-        "sourceUnit": 27588,
+        "scope": 44371,
+        "sourceUnit": 44062,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 27869,
+              "id": 44343,
               "name": "JB721GovernanceType",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 27587,
-              "src": "170:19:21",
+              "referencedDeclaration": 44061,
+              "src": "170:19:24",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -783,24 +783,24 @@
         "unitAlias": ""
       },
       {
-        "id": 27872,
+        "id": 44346,
         "nodeType": "ImportDirective",
-        "src": "233:93:21",
+        "src": "233:93:24",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/structs/JBDeployTiered721DelegateData.sol",
         "file": "../structs/JBDeployTiered721DelegateData.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 27897,
-        "sourceUnit": 28323,
+        "scope": 44371,
+        "sourceUnit": 44797,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 27871,
+              "id": 44345,
               "name": "JBDeployTiered721DelegateData",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 28322,
-              "src": "242:29:21",
+              "referencedDeclaration": 44796,
+              "src": "242:29:24",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -809,24 +809,24 @@
         "unitAlias": ""
       },
       {
-        "id": 27874,
+        "id": 44348,
         "nodeType": "ImportDirective",
-        "src": "327:66:21",
+        "src": "327:66:24",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721Delegate.sol",
         "file": "./IJBTiered721Delegate.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 27897,
-        "sourceUnit": 27865,
+        "scope": 44371,
+        "sourceUnit": 44339,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 27873,
+              "id": 44347,
               "name": "IJBTiered721Delegate",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 27864,
-              "src": "336:20:21",
+              "referencedDeclaration": 44338,
+              "src": "336:20:24",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -835,33 +835,33 @@
         "unitAlias": ""
       },
       {
-        "id": 27896,
+        "id": 44370,
         "nodeType": "ContractDefinition",
-        "src": "395:392:21",
+        "src": "395:392:24",
         "nodes": [
           {
-            "id": 27884,
+            "id": 44358,
             "nodeType": "EventDefinition",
-            "src": "440:150:21",
+            "src": "440:150:24",
             "nodes": [],
             "anonymous": false,
             "eventSelector": "a1dcc57d57a99af26e68a9d0181c52742fdf009c0bbe62ed6a635c312b2ec2f5",
             "name": "DelegateDeployed",
-            "nameLocation": "446:16:21",
+            "nameLocation": "446:16:24",
             "parameters": {
-              "id": 27883,
+              "id": 44357,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 27876,
+                  "id": 44350,
                   "indexed": true,
                   "mutability": "mutable",
                   "name": "projectId",
-                  "nameLocation": "488:9:21",
+                  "nameLocation": "488:9:24",
                   "nodeType": "VariableDeclaration",
-                  "scope": 27884,
-                  "src": "472:25:21",
+                  "scope": 44358,
+                  "src": "472:25:24",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -869,10 +869,10 @@
                     "typeString": "uint256"
                   },
                   "typeName": {
-                    "id": 27875,
+                    "id": 44349,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
-                    "src": "472:7:21",
+                    "src": "472:7:24",
                     "typeDescriptions": {
                       "typeIdentifier": "t_uint256",
                       "typeString": "uint256"
@@ -882,37 +882,37 @@
                 },
                 {
                   "constant": false,
-                  "id": 27879,
+                  "id": 44353,
                   "indexed": false,
                   "mutability": "mutable",
                   "name": "newDelegate",
-                  "nameLocation": "528:11:21",
+                  "nameLocation": "528:11:24",
                   "nodeType": "VariableDeclaration",
-                  "scope": 27884,
-                  "src": "507:32:21",
+                  "scope": 44358,
+                  "src": "507:32:24",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_contract$_IJBTiered721Delegate_$27864",
+                    "typeIdentifier": "t_contract$_IJBTiered721Delegate_$44338",
                     "typeString": "contract IJBTiered721Delegate"
                   },
                   "typeName": {
-                    "id": 27878,
+                    "id": 44352,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 27877,
+                      "id": 44351,
                       "name": "IJBTiered721Delegate",
                       "nameLocations": [
-                        "507:20:21"
+                        "507:20:24"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 27864,
-                      "src": "507:20:21"
+                      "referencedDeclaration": 44338,
+                      "src": "507:20:24"
                     },
-                    "referencedDeclaration": 27864,
-                    "src": "507:20:21",
+                    "referencedDeclaration": 44338,
+                    "src": "507:20:24",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_contract$_IJBTiered721Delegate_$27864",
+                      "typeIdentifier": "t_contract$_IJBTiered721Delegate_$44338",
                       "typeString": "contract IJBTiered721Delegate"
                     }
                   },
@@ -920,70 +920,70 @@
                 },
                 {
                   "constant": false,
-                  "id": 27882,
+                  "id": 44356,
                   "indexed": false,
                   "mutability": "mutable",
                   "name": "governanceType",
-                  "nameLocation": "569:14:21",
+                  "nameLocation": "569:14:24",
                   "nodeType": "VariableDeclaration",
-                  "scope": 27884,
-                  "src": "549:34:21",
+                  "scope": 44358,
+                  "src": "549:34:24",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_enum$_JB721GovernanceType_$27587",
+                    "typeIdentifier": "t_enum$_JB721GovernanceType_$44061",
                     "typeString": "enum JB721GovernanceType"
                   },
                   "typeName": {
-                    "id": 27881,
+                    "id": 44355,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 27880,
+                      "id": 44354,
                       "name": "JB721GovernanceType",
                       "nameLocations": [
-                        "549:19:21"
+                        "549:19:24"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 27587,
-                      "src": "549:19:21"
+                      "referencedDeclaration": 44061,
+                      "src": "549:19:24"
                     },
-                    "referencedDeclaration": 27587,
-                    "src": "549:19:21",
+                    "referencedDeclaration": 44061,
+                    "src": "549:19:24",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_enum$_JB721GovernanceType_$27587",
+                      "typeIdentifier": "t_enum$_JB721GovernanceType_$44061",
                       "typeString": "enum JB721GovernanceType"
                     }
                   },
                   "visibility": "internal"
                 }
               ],
-              "src": "462:127:21"
+              "src": "462:127:24"
             }
           },
           {
-            "id": 27895,
+            "id": 44369,
             "nodeType": "FunctionDefinition",
-            "src": "596:189:21",
+            "src": "596:189:24",
             "nodes": [],
             "functionSelector": "70d7f249",
             "implemented": false,
             "kind": "function",
             "modifiers": [],
             "name": "deployDelegateFor",
-            "nameLocation": "605:17:21",
+            "nameLocation": "605:17:24",
             "parameters": {
-              "id": 27890,
+              "id": 44364,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 27886,
+                  "id": 44360,
                   "mutability": "mutable",
                   "name": "projectId",
-                  "nameLocation": "640:9:21",
+                  "nameLocation": "640:9:24",
                   "nodeType": "VariableDeclaration",
-                  "scope": 27895,
-                  "src": "632:17:21",
+                  "scope": 44369,
+                  "src": "632:17:24",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -991,10 +991,10 @@
                     "typeString": "uint256"
                   },
                   "typeName": {
-                    "id": 27885,
+                    "id": 44359,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
-                    "src": "632:7:21",
+                    "src": "632:7:24",
                     "typeDescriptions": {
                       "typeIdentifier": "t_uint256",
                       "typeString": "uint256"
@@ -1004,89 +1004,89 @@
                 },
                 {
                   "constant": false,
-                  "id": 27889,
+                  "id": 44363,
                   "mutability": "mutable",
                   "name": "deployTieredNFTRewardDelegateData",
-                  "nameLocation": "696:33:21",
+                  "nameLocation": "696:33:24",
                   "nodeType": "VariableDeclaration",
-                  "scope": 27895,
-                  "src": "659:70:21",
+                  "scope": 44369,
+                  "src": "659:70:24",
                   "stateVariable": false,
                   "storageLocation": "memory",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_struct$_JBDeployTiered721DelegateData_$28322_memory_ptr",
+                    "typeIdentifier": "t_struct$_JBDeployTiered721DelegateData_$44796_memory_ptr",
                     "typeString": "struct JBDeployTiered721DelegateData"
                   },
                   "typeName": {
-                    "id": 27888,
+                    "id": 44362,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 27887,
+                      "id": 44361,
                       "name": "JBDeployTiered721DelegateData",
                       "nameLocations": [
-                        "659:29:21"
+                        "659:29:24"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 28322,
-                      "src": "659:29:21"
+                      "referencedDeclaration": 44796,
+                      "src": "659:29:24"
                     },
-                    "referencedDeclaration": 28322,
-                    "src": "659:29:21",
+                    "referencedDeclaration": 44796,
+                    "src": "659:29:24",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_struct$_JBDeployTiered721DelegateData_$28322_storage_ptr",
+                      "typeIdentifier": "t_struct$_JBDeployTiered721DelegateData_$44796_storage_ptr",
                       "typeString": "struct JBDeployTiered721DelegateData"
                     }
                   },
                   "visibility": "internal"
                 }
               ],
-              "src": "622:113:21"
+              "src": "622:113:24"
             },
             "returnParameters": {
-              "id": 27894,
+              "id": 44368,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 27893,
+                  "id": 44367,
                   "mutability": "mutable",
                   "name": "delegate",
-                  "nameLocation": "775:8:21",
+                  "nameLocation": "775:8:24",
                   "nodeType": "VariableDeclaration",
-                  "scope": 27895,
-                  "src": "754:29:21",
+                  "scope": 44369,
+                  "src": "754:29:24",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_contract$_IJBTiered721Delegate_$27864",
+                    "typeIdentifier": "t_contract$_IJBTiered721Delegate_$44338",
                     "typeString": "contract IJBTiered721Delegate"
                   },
                   "typeName": {
-                    "id": 27892,
+                    "id": 44366,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 27891,
+                      "id": 44365,
                       "name": "IJBTiered721Delegate",
                       "nameLocations": [
-                        "754:20:21"
+                        "754:20:24"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 27864,
-                      "src": "754:20:21"
+                      "referencedDeclaration": 44338,
+                      "src": "754:20:24"
                     },
-                    "referencedDeclaration": 27864,
-                    "src": "754:20:21",
+                    "referencedDeclaration": 44338,
+                    "src": "754:20:24",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_contract$_IJBTiered721Delegate_$27864",
+                      "typeIdentifier": "t_contract$_IJBTiered721Delegate_$44338",
                       "typeString": "contract IJBTiered721Delegate"
                     }
                   },
                   "visibility": "internal"
                 }
               ],
-              "src": "753:31:21"
+              "src": "753:31:24"
             },
-            "scope": 27896,
+            "scope": 44370,
             "stateMutability": "nonpayable",
             "virtual": false,
             "visibility": "external"
@@ -1099,18 +1099,18 @@
         "contractKind": "interface",
         "fullyImplemented": false,
         "linearizedBaseContracts": [
-          27896
+          44370
         ],
         "name": "IJBTiered721DelegateDeployer",
-        "nameLocation": "405:28:21",
-        "scope": 27897,
+        "nameLocation": "405:28:24",
+        "scope": 44371,
         "usedErrors": [],
         "usedEvents": [
-          27884
+          44358
         ]
       }
     ],
     "license": "MIT"
   },
-  "id": 21
+  "id": 24
 }

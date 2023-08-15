@@ -4107,37 +4107,37 @@
   },
   "ast": {
     "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayoutRedemptionPaymentTerminal3_1_1.sol",
-    "id": 30835,
+    "id": 47309,
     "exportedSymbols": {
       "IJBPayDelegate3_1_1": [
-        29999
+        46473
       ],
       "IJBPayoutRedemptionPaymentTerminal3_1": [
-        30791
+        47265
       ],
       "IJBPayoutRedemptionPaymentTerminal3_1_1": [
-        30834
+        47308
       ],
       "IJBRedemptionDelegate3_1_1": [
-        31045
+        47519
       ],
       "JBDidPayData3_1_1": [
-        31587
+        48061
       ],
       "JBDidRedeemData3_1_1": [
-        31641
+        48115
       ],
       "JBFee": [
-        31653
+        48127
       ]
     },
     "nodeType": "SourceUnit",
-    "src": "32:877:54",
+    "src": "32:877:57",
     "nodes": [
       {
-        "id": 30793,
+        "id": 47267,
         "nodeType": "PragmaDirective",
-        "src": "32:23:54",
+        "src": "32:23:57",
         "nodes": [],
         "literals": [
           "solidity",
@@ -4147,24 +4147,24 @@
         ]
       },
       {
-        "id": 30795,
+        "id": 47269,
         "nodeType": "ImportDirective",
-        "src": "57:45:54",
+        "src": "57:45:57",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBFee.sol",
         "file": "./../structs/JBFee.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 30835,
-        "sourceUnit": 31654,
+        "scope": 47309,
+        "sourceUnit": 48128,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 30794,
+              "id": 47268,
               "name": "JBFee",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 31653,
-              "src": "65:5:54",
+              "referencedDeclaration": 48127,
+              "src": "65:5:57",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -4173,24 +4173,24 @@
         "unitAlias": ""
       },
       {
-        "id": 30797,
+        "id": 47271,
         "nodeType": "ImportDirective",
-        "src": "103:75:54",
+        "src": "103:75:57",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidRedeemData3_1_1.sol",
         "file": "./../structs/JBDidRedeemData3_1_1.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 30835,
-        "sourceUnit": 31642,
+        "scope": 47309,
+        "sourceUnit": 48116,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 30796,
+              "id": 47270,
               "name": "JBDidRedeemData3_1_1",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 31641,
-              "src": "111:20:54",
+              "referencedDeclaration": 48115,
+              "src": "111:20:57",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -4199,24 +4199,24 @@
         "unitAlias": ""
       },
       {
-        "id": 30799,
+        "id": 47273,
         "nodeType": "ImportDirective",
-        "src": "179:69:54",
+        "src": "179:69:57",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidPayData3_1_1.sol",
         "file": "./../structs/JBDidPayData3_1_1.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 30835,
-        "sourceUnit": 31588,
+        "scope": 47309,
+        "sourceUnit": 48062,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 30798,
+              "id": 47272,
               "name": "JBDidPayData3_1_1",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 31587,
-              "src": "187:17:54",
+              "referencedDeclaration": 48061,
+              "src": "187:17:57",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -4225,24 +4225,24 @@
         "unitAlias": ""
       },
       {
-        "id": 30801,
+        "id": 47275,
         "nodeType": "ImportDirective",
-        "src": "249:62:54",
+        "src": "249:62:57",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayDelegate3_1_1.sol",
         "file": "./IJBPayDelegate3_1_1.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 30835,
-        "sourceUnit": 30000,
+        "scope": 47309,
+        "sourceUnit": 46474,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 30800,
+              "id": 47274,
               "name": "IJBPayDelegate3_1_1",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 29999,
-              "src": "257:19:54",
+              "referencedDeclaration": 46473,
+              "src": "257:19:57",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -4251,24 +4251,24 @@
         "unitAlias": ""
       },
       {
-        "id": 30803,
+        "id": 47277,
         "nodeType": "ImportDirective",
-        "src": "312:76:54",
+        "src": "312:76:57",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBRedemptionDelegate3_1_1.sol",
         "file": "./IJBRedemptionDelegate3_1_1.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 30835,
-        "sourceUnit": 31046,
+        "scope": 47309,
+        "sourceUnit": 47520,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 30802,
+              "id": 47276,
               "name": "IJBRedemptionDelegate3_1_1",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 31045,
-              "src": "320:26:54",
+              "referencedDeclaration": 47519,
+              "src": "320:26:57",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -4277,24 +4277,24 @@
         "unitAlias": ""
       },
       {
-        "id": 30805,
+        "id": 47279,
         "nodeType": "ImportDirective",
-        "src": "389:98:54",
+        "src": "389:98:57",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayoutRedemptionPaymentTerminal3_1.sol",
         "file": "./IJBPayoutRedemptionPaymentTerminal3_1.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 30835,
-        "sourceUnit": 30792,
+        "scope": 47309,
+        "sourceUnit": 47266,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 30804,
+              "id": 47278,
               "name": "IJBPayoutRedemptionPaymentTerminal3_1",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 30791,
-              "src": "397:37:54",
+              "referencedDeclaration": 47265,
+              "src": "397:37:57",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -4303,56 +4303,56 @@
         "unitAlias": ""
       },
       {
-        "id": 30834,
+        "id": 47308,
         "nodeType": "ContractDefinition",
-        "src": "489:419:54",
+        "src": "489:419:57",
         "nodes": [
           {
-            "id": 30821,
+            "id": 47295,
             "nodeType": "EventDefinition",
-            "src": "584:174:54",
+            "src": "584:174:57",
             "nodes": [],
             "anonymous": false,
             "eventSelector": "6596068545b2541b0aff5579d91f991d0fe5957df8e2082483ef361953e1f997",
             "name": "DelegateDidRedeem",
-            "nameLocation": "590:17:54",
+            "nameLocation": "590:17:57",
             "parameters": {
-              "id": 30820,
+              "id": 47294,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 30810,
+                  "id": 47284,
                   "indexed": true,
                   "mutability": "mutable",
                   "name": "delegate",
-                  "nameLocation": "648:8:54",
+                  "nameLocation": "648:8:57",
                   "nodeType": "VariableDeclaration",
-                  "scope": 30821,
-                  "src": "613:43:54",
+                  "scope": 47295,
+                  "src": "613:43:57",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_contract$_IJBRedemptionDelegate3_1_1_$31045",
+                    "typeIdentifier": "t_contract$_IJBRedemptionDelegate3_1_1_$47519",
                     "typeString": "contract IJBRedemptionDelegate3_1_1"
                   },
                   "typeName": {
-                    "id": 30809,
+                    "id": 47283,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 30808,
+                      "id": 47282,
                       "name": "IJBRedemptionDelegate3_1_1",
                       "nameLocations": [
-                        "613:26:54"
+                        "613:26:57"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 31045,
-                      "src": "613:26:54"
+                      "referencedDeclaration": 47519,
+                      "src": "613:26:57"
                     },
-                    "referencedDeclaration": 31045,
-                    "src": "613:26:54",
+                    "referencedDeclaration": 47519,
+                    "src": "613:26:57",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_contract$_IJBRedemptionDelegate3_1_1_$31045",
+                      "typeIdentifier": "t_contract$_IJBRedemptionDelegate3_1_1_$47519",
                       "typeString": "contract IJBRedemptionDelegate3_1_1"
                     }
                   },
@@ -4360,37 +4360,37 @@
                 },
                 {
                   "constant": false,
-                  "id": 30813,
+                  "id": 47287,
                   "indexed": false,
                   "mutability": "mutable",
                   "name": "data",
-                  "nameLocation": "683:4:54",
+                  "nameLocation": "683:4:57",
                   "nodeType": "VariableDeclaration",
-                  "scope": 30821,
-                  "src": "662:25:54",
+                  "scope": 47295,
+                  "src": "662:25:57",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_struct$_JBDidRedeemData3_1_1_$31641_memory_ptr",
+                    "typeIdentifier": "t_struct$_JBDidRedeemData3_1_1_$48115_memory_ptr",
                     "typeString": "struct JBDidRedeemData3_1_1"
                   },
                   "typeName": {
-                    "id": 30812,
+                    "id": 47286,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 30811,
+                      "id": 47285,
                       "name": "JBDidRedeemData3_1_1",
                       "nameLocations": [
-                        "662:20:54"
+                        "662:20:57"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 31641,
-                      "src": "662:20:54"
+                      "referencedDeclaration": 48115,
+                      "src": "662:20:57"
                     },
-                    "referencedDeclaration": 31641,
-                    "src": "662:20:54",
+                    "referencedDeclaration": 48115,
+                    "src": "662:20:57",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_struct$_JBDidRedeemData3_1_1_$31641_storage_ptr",
+                      "typeIdentifier": "t_struct$_JBDidRedeemData3_1_1_$48115_storage_ptr",
                       "typeString": "struct JBDidRedeemData3_1_1"
                     }
                   },
@@ -4398,14 +4398,14 @@
                 },
                 {
                   "constant": false,
-                  "id": 30815,
+                  "id": 47289,
                   "indexed": false,
                   "mutability": "mutable",
                   "name": "delegatedAmount",
-                  "nameLocation": "701:15:54",
+                  "nameLocation": "701:15:57",
                   "nodeType": "VariableDeclaration",
-                  "scope": 30821,
-                  "src": "693:23:54",
+                  "scope": 47295,
+                  "src": "693:23:57",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -4413,10 +4413,10 @@
                     "typeString": "uint256"
                   },
                   "typeName": {
-                    "id": 30814,
+                    "id": 47288,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
-                    "src": "693:7:54",
+                    "src": "693:7:57",
                     "typeDescriptions": {
                       "typeIdentifier": "t_uint256",
                       "typeString": "uint256"
@@ -4426,14 +4426,14 @@
                 },
                 {
                   "constant": false,
-                  "id": 30817,
+                  "id": 47291,
                   "indexed": false,
                   "mutability": "mutable",
                   "name": "fee",
-                  "nameLocation": "730:3:54",
+                  "nameLocation": "730:3:57",
                   "nodeType": "VariableDeclaration",
-                  "scope": 30821,
-                  "src": "722:11:54",
+                  "scope": 47295,
+                  "src": "722:11:57",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -4441,10 +4441,10 @@
                     "typeString": "uint256"
                   },
                   "typeName": {
-                    "id": 30816,
+                    "id": 47290,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
-                    "src": "722:7:54",
+                    "src": "722:7:57",
                     "typeDescriptions": {
                       "typeIdentifier": "t_uint256",
                       "typeString": "uint256"
@@ -4454,14 +4454,14 @@
                 },
                 {
                   "constant": false,
-                  "id": 30819,
+                  "id": 47293,
                   "indexed": false,
                   "mutability": "mutable",
                   "name": "caller",
-                  "nameLocation": "747:6:54",
+                  "nameLocation": "747:6:57",
                   "nodeType": "VariableDeclaration",
-                  "scope": 30821,
-                  "src": "739:14:54",
+                  "scope": 47295,
+                  "src": "739:14:57",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -4469,10 +4469,10 @@
                     "typeString": "address"
                   },
                   "typeName": {
-                    "id": 30818,
+                    "id": 47292,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
-                    "src": "739:7:54",
+                    "src": "739:7:57",
                     "stateMutability": "nonpayable",
                     "typeDescriptions": {
                       "typeIdentifier": "t_address",
@@ -4482,55 +4482,55 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "607:150:54"
+              "src": "607:150:57"
             }
           },
           {
-            "id": 30833,
+            "id": 47307,
             "nodeType": "EventDefinition",
-            "src": "762:144:54",
+            "src": "762:144:57",
             "nodes": [],
             "anonymous": false,
             "eventSelector": "232bbbe420e7bac6f941dc82678daec2b4c712378d91e864b69aab6e26cdd424",
             "name": "DelegateDidPay",
-            "nameLocation": "768:14:54",
+            "nameLocation": "768:14:57",
             "parameters": {
-              "id": 30832,
+              "id": 47306,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 30824,
+                  "id": 47298,
                   "indexed": true,
                   "mutability": "mutable",
                   "name": "delegate",
-                  "nameLocation": "816:8:54",
+                  "nameLocation": "816:8:57",
                   "nodeType": "VariableDeclaration",
-                  "scope": 30833,
-                  "src": "788:36:54",
+                  "scope": 47307,
+                  "src": "788:36:57",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_contract$_IJBPayDelegate3_1_1_$29999",
+                    "typeIdentifier": "t_contract$_IJBPayDelegate3_1_1_$46473",
                     "typeString": "contract IJBPayDelegate3_1_1"
                   },
                   "typeName": {
-                    "id": 30823,
+                    "id": 47297,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 30822,
+                      "id": 47296,
                       "name": "IJBPayDelegate3_1_1",
                       "nameLocations": [
-                        "788:19:54"
+                        "788:19:57"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 29999,
-                      "src": "788:19:54"
+                      "referencedDeclaration": 46473,
+                      "src": "788:19:57"
                     },
-                    "referencedDeclaration": 29999,
-                    "src": "788:19:54",
+                    "referencedDeclaration": 46473,
+                    "src": "788:19:57",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_contract$_IJBPayDelegate3_1_1_$29999",
+                      "typeIdentifier": "t_contract$_IJBPayDelegate3_1_1_$46473",
                       "typeString": "contract IJBPayDelegate3_1_1"
                     }
                   },
@@ -4538,37 +4538,37 @@
                 },
                 {
                   "constant": false,
-                  "id": 30827,
+                  "id": 47301,
                   "indexed": false,
                   "mutability": "mutable",
                   "name": "data",
-                  "nameLocation": "848:4:54",
+                  "nameLocation": "848:4:57",
                   "nodeType": "VariableDeclaration",
-                  "scope": 30833,
-                  "src": "830:22:54",
+                  "scope": 47307,
+                  "src": "830:22:57",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_struct$_JBDidPayData3_1_1_$31587_memory_ptr",
+                    "typeIdentifier": "t_struct$_JBDidPayData3_1_1_$48061_memory_ptr",
                     "typeString": "struct JBDidPayData3_1_1"
                   },
                   "typeName": {
-                    "id": 30826,
+                    "id": 47300,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 30825,
+                      "id": 47299,
                       "name": "JBDidPayData3_1_1",
                       "nameLocations": [
-                        "830:17:54"
+                        "830:17:57"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 31587,
-                      "src": "830:17:54"
+                      "referencedDeclaration": 48061,
+                      "src": "830:17:57"
                     },
-                    "referencedDeclaration": 31587,
-                    "src": "830:17:54",
+                    "referencedDeclaration": 48061,
+                    "src": "830:17:57",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_struct$_JBDidPayData3_1_1_$31587_storage_ptr",
+                      "typeIdentifier": "t_struct$_JBDidPayData3_1_1_$48061_storage_ptr",
                       "typeString": "struct JBDidPayData3_1_1"
                     }
                   },
@@ -4576,14 +4576,14 @@
                 },
                 {
                   "constant": false,
-                  "id": 30829,
+                  "id": 47303,
                   "indexed": false,
                   "mutability": "mutable",
                   "name": "delegatedAmount",
-                  "nameLocation": "866:15:54",
+                  "nameLocation": "866:15:57",
                   "nodeType": "VariableDeclaration",
-                  "scope": 30833,
-                  "src": "858:23:54",
+                  "scope": 47307,
+                  "src": "858:23:57",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -4591,10 +4591,10 @@
                     "typeString": "uint256"
                   },
                   "typeName": {
-                    "id": 30828,
+                    "id": 47302,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
-                    "src": "858:7:54",
+                    "src": "858:7:57",
                     "typeDescriptions": {
                       "typeIdentifier": "t_uint256",
                       "typeString": "uint256"
@@ -4604,14 +4604,14 @@
                 },
                 {
                   "constant": false,
-                  "id": 30831,
+                  "id": 47305,
                   "indexed": false,
                   "mutability": "mutable",
                   "name": "caller",
-                  "nameLocation": "895:6:54",
+                  "nameLocation": "895:6:57",
                   "nodeType": "VariableDeclaration",
-                  "scope": 30833,
-                  "src": "887:14:54",
+                  "scope": 47307,
+                  "src": "887:14:57",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -4619,10 +4619,10 @@
                     "typeString": "address"
                   },
                   "typeName": {
-                    "id": 30830,
+                    "id": 47304,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
-                    "src": "887:7:54",
+                    "src": "887:7:57",
                     "stateMutability": "nonpayable",
                     "typeDescriptions": {
                       "typeIdentifier": "t_address",
@@ -4632,7 +4632,7 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "782:123:54"
+              "src": "782:123:57"
             }
           }
         ],
@@ -4640,18 +4640,18 @@
         "baseContracts": [
           {
             "baseName": {
-              "id": 30806,
+              "id": 47280,
               "name": "IJBPayoutRedemptionPaymentTerminal3_1",
               "nameLocations": [
-                "542:37:54"
+                "542:37:57"
               ],
               "nodeType": "IdentifierPath",
-              "referencedDeclaration": 30791,
-              "src": "542:37:54"
+              "referencedDeclaration": 47265,
+              "src": "542:37:57"
             },
-            "id": 30807,
+            "id": 47281,
             "nodeType": "InheritanceSpecifier",
-            "src": "542:37:54"
+            "src": "542:37:57"
           }
         ],
         "canonicalName": "IJBPayoutRedemptionPaymentTerminal3_1_1",
@@ -4659,43 +4659,43 @@
         "contractKind": "interface",
         "fullyImplemented": false,
         "linearizedBaseContracts": [
-          30834,
-          30791,
-          29639,
-          31069,
-          28658,
-          30874,
-          30070,
-          32574
+          47308,
+          47265,
+          46113,
+          47543,
+          45132,
+          47348,
+          46544,
+          49048
         ],
         "name": "IJBPayoutRedemptionPaymentTerminal3_1_1",
-        "nameLocation": "499:39:54",
-        "scope": 30835,
+        "nameLocation": "499:39:57",
+        "scope": 47309,
         "usedErrors": [],
         "usedEvents": [
-          30470,
-          30481,
-          30503,
-          30525,
-          30539,
-          30551,
-          30563,
-          30585,
-          30597,
-          30619,
-          30631,
-          30648,
-          30654,
-          30660,
-          30668,
-          30681,
-          30693,
-          30821,
-          30833
+          46944,
+          46955,
+          46977,
+          46999,
+          47013,
+          47025,
+          47037,
+          47059,
+          47071,
+          47093,
+          47105,
+          47122,
+          47128,
+          47134,
+          47142,
+          47155,
+          47167,
+          47295,
+          47307
         ]
       }
     ],
     "license": "MIT"
   },
-  "id": 54
+  "id": 57
 }

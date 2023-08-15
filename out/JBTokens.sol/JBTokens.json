@@ -16,12 +16,12 @@
   ],
   "bytecode": {
     "object": "0x609f610038600b82828239805160001a607314602b57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe730000000000000000000000000000000000000000301460806040526004361060335760003560e01c80638322fff2146038575b600080fd5b604061eeee81565b60405173ffffffffffffffffffffffffffffffffffffffff909116815260200160405180910390f3fea2646970667358221220b37b160c7d0e632855ae79943256fd644825090c2939e32066869f096ca0232164736f6c63430008150033",
-    "sourceMap": "57:215:71:-:0;;;;;;;;;;;;;;;-1:-1:-1;;;57:215:71;;;;;;;;;;;;;;;;;",
+    "sourceMap": "57:215:74:-:0;;;;;;;;;;;;;;;-1:-1:-1;;;57:215:74;;;;;;;;;;;;;;;;;",
     "linkReferences": {}
   },
   "deployedBytecode": {
     "object": "0x730000000000000000000000000000000000000000301460806040526004361060335760003560e01c80638322fff2146038575b600080fd5b604061eeee81565b60405173ffffffffffffffffffffffffffffffffffffffff909116815260200160405180910390f3fea2646970667358221220b37b160c7d0e632855ae79943256fd644825090c2939e32066869f096ca0232164736f6c63430008150033",
-    "sourceMap": "57:215:71:-:0;;;;;;;;;;;;;;;;;;;;;;;;188:81;;226:42;188:81;;;;;198:42:114;186:55;;;168:74;;156:2;141:18;188:81:71;;;;;;",
+    "sourceMap": "57:215:74:-:0;;;;;;;;;;;;;;;;;;;;;;;;188:81;;226:42;188:81;;;;;198:42:117;186:55;;;168:74;;156:2;141:18;188:81:74;;;;;;",
     "linkReferences": {}
   },
   "methodIdentifiers": {
@@ -105,19 +105,19 @@
   },
   "ast": {
     "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/libraries/JBTokens.sol",
-    "id": 31530,
+    "id": 48004,
     "exportedSymbols": {
       "JBTokens": [
-        31529
+        48003
       ]
     },
     "nodeType": "SourceUnit",
-    "src": "32:241:71",
+    "src": "32:241:74",
     "nodes": [
       {
-        "id": 31521,
+        "id": 47995,
         "nodeType": "PragmaDirective",
-        "src": "32:23:71",
+        "src": "32:23:74",
         "nodes": [],
         "literals": [
           "solidity",
@@ -127,27 +127,27 @@
         ]
       },
       {
-        "id": 31529,
+        "id": 48003,
         "nodeType": "ContractDefinition",
-        "src": "57:215:71",
+        "src": "57:215:74",
         "nodes": [
           {
-            "id": 31528,
+            "id": 48002,
             "nodeType": "VariableDeclaration",
-            "src": "188:81:71",
+            "src": "188:81:74",
             "nodes": [],
             "constant": true,
             "documentation": {
-              "id": 31522,
+              "id": 47996,
               "nodeType": "StructuredDocumentation",
-              "src": "78:107:71",
+              "src": "78:107:74",
               "text": "@notice The ETH token address in Juicebox is represented by 0x000000000000000000000000000000000000EEEe."
             },
             "functionSelector": "8322fff2",
             "mutability": "constant",
             "name": "ETH",
-            "nameLocation": "212:3:71",
-            "scope": 31529,
+            "nameLocation": "212:3:74",
+            "scope": 48003,
             "stateVariable": true,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -155,10 +155,10 @@
               "typeString": "address"
             },
             "typeName": {
-              "id": 31523,
+              "id": 47997,
               "name": "address",
               "nodeType": "ElementaryTypeName",
-              "src": "188:7:71",
+              "src": "188:7:74",
               "stateMutability": "nonpayable",
               "typeDescriptions": {
                 "typeIdentifier": "t_address",
@@ -169,14 +169,14 @@
               "arguments": [
                 {
                   "hexValue": "307830303030303030303030303030303030303030303030303030303030303030303030303045454565",
-                  "id": 31526,
+                  "id": 48000,
                   "isConstant": false,
                   "isLValue": false,
                   "isPure": true,
                   "kind": "number",
                   "lValueRequested": false,
                   "nodeType": "Literal",
-                  "src": "226:42:71",
+                  "src": "226:42:74",
                   "typeDescriptions": {
                     "typeIdentifier": "t_address",
                     "typeString": "address"
@@ -191,26 +191,26 @@
                     "typeString": "address"
                   }
                 ],
-                "id": 31525,
+                "id": 47999,
                 "isConstant": false,
                 "isLValue": false,
                 "isPure": true,
                 "lValueRequested": false,
                 "nodeType": "ElementaryTypeNameExpression",
-                "src": "218:7:71",
+                "src": "218:7:74",
                 "typeDescriptions": {
                   "typeIdentifier": "t_type$_t_address_$",
                   "typeString": "type(address)"
                 },
                 "typeName": {
-                  "id": 31524,
+                  "id": 47998,
                   "name": "address",
                   "nodeType": "ElementaryTypeName",
-                  "src": "218:7:71",
+                  "src": "218:7:74",
                   "typeDescriptions": {}
                 }
               },
-              "id": 31527,
+              "id": 48001,
               "isConstant": false,
               "isLValue": false,
               "isPure": true,
@@ -219,7 +219,7 @@
               "nameLocations": [],
               "names": [],
               "nodeType": "FunctionCall",
-              "src": "218:51:71",
+              "src": "218:51:74",
               "tryCall": false,
               "typeDescriptions": {
                 "typeIdentifier": "t_address",
@@ -236,16 +236,16 @@
         "contractKind": "library",
         "fullyImplemented": true,
         "linearizedBaseContracts": [
-          31529
+          48003
         ],
         "name": "JBTokens",
-        "nameLocation": "65:8:71",
-        "scope": 31530,
+        "nameLocation": "65:8:74",
+        "scope": 48004,
         "usedErrors": [],
         "usedEvents": []
       }
     ],
     "license": "MIT"
   },
-  "id": 71
+  "id": 74
 }

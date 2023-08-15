@@ -288,19 +288,19 @@
   },
   "ast": {
     "absolutePath": "node_modules/@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolImmutables.sol",
-    "id": 32935,
+    "id": 49409,
     "exportedSymbols": {
       "IUniswapV3PoolImmutables": [
-        32934
+        49408
       ]
     },
     "nodeType": "SourceUnit",
-    "src": "45:1766:104",
+    "src": "45:1766:107",
     "nodes": [
       {
-        "id": 32896,
+        "id": 49370,
         "nodeType": "PragmaDirective",
-        "src": "45:24:104",
+        "src": "45:24:107",
         "nodes": [],
         "literals": [
           "solidity",
@@ -310,19 +310,19 @@
         ]
       },
       {
-        "id": 32934,
+        "id": 49408,
         "nodeType": "ContractDefinition",
-        "src": "224:1586:104",
+        "src": "224:1586:107",
         "nodes": [
           {
-            "id": 32903,
+            "id": 49377,
             "nodeType": "FunctionDefinition",
-            "src": "408:51:104",
+            "src": "408:51:107",
             "nodes": [],
             "documentation": {
-              "id": 32898,
+              "id": 49372,
               "nodeType": "StructuredDocumentation",
-              "src": "265:138:104",
+              "src": "265:138:107",
               "text": "@notice The contract that deployed the pool, which must adhere to the IUniswapV3Factory interface\n @return The contract address"
             },
             "functionSelector": "c45a0155",
@@ -330,26 +330,26 @@
             "kind": "function",
             "modifiers": [],
             "name": "factory",
-            "nameLocation": "417:7:104",
+            "nameLocation": "417:7:107",
             "parameters": {
-              "id": 32899,
+              "id": 49373,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "424:2:104"
+              "src": "424:2:107"
             },
             "returnParameters": {
-              "id": 32902,
+              "id": 49376,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 32901,
+                  "id": 49375,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 32903,
-                  "src": "450:7:104",
+                  "scope": 49377,
+                  "src": "450:7:107",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -357,10 +357,10 @@
                     "typeString": "address"
                   },
                   "typeName": {
-                    "id": 32900,
+                    "id": 49374,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
-                    "src": "450:7:104",
+                    "src": "450:7:107",
                     "stateMutability": "nonpayable",
                     "typeDescriptions": {
                       "typeIdentifier": "t_address",
@@ -370,22 +370,22 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "449:9:104"
+              "src": "449:9:107"
             },
-            "scope": 32934,
+            "scope": 49408,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 32909,
+            "id": 49383,
             "nodeType": "FunctionDefinition",
-            "src": "583:50:104",
+            "src": "583:50:107",
             "nodes": [],
             "documentation": {
-              "id": 32904,
+              "id": 49378,
               "nodeType": "StructuredDocumentation",
-              "src": "465:113:104",
+              "src": "465:113:107",
               "text": "@notice The first of the two tokens of the pool, sorted by address\n @return The token contract address"
             },
             "functionSelector": "0dfe1681",
@@ -393,26 +393,26 @@
             "kind": "function",
             "modifiers": [],
             "name": "token0",
-            "nameLocation": "592:6:104",
+            "nameLocation": "592:6:107",
             "parameters": {
-              "id": 32905,
+              "id": 49379,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "598:2:104"
+              "src": "598:2:107"
             },
             "returnParameters": {
-              "id": 32908,
+              "id": 49382,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 32907,
+                  "id": 49381,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 32909,
-                  "src": "624:7:104",
+                  "scope": 49383,
+                  "src": "624:7:107",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -420,10 +420,10 @@
                     "typeString": "address"
                   },
                   "typeName": {
-                    "id": 32906,
+                    "id": 49380,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
-                    "src": "624:7:104",
+                    "src": "624:7:107",
                     "stateMutability": "nonpayable",
                     "typeDescriptions": {
                       "typeIdentifier": "t_address",
@@ -433,22 +433,22 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "623:9:104"
+              "src": "623:9:107"
             },
-            "scope": 32934,
+            "scope": 49408,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 32915,
+            "id": 49389,
             "nodeType": "FunctionDefinition",
-            "src": "758:50:104",
+            "src": "758:50:107",
             "nodes": [],
             "documentation": {
-              "id": 32910,
+              "id": 49384,
               "nodeType": "StructuredDocumentation",
-              "src": "639:114:104",
+              "src": "639:114:107",
               "text": "@notice The second of the two tokens of the pool, sorted by address\n @return The token contract address"
             },
             "functionSelector": "d21220a7",
@@ -456,26 +456,26 @@
             "kind": "function",
             "modifiers": [],
             "name": "token1",
-            "nameLocation": "767:6:104",
+            "nameLocation": "767:6:107",
             "parameters": {
-              "id": 32911,
+              "id": 49385,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "773:2:104"
+              "src": "773:2:107"
             },
             "returnParameters": {
-              "id": 32914,
+              "id": 49388,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 32913,
+                  "id": 49387,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 32915,
-                  "src": "799:7:104",
+                  "scope": 49389,
+                  "src": "799:7:107",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -483,10 +483,10 @@
                     "typeString": "address"
                   },
                   "typeName": {
-                    "id": 32912,
+                    "id": 49386,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
-                    "src": "799:7:104",
+                    "src": "799:7:107",
                     "stateMutability": "nonpayable",
                     "typeDescriptions": {
                       "typeIdentifier": "t_address",
@@ -496,22 +496,22 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "798:9:104"
+              "src": "798:9:107"
             },
-            "scope": 32934,
+            "scope": 49408,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 32921,
+            "id": 49395,
             "nodeType": "FunctionDefinition",
-            "src": "903:46:104",
+            "src": "903:46:107",
             "nodes": [],
             "documentation": {
-              "id": 32916,
+              "id": 49390,
               "nodeType": "StructuredDocumentation",
-              "src": "814:84:104",
+              "src": "814:84:107",
               "text": "@notice The pool's fee in hundredths of a bip, i.e. 1e-6\n @return The fee"
             },
             "functionSelector": "ddca3f43",
@@ -519,26 +519,26 @@
             "kind": "function",
             "modifiers": [],
             "name": "fee",
-            "nameLocation": "912:3:104",
+            "nameLocation": "912:3:107",
             "parameters": {
-              "id": 32917,
+              "id": 49391,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "915:2:104"
+              "src": "915:2:107"
             },
             "returnParameters": {
-              "id": 32920,
+              "id": 49394,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 32919,
+                  "id": 49393,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 32921,
-                  "src": "941:6:104",
+                  "scope": 49395,
+                  "src": "941:6:107",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -546,10 +546,10 @@
                     "typeString": "uint24"
                   },
                   "typeName": {
-                    "id": 32918,
+                    "id": 49392,
                     "name": "uint24",
                     "nodeType": "ElementaryTypeName",
-                    "src": "941:6:104",
+                    "src": "941:6:107",
                     "typeDescriptions": {
                       "typeIdentifier": "t_uint24",
                       "typeString": "uint24"
@@ -558,22 +558,22 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "940:8:104"
+              "src": "940:8:107"
             },
-            "scope": 32934,
+            "scope": 49408,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 32927,
+            "id": 49401,
             "nodeType": "FunctionDefinition",
-            "src": "1318:53:104",
+            "src": "1318:53:107",
             "nodes": [],
             "documentation": {
-              "id": 32922,
+              "id": 49396,
               "nodeType": "StructuredDocumentation",
-              "src": "955:358:104",
+              "src": "955:358:107",
               "text": "@notice The pool tick spacing\n @dev Ticks can only be used at multiples of this value, minimum of 1 and always positive\n e.g.: a tickSpacing of 3 means ticks can be initialized every 3rd tick, i.e., ..., -6, -3, 0, 3, 6, ...\n This value is an int24 to avoid casting even though it is always positive.\n @return The tick spacing"
             },
             "functionSelector": "d0c93a7c",
@@ -581,26 +581,26 @@
             "kind": "function",
             "modifiers": [],
             "name": "tickSpacing",
-            "nameLocation": "1327:11:104",
+            "nameLocation": "1327:11:107",
             "parameters": {
-              "id": 32923,
+              "id": 49397,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "1338:2:104"
+              "src": "1338:2:107"
             },
             "returnParameters": {
-              "id": 32926,
+              "id": 49400,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 32925,
+                  "id": 49399,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 32927,
-                  "src": "1364:5:104",
+                  "scope": 49401,
+                  "src": "1364:5:107",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -608,10 +608,10 @@
                     "typeString": "int24"
                   },
                   "typeName": {
-                    "id": 32924,
+                    "id": 49398,
                     "name": "int24",
                     "nodeType": "ElementaryTypeName",
-                    "src": "1364:5:104",
+                    "src": "1364:5:107",
                     "typeDescriptions": {
                       "typeIdentifier": "t_int24",
                       "typeString": "int24"
@@ -620,22 +620,22 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "1363:7:104"
+              "src": "1363:7:107"
             },
-            "scope": 32934,
+            "scope": 49408,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 32933,
+            "id": 49407,
             "nodeType": "FunctionDefinition",
-            "src": "1745:63:104",
+            "src": "1745:63:107",
             "nodes": [],
             "documentation": {
-              "id": 32928,
+              "id": 49402,
               "nodeType": "StructuredDocumentation",
-              "src": "1377:363:104",
+              "src": "1377:363:107",
               "text": "@notice The maximum amount of position liquidity that can use any tick in the range\n @dev This parameter is enforced per tick to prevent liquidity from overflowing a uint128 at any point, and\n also prevents out-of-range liquidity from being used to prevent adding in-range liquidity to a pool\n @return The max amount of liquidity per tick"
             },
             "functionSelector": "70cf754a",
@@ -643,26 +643,26 @@
             "kind": "function",
             "modifiers": [],
             "name": "maxLiquidityPerTick",
-            "nameLocation": "1754:19:104",
+            "nameLocation": "1754:19:107",
             "parameters": {
-              "id": 32929,
+              "id": 49403,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "1773:2:104"
+              "src": "1773:2:107"
             },
             "returnParameters": {
-              "id": 32932,
+              "id": 49406,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 32931,
+                  "id": 49405,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 32933,
-                  "src": "1799:7:104",
+                  "scope": 49407,
+                  "src": "1799:7:107",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -670,10 +670,10 @@
                     "typeString": "uint128"
                   },
                   "typeName": {
-                    "id": 32930,
+                    "id": 49404,
                     "name": "uint128",
                     "nodeType": "ElementaryTypeName",
-                    "src": "1799:7:104",
+                    "src": "1799:7:107",
                     "typeDescriptions": {
                       "typeIdentifier": "t_uint128",
                       "typeString": "uint128"
@@ -682,9 +682,9 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "1798:9:104"
+              "src": "1798:9:107"
             },
-            "scope": 32934,
+            "scope": 49408,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
@@ -696,23 +696,23 @@
         "contractDependencies": [],
         "contractKind": "interface",
         "documentation": {
-          "id": 32897,
+          "id": 49371,
           "nodeType": "StructuredDocumentation",
-          "src": "71:153:104",
+          "src": "71:153:107",
           "text": "@title Pool state that never changes\n @notice These parameters are fixed for a pool forever, i.e., the methods will always return the same values"
         },
         "fullyImplemented": false,
         "linearizedBaseContracts": [
-          32934
+          49408
         ],
         "name": "IUniswapV3PoolImmutables",
-        "nameLocation": "234:24:104",
-        "scope": 32935,
+        "nameLocation": "234:24:107",
+        "scope": 49409,
         "usedErrors": [],
         "usedEvents": []
       }
     ],
     "license": "GPL-2.0-or-later"
   },
-  "id": 104
+  "id": 107
 }

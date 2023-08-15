@@ -117,22 +117,22 @@
   },
   "ast": {
     "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBOperatable.sol",
-    "id": 29897,
+    "id": 46371,
     "exportedSymbols": {
       "IJBOperatable": [
-        29896
+        46370
       ],
       "IJBOperatorStore": [
-        29965
+        46439
       ]
     },
     "nodeType": "SourceUnit",
-    "src": "32:180:47",
+    "src": "32:180:50",
     "nodes": [
       {
-        "id": 29887,
+        "id": 46361,
         "nodeType": "PragmaDirective",
-        "src": "32:23:47",
+        "src": "32:23:50",
         "nodes": [],
         "literals": [
           "solidity",
@@ -142,24 +142,24 @@
         ]
       },
       {
-        "id": 29889,
+        "id": 46363,
         "nodeType": "ImportDirective",
-        "src": "57:56:47",
+        "src": "57:56:50",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBOperatorStore.sol",
         "file": "./IJBOperatorStore.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 29897,
-        "sourceUnit": 29966,
+        "scope": 46371,
+        "sourceUnit": 46440,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 29888,
+              "id": 46362,
               "name": "IJBOperatorStore",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 29965,
-              "src": "65:16:47",
+              "referencedDeclaration": 46439,
+              "src": "65:16:50",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -168,72 +168,72 @@
         "unitAlias": ""
       },
       {
-        "id": 29896,
+        "id": 46370,
         "nodeType": "ContractDefinition",
-        "src": "115:96:47",
+        "src": "115:96:50",
         "nodes": [
           {
-            "id": 29895,
+            "id": 46369,
             "nodeType": "FunctionDefinition",
-            "src": "143:66:47",
+            "src": "143:66:50",
             "nodes": [],
             "functionSelector": "ad007d63",
             "implemented": false,
             "kind": "function",
             "modifiers": [],
             "name": "operatorStore",
-            "nameLocation": "152:13:47",
+            "nameLocation": "152:13:50",
             "parameters": {
-              "id": 29890,
+              "id": 46364,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "165:2:47"
+              "src": "165:2:50"
             },
             "returnParameters": {
-              "id": 29894,
+              "id": 46368,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 29893,
+                  "id": 46367,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 29895,
-                  "src": "191:16:47",
+                  "scope": 46369,
+                  "src": "191:16:50",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_contract$_IJBOperatorStore_$29965",
+                    "typeIdentifier": "t_contract$_IJBOperatorStore_$46439",
                     "typeString": "contract IJBOperatorStore"
                   },
                   "typeName": {
-                    "id": 29892,
+                    "id": 46366,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 29891,
+                      "id": 46365,
                       "name": "IJBOperatorStore",
                       "nameLocations": [
-                        "191:16:47"
+                        "191:16:50"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 29965,
-                      "src": "191:16:47"
+                      "referencedDeclaration": 46439,
+                      "src": "191:16:50"
                     },
-                    "referencedDeclaration": 29965,
-                    "src": "191:16:47",
+                    "referencedDeclaration": 46439,
+                    "src": "191:16:50",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_contract$_IJBOperatorStore_$29965",
+                      "typeIdentifier": "t_contract$_IJBOperatorStore_$46439",
                       "typeString": "contract IJBOperatorStore"
                     }
                   },
                   "visibility": "internal"
                 }
               ],
-              "src": "190:18:47"
+              "src": "190:18:50"
             },
-            "scope": 29896,
+            "scope": 46370,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
@@ -246,16 +246,16 @@
         "contractKind": "interface",
         "fullyImplemented": false,
         "linearizedBaseContracts": [
-          29896
+          46370
         ],
         "name": "IJBOperatable",
-        "nameLocation": "125:13:47",
-        "scope": 29897,
+        "nameLocation": "125:13:50",
+        "scope": 46371,
         "usedErrors": [],
         "usedEvents": []
       }
     ],
     "license": "MIT"
   },
-  "id": 47
+  "id": 50
 }

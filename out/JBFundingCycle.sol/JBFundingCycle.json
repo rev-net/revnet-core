@@ -10,22 +10,22 @@
   },
   "ast": {
     "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycle.sol",
-    "id": 31698,
+    "id": 48172,
     "exportedSymbols": {
       "IJBFundingCycleBallot": [
-        29730
+        46204
       ],
       "JBFundingCycle": [
-        31697
+        48171
       ]
     },
     "nodeType": "SourceUnit",
-    "src": "32:2654:78",
+    "src": "32:2654:81",
     "nodes": [
       {
-        "id": 31674,
+        "id": 48148,
         "nodeType": "PragmaDirective",
-        "src": "32:23:78",
+        "src": "32:23:81",
         "nodes": [],
         "literals": [
           "solidity",
@@ -35,24 +35,24 @@
         ]
       },
       {
-        "id": 31676,
+        "id": 48150,
         "nodeType": "ImportDirective",
-        "src": "57:80:78",
+        "src": "57:80:81",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleBallot.sol",
         "file": "./../interfaces/IJBFundingCycleBallot.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 31698,
-        "sourceUnit": 29731,
+        "scope": 48172,
+        "sourceUnit": 46205,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 31675,
+              "id": 48149,
               "name": "IJBFundingCycleBallot",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 29730,
-              "src": "65:21:78",
+              "referencedDeclaration": 46204,
+              "src": "65:21:81",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -61,27 +61,27 @@
         "unitAlias": ""
       },
       {
-        "id": 31697,
+        "id": 48171,
         "nodeType": "StructDefinition",
-        "src": "2467:218:78",
+        "src": "2467:218:81",
         "nodes": [],
         "canonicalName": "JBFundingCycle",
         "documentation": {
-          "id": 31677,
+          "id": 48151,
           "nodeType": "StructuredDocumentation",
-          "src": "139:2328:78",
+          "src": "139:2328:81",
           "text": "@custom:member number The funding cycle number for the cycle's project. Each funding cycle has a number that is an increment of the cycle that directly preceded it. Each project's first funding cycle has a number of 1.\n @custom:member configuration The timestamp when the parameters for this funding cycle were configured. This value will stay the same for subsequent funding cycles that roll over from an originally configured cycle.\n @custom:member basedOn The `configuration` of the funding cycle that was active when this cycle was created.\n @custom:member start The timestamp marking the moment from which the funding cycle is considered active. It is a unix timestamp measured in seconds.\n @custom:member duration The number of seconds the funding cycle lasts for, after which a new funding cycle will start. A duration of 0 means that the funding cycle will stay active until the project owner explicitly issues a reconfiguration, at which point a new funding cycle will immediately start with the updated properties. If the duration is greater than 0, a project owner cannot make changes to a funding cycle's parameters while it is active – any proposed changes will apply to the subsequent cycle. If no changes are proposed, a funding cycle rolls over to another one with the same properties but new `start` timestamp and a discounted `weight`.\n @custom:member weight A fixed point number with 18 decimals that contracts can use to base arbitrary calculations on. For example, payment terminals can use this to determine how many tokens should be minted when a payment is received.\n @custom:member discountRate A percent by how much the `weight` of the subsequent funding cycle should be reduced, if the project owner hasn't configured the subsequent funding cycle with an explicit `weight`. If it's 0, each funding cycle will have equal weight. If the number is 90%, the next funding cycle will have a 10% smaller weight. This weight is out of `JBConstants.MAX_DISCOUNT_RATE`.\n @custom:member ballot An address of a contract that says whether a proposed reconfiguration should be accepted or rejected. It can be used to create rules around how a project owner can change funding cycle parameters over time.\n @custom:member metadata Extra data that can be associated with a funding cycle."
         },
         "members": [
           {
             "constant": false,
-            "id": 31679,
+            "id": 48153,
             "mutability": "mutable",
             "name": "number",
-            "nameLocation": "2501:6:78",
+            "nameLocation": "2501:6:81",
             "nodeType": "VariableDeclaration",
-            "scope": 31697,
-            "src": "2493:14:78",
+            "scope": 48171,
+            "src": "2493:14:81",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -89,10 +89,10 @@
               "typeString": "uint256"
             },
             "typeName": {
-              "id": 31678,
+              "id": 48152,
               "name": "uint256",
               "nodeType": "ElementaryTypeName",
-              "src": "2493:7:78",
+              "src": "2493:7:81",
               "typeDescriptions": {
                 "typeIdentifier": "t_uint256",
                 "typeString": "uint256"
@@ -102,13 +102,13 @@
           },
           {
             "constant": false,
-            "id": 31681,
+            "id": 48155,
             "mutability": "mutable",
             "name": "configuration",
-            "nameLocation": "2519:13:78",
+            "nameLocation": "2519:13:81",
             "nodeType": "VariableDeclaration",
-            "scope": 31697,
-            "src": "2511:21:78",
+            "scope": 48171,
+            "src": "2511:21:81",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -116,10 +116,10 @@
               "typeString": "uint256"
             },
             "typeName": {
-              "id": 31680,
+              "id": 48154,
               "name": "uint256",
               "nodeType": "ElementaryTypeName",
-              "src": "2511:7:78",
+              "src": "2511:7:81",
               "typeDescriptions": {
                 "typeIdentifier": "t_uint256",
                 "typeString": "uint256"
@@ -129,13 +129,13 @@
           },
           {
             "constant": false,
-            "id": 31683,
+            "id": 48157,
             "mutability": "mutable",
             "name": "basedOn",
-            "nameLocation": "2544:7:78",
+            "nameLocation": "2544:7:81",
             "nodeType": "VariableDeclaration",
-            "scope": 31697,
-            "src": "2536:15:78",
+            "scope": 48171,
+            "src": "2536:15:81",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -143,10 +143,10 @@
               "typeString": "uint256"
             },
             "typeName": {
-              "id": 31682,
+              "id": 48156,
               "name": "uint256",
               "nodeType": "ElementaryTypeName",
-              "src": "2536:7:78",
+              "src": "2536:7:81",
               "typeDescriptions": {
                 "typeIdentifier": "t_uint256",
                 "typeString": "uint256"
@@ -156,13 +156,13 @@
           },
           {
             "constant": false,
-            "id": 31685,
+            "id": 48159,
             "mutability": "mutable",
             "name": "start",
-            "nameLocation": "2563:5:78",
+            "nameLocation": "2563:5:81",
             "nodeType": "VariableDeclaration",
-            "scope": 31697,
-            "src": "2555:13:78",
+            "scope": 48171,
+            "src": "2555:13:81",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -170,10 +170,10 @@
               "typeString": "uint256"
             },
             "typeName": {
-              "id": 31684,
+              "id": 48158,
               "name": "uint256",
               "nodeType": "ElementaryTypeName",
-              "src": "2555:7:78",
+              "src": "2555:7:81",
               "typeDescriptions": {
                 "typeIdentifier": "t_uint256",
                 "typeString": "uint256"
@@ -183,13 +183,13 @@
           },
           {
             "constant": false,
-            "id": 31687,
+            "id": 48161,
             "mutability": "mutable",
             "name": "duration",
-            "nameLocation": "2580:8:78",
+            "nameLocation": "2580:8:81",
             "nodeType": "VariableDeclaration",
-            "scope": 31697,
-            "src": "2572:16:78",
+            "scope": 48171,
+            "src": "2572:16:81",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -197,10 +197,10 @@
               "typeString": "uint256"
             },
             "typeName": {
-              "id": 31686,
+              "id": 48160,
               "name": "uint256",
               "nodeType": "ElementaryTypeName",
-              "src": "2572:7:78",
+              "src": "2572:7:81",
               "typeDescriptions": {
                 "typeIdentifier": "t_uint256",
                 "typeString": "uint256"
@@ -210,13 +210,13 @@
           },
           {
             "constant": false,
-            "id": 31689,
+            "id": 48163,
             "mutability": "mutable",
             "name": "weight",
-            "nameLocation": "2600:6:78",
+            "nameLocation": "2600:6:81",
             "nodeType": "VariableDeclaration",
-            "scope": 31697,
-            "src": "2592:14:78",
+            "scope": 48171,
+            "src": "2592:14:81",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -224,10 +224,10 @@
               "typeString": "uint256"
             },
             "typeName": {
-              "id": 31688,
+              "id": 48162,
               "name": "uint256",
               "nodeType": "ElementaryTypeName",
-              "src": "2592:7:78",
+              "src": "2592:7:81",
               "typeDescriptions": {
                 "typeIdentifier": "t_uint256",
                 "typeString": "uint256"
@@ -237,13 +237,13 @@
           },
           {
             "constant": false,
-            "id": 31691,
+            "id": 48165,
             "mutability": "mutable",
             "name": "discountRate",
-            "nameLocation": "2618:12:78",
+            "nameLocation": "2618:12:81",
             "nodeType": "VariableDeclaration",
-            "scope": 31697,
-            "src": "2610:20:78",
+            "scope": 48171,
+            "src": "2610:20:81",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -251,10 +251,10 @@
               "typeString": "uint256"
             },
             "typeName": {
-              "id": 31690,
+              "id": 48164,
               "name": "uint256",
               "nodeType": "ElementaryTypeName",
-              "src": "2610:7:78",
+              "src": "2610:7:81",
               "typeDescriptions": {
                 "typeIdentifier": "t_uint256",
                 "typeString": "uint256"
@@ -264,36 +264,36 @@
           },
           {
             "constant": false,
-            "id": 31694,
+            "id": 48168,
             "mutability": "mutable",
             "name": "ballot",
-            "nameLocation": "2656:6:78",
+            "nameLocation": "2656:6:81",
             "nodeType": "VariableDeclaration",
-            "scope": 31697,
-            "src": "2634:28:78",
+            "scope": 48171,
+            "src": "2634:28:81",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
-              "typeIdentifier": "t_contract$_IJBFundingCycleBallot_$29730",
+              "typeIdentifier": "t_contract$_IJBFundingCycleBallot_$46204",
               "typeString": "contract IJBFundingCycleBallot"
             },
             "typeName": {
-              "id": 31693,
+              "id": 48167,
               "nodeType": "UserDefinedTypeName",
               "pathNode": {
-                "id": 31692,
+                "id": 48166,
                 "name": "IJBFundingCycleBallot",
                 "nameLocations": [
-                  "2634:21:78"
+                  "2634:21:81"
                 ],
                 "nodeType": "IdentifierPath",
-                "referencedDeclaration": 29730,
-                "src": "2634:21:78"
+                "referencedDeclaration": 46204,
+                "src": "2634:21:81"
               },
-              "referencedDeclaration": 29730,
-              "src": "2634:21:78",
+              "referencedDeclaration": 46204,
+              "src": "2634:21:81",
               "typeDescriptions": {
-                "typeIdentifier": "t_contract$_IJBFundingCycleBallot_$29730",
+                "typeIdentifier": "t_contract$_IJBFundingCycleBallot_$46204",
                 "typeString": "contract IJBFundingCycleBallot"
               }
             },
@@ -301,13 +301,13 @@
           },
           {
             "constant": false,
-            "id": 31696,
+            "id": 48170,
             "mutability": "mutable",
             "name": "metadata",
-            "nameLocation": "2674:8:78",
+            "nameLocation": "2674:8:81",
             "nodeType": "VariableDeclaration",
-            "scope": 31697,
-            "src": "2666:16:78",
+            "scope": 48171,
+            "src": "2666:16:81",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -315,10 +315,10 @@
               "typeString": "uint256"
             },
             "typeName": {
-              "id": 31695,
+              "id": 48169,
               "name": "uint256",
               "nodeType": "ElementaryTypeName",
-              "src": "2666:7:78",
+              "src": "2666:7:81",
               "typeDescriptions": {
                 "typeIdentifier": "t_uint256",
                 "typeString": "uint256"
@@ -328,12 +328,12 @@
           }
         ],
         "name": "JBFundingCycle",
-        "nameLocation": "2474:14:78",
-        "scope": 31698,
+        "nameLocation": "2474:14:81",
+        "scope": 48172,
         "visibility": "public"
       }
     ],
     "license": "MIT"
   },
-  "id": 78
+  "id": 81
 }

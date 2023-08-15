@@ -29,12 +29,12 @@
   ],
   "bytecode": {
     "object": "0x6098610038600b82828239805160001a607314602b57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c8063116e9c0914604257806328b09e9e14605b575b600080fd5b6049601981565b60405190815260200160405180910390f35b604960188156fea264697066735822122047668122e455c19dc783e774fc22522973bd2e8fe7b42ae021e72e812981969464736f6c63430008150033",
-    "sourceMap": "164:283:33:-:0;;;;;;;;;;;;;;;-1:-1:-1;;;164:283:33;;;;;;;;;;;;;;;;;",
+    "sourceMap": "164:283:36:-:0;;;;;;;;;;;;;;;-1:-1:-1;;;164:283:36;;;;;;;;;;;;;;;;;",
     "linkReferences": {}
   },
   "deployedBytecode": {
     "object": "0x7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c8063116e9c0914604257806328b09e9e14605b575b600080fd5b6049601981565b60405190815260200160405180910390f35b604960188156fea264697066735822122047668122e455c19dc783e774fc22522973bd2e8fe7b42ae021e72e812981969464736f6c63430008150033",
-    "sourceMap": "164:283:33:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;404:40;;442:2;404:40;;;;;168:25:114;;;156:2;141:18;404:40:33;;;;;;;354:44;;396:2;354:44;",
+    "sourceMap": "164:283:36:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;404:40;;442:2;404:40;;;;;168:25:117;;;156:2;141:18;404:40:36;;;;;;;354:44;;396:2;354:44;",
     "linkReferences": {}
   },
   "methodIdentifiers": {
@@ -128,19 +128,19 @@
   },
   "ast": {
     "absolutePath": "node_modules/@jbx-protocol/juice-buyback-delegate/contracts/libraries/JBBuybackDelegateOperations.sol",
-    "id": 28607,
+    "id": 45081,
     "exportedSymbols": {
       "JBBuybackDelegateOperations": [
-        28606
+        45080
       ]
     },
     "nodeType": "SourceUnit",
-    "src": "32:416:33",
+    "src": "32:416:36",
     "nodes": [
       {
-        "id": 28598,
+        "id": 45072,
         "nodeType": "PragmaDirective",
-        "src": "32:23:33",
+        "src": "32:23:36",
         "nodes": [],
         "literals": [
           "solidity",
@@ -150,21 +150,21 @@
         ]
       },
       {
-        "id": 28606,
+        "id": 45080,
         "nodeType": "ContractDefinition",
-        "src": "164:283:33",
+        "src": "164:283:36",
         "nodes": [
           {
-            "id": 28602,
+            "id": 45076,
             "nodeType": "VariableDeclaration",
-            "src": "354:44:33",
+            "src": "354:44:36",
             "nodes": [],
             "constant": true,
             "functionSelector": "28b09e9e",
             "mutability": "constant",
             "name": "SET_POOL_PARAMS",
-            "nameLocation": "378:15:33",
-            "scope": 28606,
+            "nameLocation": "378:15:36",
+            "scope": 45080,
             "stateVariable": true,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -172,10 +172,10 @@
               "typeString": "uint256"
             },
             "typeName": {
-              "id": 28600,
+              "id": 45074,
               "name": "uint256",
               "nodeType": "ElementaryTypeName",
-              "src": "354:7:33",
+              "src": "354:7:36",
               "typeDescriptions": {
                 "typeIdentifier": "t_uint256",
                 "typeString": "uint256"
@@ -183,14 +183,14 @@
             },
             "value": {
               "hexValue": "3234",
-              "id": 28601,
+              "id": 45075,
               "isConstant": false,
               "isLValue": false,
               "isPure": true,
               "kind": "number",
               "lValueRequested": false,
               "nodeType": "Literal",
-              "src": "396:2:33",
+              "src": "396:2:36",
               "typeDescriptions": {
                 "typeIdentifier": "t_rational_24_by_1",
                 "typeString": "int_const 24"
@@ -200,16 +200,16 @@
             "visibility": "public"
           },
           {
-            "id": 28605,
+            "id": 45079,
             "nodeType": "VariableDeclaration",
-            "src": "404:40:33",
+            "src": "404:40:36",
             "nodes": [],
             "constant": true,
             "functionSelector": "116e9c09",
             "mutability": "constant",
             "name": "CHANGE_POOL",
-            "nameLocation": "428:11:33",
-            "scope": 28606,
+            "nameLocation": "428:11:36",
+            "scope": 45080,
             "stateVariable": true,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -217,10 +217,10 @@
               "typeString": "uint256"
             },
             "typeName": {
-              "id": 28603,
+              "id": 45077,
               "name": "uint256",
               "nodeType": "ElementaryTypeName",
-              "src": "404:7:33",
+              "src": "404:7:36",
               "typeDescriptions": {
                 "typeIdentifier": "t_uint256",
                 "typeString": "uint256"
@@ -228,14 +228,14 @@
             },
             "value": {
               "hexValue": "3235",
-              "id": 28604,
+              "id": 45078,
               "isConstant": false,
               "isLValue": false,
               "isPure": true,
               "kind": "number",
               "lValueRequested": false,
               "nodeType": "Literal",
-              "src": "442:2:33",
+              "src": "442:2:36",
               "typeDescriptions": {
                 "typeIdentifier": "t_rational_25_by_1",
                 "typeString": "int_const 25"
@@ -251,23 +251,23 @@
         "contractDependencies": [],
         "contractKind": "library",
         "documentation": {
-          "id": 28599,
+          "id": 45073,
           "nodeType": "StructuredDocumentation",
-          "src": "57:107:33",
+          "src": "57:107:36",
           "text": "@title JBBuybackDelegateOperations\n @notice JB specific operation indexes for the JBBuybackDelegate"
         },
         "fullyImplemented": true,
         "linearizedBaseContracts": [
-          28606
+          45080
         ],
         "name": "JBBuybackDelegateOperations",
-        "nameLocation": "172:27:33",
-        "scope": 28607,
+        "nameLocation": "172:27:36",
+        "scope": 45081,
         "usedErrors": [],
         "usedEvents": []
       }
     ],
     "license": "MIT"
   },
-  "id": 33
+  "id": 36
 }
