@@ -30,14 +30,12 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
     /// @param _directory The directory of terminals and controllers for projects.
     /// @param _delegateDeployer The delegate deployer.
     /// @param _controller The controller that projects are made from.
-    /// @param _buybackDelegate The buyback delegate to use.
     constructor(
         IJBDirectory _directory,
         IJBTiered721DelegateDeployer _delegateDeployer,
-        IJBController3_1 _controller,
-        IJBGenericBuybackDelegate _buybackDelegate
+        IJBController3_1 _controller
     )
-        PayAllocatorRetailistJBDeployer(_controller, _buybackDelegate)
+        PayAllocatorRetailistJBDeployer(_controller)
     {
         directory = _directory;
         delegateDeployer = _delegateDeployer;
@@ -52,17 +50,19 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
     /// @param _symbol The symbol of the ERC-20 token being created for the project.
     /// @param _data The data needed to deploy a basic retailist project.
     /// @param _terminals The terminals that project uses to accept payments through.
+    /// @param _buybackDelegate The buyback delegate to use.
     /// @param _deployTiered721DelegateData Structure containing data necessary for delegate deployment.
     /// @param _otherDelegateAllocations Any pay delegate allocations that should run when the project is paid.
     /// @param _extraFundingCycleMetadata Extra metadata to attach to the funding cycle for the delegates to use.
     /// @return projectId The ID of the newly created Retailist project.
     function deployTiered721PayAllocatorProjectFor(
         address _operator,
-        JBProjectMetadata calldata _projectMetadata,
-        string calldata _name,
-        string calldata _symbol,
-        BasicRetailistJBParams calldata _data,
+        JBProjectMetadata memory _projectMetadata,
+        string memory _name,
+        string memory _symbol,
+        BasicRetailistJBParams memory _data,
         IJBPaymentTerminal[] memory _terminals,
+        IJBGenericBuybackDelegate _buybackDelegate,
         JBDeployTiered721DelegateData memory _deployTiered721DelegateData,
         JBPayDelegateAllocation3_1_1[] memory _otherDelegateAllocations,
         uint8 _extraFundingCycleMetadata
@@ -72,9 +72,6 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
     {
         // Get the project ID, optimistically knowing it will be one greater than the current count.
         projectId = directory.projects().count() + 1;
-
-        // Deploy the delegate contract.
-        IJBTiered721Delegate _delegate = delegateDeployer.deployDelegateFor(projectId, _deployTiered721DelegateData);
 
         // Keep a reference to the number of delegate allocations passed in.
         uint256 _numberOfOtherDelegateAllocations = _otherDelegateAllocations.length;
@@ -91,12 +88,17 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
             }
         }
 
-        // Add the Tiered 721 Allocation at the end.
-        _delegateAllocations[_numberOfOtherDelegateAllocations] = JBPayDelegateAllocation3_1_1({
-            delegate: IJBPayDelegate3_1_1(address(_delegate)),
-            amount: 0,
-            metadata: bytes("")
-        });
+        {
+            // Deploy the delegate contract.
+            IJBTiered721Delegate _delegate = delegateDeployer.deployDelegateFor(projectId, _deployTiered721DelegateData);
+
+            // Add the Tiered 721 Allocation at the end.
+            _delegateAllocations[_numberOfOtherDelegateAllocations] = JBPayDelegateAllocation3_1_1({
+                delegate: IJBPayDelegate3_1_1(address(_delegate)),
+                amount: 0,
+                metadata: bytes("")
+            });
+        }
 
         super.deployPayAllocatorProjectFor(
             _operator,
@@ -105,6 +107,7 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
             _symbol,
             _data,
             _terminals,
+            _buybackDelegate,
             _delegateAllocations,
             _extraFundingCycleMetadata
         );

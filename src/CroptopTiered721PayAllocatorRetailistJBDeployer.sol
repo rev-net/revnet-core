@@ -39,15 +39,13 @@ contract CroptopTiered721PayAllocatorRetailistJBDeployer is Tiered721PayAllocato
     /// @param _publisher The Croptop publisher that facilitates the permissioned publishing of NFT posts to a Juicebox
     /// project.
     /// @param _controller The controller that projects are made from.
-    /// @param _buybackDelegate The buyback delegate to use.
     constructor(
         CroptopPublisher _publisher,
         IJBDirectory _directory,
         IJBTiered721DelegateDeployer _delegateDeployer,
-        IJBController3_1 _controller,
-        IJBGenericBuybackDelegate _buybackDelegate
+        IJBController3_1 _controller
     )
-        Tiered721PayAllocatorRetailistJBDeployer(_directory, _delegateDeployer, _controller, _buybackDelegate)
+        Tiered721PayAllocatorRetailistJBDeployer(_directory, _delegateDeployer, _controller)
     {
         publisher = _publisher;
         croptopPermissionIndexes.push(JB721Operations.ADJUST_TIERS);
@@ -62,6 +60,7 @@ contract CroptopTiered721PayAllocatorRetailistJBDeployer is Tiered721PayAllocato
     /// @param _symbol The symbol of the ERC-20 token being created for the project.
     /// @param _data The data needed to deploy a basic retailist project.
     /// @param _terminals The terminals that project uses to accept payments through.
+    /// @param _buybackDelegate The buyback delegate to use.
     /// @param _deployTiered721DelegateData Structure containing data necessary for delegate deployment.
     /// @param _otherDelegateAllocations Any pay delegate allocations that should run when the project is paid.
     /// @param _extraFundingCycleMetadata Extra metadata to attach to the funding cycle for the delegates to use.
@@ -69,11 +68,12 @@ contract CroptopTiered721PayAllocatorRetailistJBDeployer is Tiered721PayAllocato
     /// @return projectId The ID of the newly created Retailist project.
     function deployCroptopTiered721PayAllocatorProjectFor(
         address _operator,
-        JBProjectMetadata calldata _projectMetadata,
-        string calldata _name,
-        string calldata _symbol,
-        BasicRetailistJBParams calldata _data,
+        JBProjectMetadata memory _projectMetadata,
+        string memory _name,
+        string memory _symbol,
+        BasicRetailistJBParams memory _data,
         IJBPaymentTerminal[] memory _terminals,
+        IJBGenericBuybackDelegate _buybackDelegate,
         JBDeployTiered721DelegateData memory _deployTiered721DelegateData,
         JBPayDelegateAllocation3_1_1[] memory _otherDelegateAllocations,
         uint8 _extraFundingCycleMetadata,
@@ -89,6 +89,7 @@ contract CroptopTiered721PayAllocatorRetailistJBDeployer is Tiered721PayAllocato
             _symbol,
             _data,
             _terminals,
+            _buybackDelegate,
             _deployTiered721DelegateData,
             _otherDelegateAllocations,
             _extraFundingCycleMetadata

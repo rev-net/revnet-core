@@ -60,9 +60,6 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
     /// @notice The controller that projects are made from.
     IJBController3_1 public immutable controller;
 
-    /// @notice The buyback delegate.
-    IJBGenericBuybackDelegate public immutable buybackDelegate;
-
     /// @notice The permissions that the provided _operator should be granted. This is set once in the constructor to
     /// contain only the SET_SPLITS operation.
     uint256[] public permissionIndexes;
@@ -82,11 +79,8 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
     }
 
     /// @param _controller The controller that projects are made from.
-    /// @param _buybackDelegate The buyback delegate to use.
-    constructor(IJBController3_1 _controller, IJBGenericBuybackDelegate _buybackDelegate) {
+    constructor(IJBController3_1 _controller) {
         controller = _controller;
-        buybackDelegate = _buybackDelegate;
-
         permissionIndexes.push(JBOperations.SET_SPLITS);
         permissionIndexes.push(JBBuybackDelegateOperations.SET_POOL_PARAMS);
     }
@@ -99,14 +93,16 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
     /// @param _symbol The symbol of the ERC-20 token being created for the project.
     /// @param _data The data needed to deploy a basic retailist project.
     /// @param _terminals The terminals that project uses to accept payments through.
+    /// @param _buybackDelegate The buyback delegate to use.
     /// @return projectId The ID of the newly created Retailist project.
     function deployBasicProjectFor(
         address _operator,
-        JBProjectMetadata calldata _projectMetadata,
-        string calldata _name,
-        string calldata _symbol,
-        BasicRetailistJBParams calldata _data,
-        IJBPaymentTerminal[] memory _terminals
+        JBProjectMetadata memory _projectMetadata,
+        string memory _name,
+        string memory _symbol,
+        BasicRetailistJBParams memory _data,
+        IJBPaymentTerminal[] memory _terminals,
+        IJBGenericBuybackDelegate _buybackDelegate
     )
         public
         returns (uint256 projectId)
@@ -143,11 +139,11 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
         controller.tokenStore().issueFor({ projectId: projectId, name: _name, symbol: _symbol });
 
         // Set the pool for the buyback delegate.
-        buybackDelegate.setPoolFor({
+        _buybackDelegate.setPoolFor({
             _projectId: projectId,
             _fee: _data.poolFee,
-            _secondsAgo: uint32(buybackDelegate.MIN_SECONDS_AGO()),
-            _twapDelta: uint32(buybackDelegate.MAX_TWAP_DELTA()),
+            _secondsAgo: uint32(_buybackDelegate.MIN_SECONDS_AGO()),
+            _twapDelta: uint32(_buybackDelegate.MAX_TWAP_DELTA()),
             _terminalToken: JBTokens.ETH
         });
 
@@ -181,7 +177,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
                 useTotalOverflowForRedemptions: false,
                 useDataSourceForPay: true, // Use the buyback delegate data source.
                 useDataSourceForRedeem: false,
-                dataSource: address(buybackDelegate),
+                dataSource: address(_buybackDelegate),
                 metadata: 0
             }),
             mustStartAtOrAfter: 0,
