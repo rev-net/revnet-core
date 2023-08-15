@@ -10,19 +10,19 @@
   },
   "ast": {
     "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/enums/JB721GovernanceType.sol",
-    "id": 23380,
+    "id": 27588,
     "exportedSymbols": {
       "JB721GovernanceType": [
-        23379
+        27587
       ]
     },
     "nodeType": "SourceUnit",
-    "src": "32:76:12",
+    "src": "32:76:17",
     "nodes": [
       {
-        "id": 23376,
+        "id": 27584,
         "nodeType": "PragmaDirective",
-        "src": "32:23:12",
+        "src": "32:23:17",
         "nodes": [],
         "literals": [
           "solidity",
@@ -32,32 +32,32 @@
         ]
       },
       {
-        "id": 23379,
+        "id": 27587,
         "nodeType": "EnumDefinition",
-        "src": "57:50:12",
+        "src": "57:50:17",
         "nodes": [],
         "canonicalName": "JB721GovernanceType",
         "members": [
           {
-            "id": 23377,
+            "id": 27585,
             "name": "NONE",
-            "nameLocation": "88:4:12",
+            "nameLocation": "88:4:17",
             "nodeType": "EnumValue",
-            "src": "88:4:12"
+            "src": "88:4:17"
           },
           {
-            "id": 23378,
+            "id": 27586,
             "name": "ONCHAIN",
-            "nameLocation": "98:7:12",
+            "nameLocation": "98:7:17",
             "nodeType": "EnumValue",
-            "src": "98:7:12"
+            "src": "98:7:17"
           }
         ],
         "name": "JB721GovernanceType",
-        "nameLocation": "62:19:12"
+        "nameLocation": "62:19:17"
       }
     ],
     "license": "MIT"
   },
-  "id": 12
+  "id": 17
 }

@@ -11,10 +11,10 @@
     "linkReferences": {}
   },
   "methodIdentifiers": {},
-  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.20+commit.a1b79de6\"},\"language\":\"Solidity\",\"output\":{\"abi\":[],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"StdChains provides information about EVM compatible chains that can be used in scripts/tests. For each chain, the chain's name, chain ID, and a default RPC URL are provided. Chains are identified by their alias, which is the same as the alias in the `[rpc_endpoints]` section of the `foundry.toml` file. For best UX, ensure the alias in the `foundry.toml` file match the alias used in this contract, which can be found as the first argument to the `setChainWithDefaultRpcUrl` call in the `initialize` function. There are two main ways to use this contract:   1. Set a chain with `setChain(string memory chainAlias, ChainData memory chain)` or      `setChain(string memory chainAlias, Chain memory chain)`   2. Get a chain with `getChain(string memory chainAlias)` or `getChain(uint256 chainId)`. The first time either of those are used, chains are initialized with the default set of RPC URLs. This is done in `initialize`, which uses `setChainWithDefaultRpcUrl`. Defaults are recorded in `defaultRpcUrls`. The `setChain` function is straightforward, and it simply saves off the given chain data. The `getChain` methods use `getChainWithUpdatedRpcUrl` to return a chain. For example, let's say we want to retrieve `mainnet`'s RPC URL:   - If you haven't set any mainnet chain info with `setChain`, you haven't specified that     chain in `foundry.toml` and no env var is set, the default data and RPC URL will be returned.   - If you have set a mainnet RPC URL in `foundry.toml` it will return that, if valid (e.g. if     a URL is given or if an environment variable is given and that environment variable exists).     Otherwise, the default data is returned.   - If you specified data with `setChain` it will return that. Summarizing the above, the prioritization hierarchy is `setChain` -> `foundry.toml` -> environment variable -> defaults.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"lib/forge-std/src/StdChains.sol\":\"StdChains\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":1000000000},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@ensdomains/=node_modules/@ensdomains/\",\":@jbx-protocol/=node_modules/@jbx-protocol/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@paulrberg/=node_modules/@paulrberg/\",\":@prb/=node_modules/@prb/\",\":ds-test/=lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\",\":prb-math/=node_modules/prb-math/\"]},\"sources\":{\"lib/forge-std/src/StdChains.sol\":{\"keccak256\":\"0xdbf2c734ffcc665d175a4b239d90a6ceb873d613c26ce7dc5c4d3131b76a0e92\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://53e1caed2b51fc82c3050f37cb6ee1fb9a2627baaae4cb08919b795a7216db2d\",\"dweb:/ipfs/Qmepc4Zd44EpqBjLHVAGzu6B5QqY1zqecHgfBTpZcQ7HZ7\"]},\"lib/forge-std/src/Vm.sol\":{\"keccak256\":\"0xe0cfe5ca62fb9d9366be870999bd82802d6b913c1f960f67b8f17060008f2d1a\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://ddadc1e899953cb26e7d87c0f27284d02f09b611cfd3300e321c33dc2c65d0b3\",\"dweb:/ipfs/Qmbmrdph3D5YweihJSPM6sopZcSKWMox2ZM89dyonfhrq8\"]}},\"version\":1}",
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.21+commit.d9974bed\"},\"language\":\"Solidity\",\"output\":{\"abi\":[],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"StdChains provides information about EVM compatible chains that can be used in scripts/tests. For each chain, the chain's name, chain ID, and a default RPC URL are provided. Chains are identified by their alias, which is the same as the alias in the `[rpc_endpoints]` section of the `foundry.toml` file. For best UX, ensure the alias in the `foundry.toml` file match the alias used in this contract, which can be found as the first argument to the `setChainWithDefaultRpcUrl` call in the `initialize` function. There are two main ways to use this contract:   1. Set a chain with `setChain(string memory chainAlias, ChainData memory chain)` or      `setChain(string memory chainAlias, Chain memory chain)`   2. Get a chain with `getChain(string memory chainAlias)` or `getChain(uint256 chainId)`. The first time either of those are used, chains are initialized with the default set of RPC URLs. This is done in `initialize`, which uses `setChainWithDefaultRpcUrl`. Defaults are recorded in `defaultRpcUrls`. The `setChain` function is straightforward, and it simply saves off the given chain data. The `getChain` methods use `getChainWithUpdatedRpcUrl` to return a chain. For example, let's say we want to retrieve `mainnet`'s RPC URL:   - If you haven't set any mainnet chain info with `setChain`, you haven't specified that     chain in `foundry.toml` and no env var is set, the default data and RPC URL will be returned.   - If you have set a mainnet RPC URL in `foundry.toml` it will return that, if valid (e.g. if     a URL is given or if an environment variable is given and that environment variable exists).     Otherwise, the default data is returned.   - If you specified data with `setChain` it will return that. Summarizing the above, the prioritization hierarchy is `setChain` -> `foundry.toml` -> environment variable -> defaults.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"lib/forge-std/src/StdChains.sol\":\"StdChains\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":1000000000},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@croptop/=node_modules/@croptop/\",\":@ensdomains/=node_modules/@ensdomains/\",\":@jbx-protocol/=node_modules/@jbx-protocol/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@paulrberg/=node_modules/@paulrberg/\",\":@prb/=node_modules/@prb/\",\":@uniswap/=node_modules/@uniswap/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\",\":prb-math/=node_modules/prb-math/\"]},\"sources\":{\"lib/forge-std/src/StdChains.sol\":{\"keccak256\":\"0xdbf2c734ffcc665d175a4b239d90a6ceb873d613c26ce7dc5c4d3131b76a0e92\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://53e1caed2b51fc82c3050f37cb6ee1fb9a2627baaae4cb08919b795a7216db2d\",\"dweb:/ipfs/Qmepc4Zd44EpqBjLHVAGzu6B5QqY1zqecHgfBTpZcQ7HZ7\"]},\"lib/forge-std/src/Vm.sol\":{\"keccak256\":\"0xe0cfe5ca62fb9d9366be870999bd82802d6b913c1f960f67b8f17060008f2d1a\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://ddadc1e899953cb26e7d87c0f27284d02f09b611cfd3300e321c33dc2c65d0b3\",\"dweb:/ipfs/Qmbmrdph3D5YweihJSPM6sopZcSKWMox2ZM89dyonfhrq8\"]}},\"version\":1}",
   "metadata": {
     "compiler": {
-      "version": "0.8.20+commit.a1b79de6"
+      "version": "0.8.21+commit.d9974bed"
     },
     "language": "Solidity",
     "output": {
@@ -32,15 +32,18 @@
     },
     "settings": {
       "remappings": [
-        ":@chainlink/=node_modules/@chainlink/",
-        ":@ensdomains/=node_modules/@ensdomains/",
-        ":@jbx-protocol/=node_modules/@jbx-protocol/",
-        ":@openzeppelin/=node_modules/@openzeppelin/",
-        ":@paulrberg/=node_modules/@paulrberg/",
-        ":@prb/=node_modules/@prb/",
-        ":ds-test/=lib/ds-test/src/",
-        ":forge-std/=lib/forge-std/src/",
-        ":prb-math/=node_modules/prb-math/"
+        "@chainlink/=node_modules/@chainlink/",
+        "@croptop/=node_modules/@croptop/",
+        "@ensdomains/=node_modules/@ensdomains/",
+        "@jbx-protocol/=node_modules/@jbx-protocol/",
+        "@openzeppelin/=node_modules/@openzeppelin/",
+        "@paulrberg/=node_modules/@paulrberg/",
+        "@prb/=node_modules/@prb/",
+        "@uniswap/=node_modules/@uniswap/",
+        "base64-sol/=node_modules/base64-sol/",
+        "ds-test/=lib/ds-test/src/",
+        "forge-std/=lib/forge-std/src/",
+        "prb-math/=node_modules/prb-math/"
       ],
       "optimizer": {
         "enabled": true,
@@ -6286,6 +6289,7 @@
                                     "statements": [
                                       {
                                         "AST": {
+                                          "nativeSrc": "7399:80:4",
                                           "nodeType": "YulBlock",
                                           "src": "7399:80:4",
                                           "statements": [
@@ -6296,6 +6300,7 @@
                                                     "arguments": [
                                                       {
                                                         "kind": "number",
+                                                        "nativeSrc": "7436:2:4",
                                                         "nodeType": "YulLiteral",
                                                         "src": "7436:2:4",
                                                         "type": "",
@@ -6303,15 +6308,18 @@
                                                       },
                                                       {
                                                         "name": "err",
+                                                        "nativeSrc": "7440:3:4",
                                                         "nodeType": "YulIdentifier",
                                                         "src": "7440:3:4"
                                                       }
                                                     ],
                                                     "functionName": {
                                                       "name": "add",
+                                                      "nativeSrc": "7432:3:4",
                                                       "nodeType": "YulIdentifier",
                                                       "src": "7432:3:4"
                                                     },
+                                                    "nativeSrc": "7432:12:4",
                                                     "nodeType": "YulFunctionCall",
                                                     "src": "7432:12:4"
                                                   },
@@ -6319,27 +6327,33 @@
                                                     "arguments": [
                                                       {
                                                         "name": "err",
+                                                        "nativeSrc": "7452:3:4",
                                                         "nodeType": "YulIdentifier",
                                                         "src": "7452:3:4"
                                                       }
                                                     ],
                                                     "functionName": {
                                                       "name": "mload",
+                                                      "nativeSrc": "7446:5:4",
                                                       "nodeType": "YulIdentifier",
                                                       "src": "7446:5:4"
                                                     },
+                                                    "nativeSrc": "7446:10:4",
                                                     "nodeType": "YulFunctionCall",
                                                     "src": "7446:10:4"
                                                   }
                                                 ],
                                                 "functionName": {
                                                   "name": "revert",
+                                                  "nativeSrc": "7425:6:4",
                                                   "nodeType": "YulIdentifier",
                                                   "src": "7425:6:4"
                                                 },
+                                                "nativeSrc": "7425:32:4",
                                                 "nodeType": "YulFunctionCall",
                                                 "src": "7425:32:4"
                                               },
+                                              "nativeSrc": "7425:32:4",
                                               "nodeType": "YulExpressionStatement",
                                               "src": "7425:32:4"
                                             }

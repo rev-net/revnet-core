@@ -1,43 +1,43 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import {IJBPaymentTerminal} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPaymentTerminal.sol";
-import {IJBController3_1} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController3_1.sol";
-import {IJBPayoutRedemptionPaymentTerminal3_1_1} from
+import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import { IJBPaymentTerminal } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPaymentTerminal.sol";
+import { IJBController3_1 } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController3_1.sol";
+import { IJBPayoutRedemptionPaymentTerminal3_1_1 } from
     "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayoutRedemptionPaymentTerminal3_1_1.sol";
-import {IJBFundingCycleBallot} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleBallot.sol";
-import {IJBOperatable} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBOperatable.sol";
-import {IJBSplitAllocator} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBSplitAllocator.sol";
-import {IJBToken} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBToken.sol";
-import {IJBFundingCycleDataSource3_1_1} from
+import { IJBFundingCycleBallot } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleBallot.sol";
+import { IJBOperatable } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBOperatable.sol";
+import { IJBSplitAllocator } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBSplitAllocator.sol";
+import { IJBToken } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBToken.sol";
+import { IJBFundingCycleDataSource3_1_1 } from
     "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleDataSource3_1_1.sol";
-import {JBConstants} from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBConstants.sol";
-import {JBSplitsGroups} from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBSplitsGroups.sol";
-import {JBFundingCycleData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycleData.sol";
-import {JBFundingCycleMetadata} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycleMetadata.sol";
-import {JBPayDelegateAllocation3_1_1} from
+import { JBConstants } from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBConstants.sol";
+import { JBTokens } from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBTokens.sol";
+import { JBSplitsGroups } from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBSplitsGroups.sol";
+import { JBFundingCycleData } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycleData.sol";
+import { JBFundingCycleMetadata } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycleMetadata.sol";
+import { JBPayDelegateAllocation3_1_1 } from
     "@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayDelegateAllocation3_1_1.sol";
-import {JBRedemptionDelegateAllocation3_1_1} from
+import { JBRedemptionDelegateAllocation3_1_1 } from
     "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedemptionDelegateAllocation3_1_1.sol";
-import {JBPayParamsData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayParamsData.sol";
-import {JBRedeemParamsData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedeemParamsData.sol";
-import {JBGlobalFundingCycleMetadata} from
+import { JBPayParamsData } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayParamsData.sol";
+import { JBRedeemParamsData } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedeemParamsData.sol";
+import { JBGlobalFundingCycleMetadata } from
     "@jbx-protocol/juice-contracts-v3/contracts/structs/JBGlobalFundingCycleMetadata.sol";
-import {JBGroupedSplits} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBGroupedSplits.sol";
-import {JBSplit} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBSplit.sol";
-import {JBOperatorData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBOperatorData.sol";
-import {JBFundAccessConstraints} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundAccessConstraints.sol";
-import {JBProjectMetadata} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBProjectMetadata.sol";
-import {BasicRetailistJBParams, BasicRetailistJBDeployer} from "./BasicRetailistJBDeployer.sol";
+import { JBGroupedSplits } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBGroupedSplits.sol";
+import { JBSplit } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBSplit.sol";
+import { JBOperatorData } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBOperatorData.sol";
+import { JBFundAccessConstraints } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundAccessConstraints.sol";
+import { JBProjectMetadata } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBProjectMetadata.sol";
+import { IJBGenericBuybackDelegate } from
+    "@jbx-protocol/juice-buyback-delegate/contracts/interfaces/IJBGenericBuybackDelegate.sol";
+import { BasicRetailistJBParams, BasicRetailistJBDeployer } from "./BasicRetailistJBDeployer.sol";
 
-/// @notice A contract that facilitates deploying a basic Retailist treasury that also calls other pay delegates that are specified when the project is deployed.
+/// @notice A contract that facilitates deploying a basic Retailist treasury that also calls other pay delegates that
+/// are specified when the project is deployed.
 contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFundingCycleDataSource3_1_1 {
-    /// @notice The data source that returns the correct values for the Buyback Delegate of each project.
-    /// @custom:param projectId The ID of the project to which the Buyback Delegate allocations apply.
-    mapping(uint256 => IJBFundingCycleDataSource3_1_1) public buybackDelegateDataSourceOf;
-
     /// @notice The delegate allocations to include during payments to projects.
     /// @custom:param projectId The ID of the project to which the delegate allocations apply.
     mapping(uint256 => JBPayDelegateAllocation3_1_1[]) public delegateAllocationsOf;
@@ -45,10 +45,13 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
     /// @notice This function gets called when the project receives a payment.
     /// @dev Part of IJBFundingCycleDataSource.
     /// @dev This implementation just sets this contract up to receive a `didPay` call.
-    /// @param _data The Juicebox standard project payment data. See https://docs.juicebox.money/dev/api/data-structures/jbpayparamsdata/.
-    /// @return weight The weight that project tokens should get minted relative to. This is useful for optionally customizing how many tokens are issued per payment.
+    /// @param _data The Juicebox standard project payment data. See
+    /// https://docs.juicebox.money/dev/api/data-structures/jbpayparamsdata/.
+    /// @return weight The weight that project tokens should get minted relative to. This is useful for optionally
+    /// customizing how many tokens are issued per payment.
     /// @return memo A memo to be forwarded to the event. Useful for describing any new actions that are being taken.
-    /// @return delegateAllocations Amount to be sent to delegates instead of adding to local balance. Useful for auto-routing funds from a treasury as payment come in.
+    /// @return delegateAllocations Amount to be sent to delegates instead of adding to local balance. Useful for
+    /// auto-routing funds from a treasury as payment come in.
     function payParams(JBPayParamsData calldata _data)
         external
         view
@@ -60,7 +63,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         JBPayDelegateAllocation3_1_1[] memory _buybackDelegateAllocations;
 
         // Set the values to be those returned by the Buyback Data Source.
-        (weight,, _buybackDelegateAllocations) = buybackDelegateDataSourceOf[_data.projectId].payParams(_data);
+        (weight,, _buybackDelegateAllocations) = buybackDelegate.payParams(_data);
 
         // Cache the delegate allocations.
         JBPayDelegateAllocation3_1_1[] memory _delegateAllocations = delegateAllocationsOf[_data.projectId];
@@ -114,12 +117,19 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
 
     /// @param _controller The controller that projects are made from.
     /// @param _terminal The terminal that projects use to accept payments from.
-    constructor(IJBController3_1 _controller, IJBPayoutRedemptionPaymentTerminal3_1_1 _terminal)
-        BasicRetailistJBDeployer(_controller, _terminal)
-    {}
+    /// @param _buybackDelegate The buyback delegate to use.
+    constructor(
+        IJBController3_1 _controller,
+        IJBPayoutRedemptionPaymentTerminal3_1_1 _terminal,
+        IJBGenericBuybackDelegate _buybackDelegate
+    )
+        BasicRetailistJBDeployer(_controller, _terminal, _buybackDelegate)
+    { }
 
-    /// @notice Deploy a project with basic Retailism constraints that also calls other pay delegates that are specified.
-    /// @param _operator The address that will receive the token premint, initial reserved token allocations, and who is allowed to change the allocated reserved rate distribution.
+    /// @notice Deploy a project with basic Retailism constraints that also calls other pay delegates that are
+    /// specified.
+    /// @param _operator The address that will receive the token premint, initial reserved token allocations, and who is
+    /// allowed to change the allocated reserved rate distribution.
     /// @param _projectMetadata The metadata containing project info.
     /// @param _name The name of the ERC-20 token being create for the project.
     /// @param _symbol The symbol of the ERC-20 token being created for the project.
@@ -135,7 +145,10 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         BasicRetailistJBParams calldata _data,
         JBPayDelegateAllocation3_1_1[] memory _delegateAllocations,
         uint8 _extraFundingCycleMetadata
-    ) public returns (uint256 projectId) {
+    )
+        public
+        returns (uint256 projectId)
+    {
         // Package the reserved token splits.
         JBGroupedSplits[] memory _groupedSplits = new JBGroupedSplits[](1);
 
@@ -155,7 +168,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
                 allocator: IJBSplitAllocator(address(0))
             });
 
-            _groupedSplits[0] = JBGroupedSplits({group: JBSplitsGroups.RESERVED_TOKENS, splits: _splits});
+            _groupedSplits[0] = JBGroupedSplits({ group: JBSplitsGroups.RESERVED_TOKENS, splits: _splits });
         }
 
         // Deploy a project.
@@ -165,14 +178,16 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         });
 
         // Issue the project's ERC-20 token.
-        IJBToken _token = controller.tokenStore().issueFor({projectId: projectId, name: _name, symbol: _symbol});
+        controller.tokenStore().issueFor({ projectId: projectId, name: _name, symbol: _symbol });
 
-        // TODO: Deploy BBD.
-        address _buybackDelegate = address(0);
-        _token;
-
-        // Keep a reference to this data source.
-        buybackDelegateDataSourceOf[projectId] = IJBFundingCycleDataSource3_1_1(_buybackDelegate);
+        // Set the pool for the buyback delegate.
+        buybackDelegate.setPoolFor({
+            _projectId: projectId,
+            _fee: 1,
+            _secondsAgo: uint32(buybackDelegate.MIN_SECONDS_AGO()),
+            _twapDelta: uint32(buybackDelegate.MAX_TWAP_DELTA()),
+            _terminalToken: JBTokens.ETH
+        });
 
         // Configure the project's funding cycles using BBD.
         controller.launchFundingCyclesFor({
@@ -227,10 +242,11 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
 
         // Give the operator permission to change the allocated reserved rate distribution destination.
         IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
-            JBOperatorData({operator: _operator, domain: projectId, permissionIndexes: permissionIndexes})
+            JBOperatorData({ operator: _operator, domain: projectId, permissionIndexes: permissionIndexes })
         );
 
-        // Store the timestamp after which the project's reconfigurd funding cycles can start. A separate transaction to `scheduledReconfigurationOf` must be called to formally scheduled it.
+        // Store the timestamp after which the project's reconfigurd funding cycles can start. A separate transaction to
+        // `scheduledReconfigurationOf` must be called to formally scheduled it.
         reconfigurationStartTimestampOf[projectId] = block.timestamp + _data.reservedRateDuration;
 
         // Store the pay delegate allocations.

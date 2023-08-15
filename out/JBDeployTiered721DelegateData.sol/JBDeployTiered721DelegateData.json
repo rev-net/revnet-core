@@ -10,67 +10,67 @@
   },
   "ast": {
     "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/structs/JBDeployTiered721DelegateData.sol",
-    "id": 24101,
+    "id": 28323,
     "exportedSymbols": {
       "IJB721TokenUriResolver": [
-        23407
+        27625
       ],
       "IJBDirectory": [
-        24702
+        29621
       ],
       "IJBFundingCycleStore": [
-        24956
+        29875
       ],
       "IJBPaymentTerminal": [
-        25151
+        30070
       ],
       "IJBPriceFeed": [
-        25601
+        30884
       ],
       "IJBPrices": [
-        25646
+        30929
       ],
       "IJBProjects": [
-        25728
+        31011
       ],
       "IJBTiered721DelegateStore": [
-        23990
+        28199
       ],
       "JB721GovernanceType": [
-        23379
+        27587
       ],
       "JB721PricingParams": [
-        24007
+        28229
       ],
       "JB721Tier": [
-        24035
+        28257
       ],
       "JB721TierParams": [
-        24061
+        28283
       ],
       "JBBallotState": [
-        24135
+        28612
       ],
       "JBDeployTiered721DelegateData": [
-        24100
+        28322
       ],
       "JBFundingCycle": [
-        26404
+        31697
       ],
       "JBFundingCycleData": [
-        26419
+        31712
       ],
       "JBTiered721Flags": [
-        24112
+        28334
       ]
     },
     "nodeType": "SourceUnit",
-    "src": "32:1678:21",
+    "src": "32:1678:27",
     "nodes": [
       {
-        "id": 24063,
+        "id": 28285,
         "nodeType": "PragmaDirective",
-        "src": "32:23:21",
+        "src": "32:23:27",
         "nodes": [],
         "literals": [
           "solidity",
@@ -80,118 +80,118 @@
         ]
       },
       {
-        "id": 24064,
+        "id": 28286,
         "nodeType": "ImportDirective",
-        "src": "57:80:21",
+        "src": "57:80:27",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol",
         "file": "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 24101,
-        "sourceUnit": 24703,
+        "scope": 28323,
+        "sourceUnit": 29622,
         "symbolAliases": [],
         "unitAlias": ""
       },
       {
-        "id": 24065,
+        "id": 28287,
         "nodeType": "ImportDirective",
-        "src": "138:88:21",
+        "src": "138:88:27",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleStore.sol",
         "file": "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleStore.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 24101,
-        "sourceUnit": 24957,
+        "scope": 28323,
+        "sourceUnit": 29876,
         "symbolAliases": [],
         "unitAlias": ""
       },
       {
-        "id": 24066,
+        "id": 28288,
         "nodeType": "ImportDirective",
-        "src": "227:44:21",
+        "src": "227:44:27",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/enums/JB721GovernanceType.sol",
         "file": "./../enums/JB721GovernanceType.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 24101,
-        "sourceUnit": 23380,
+        "scope": 28323,
+        "sourceUnit": 27588,
         "symbolAliases": [],
         "unitAlias": ""
       },
       {
-        "id": 24067,
+        "id": 28289,
         "nodeType": "ImportDirective",
-        "src": "272:52:21",
+        "src": "272:52:27",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/interfaces/IJB721TokenUriResolver.sol",
         "file": "./../interfaces/IJB721TokenUriResolver.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 24101,
-        "sourceUnit": 23408,
+        "scope": 28323,
+        "sourceUnit": 27626,
         "symbolAliases": [],
         "unitAlias": ""
       },
       {
-        "id": 24068,
+        "id": 28290,
         "nodeType": "ImportDirective",
-        "src": "325:55:21",
+        "src": "325:55:27",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721DelegateStore.sol",
         "file": "./../interfaces/IJBTiered721DelegateStore.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 24101,
-        "sourceUnit": 23991,
+        "scope": 28323,
+        "sourceUnit": 28200,
         "symbolAliases": [],
         "unitAlias": ""
       },
       {
-        "id": 24069,
+        "id": 28291,
         "nodeType": "ImportDirective",
-        "src": "381:34:21",
+        "src": "381:34:27",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/structs/JB721PricingParams.sol",
         "file": "./JB721PricingParams.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 24101,
-        "sourceUnit": 24008,
+        "scope": 28323,
+        "sourceUnit": 28230,
         "symbolAliases": [],
         "unitAlias": ""
       },
       {
-        "id": 24070,
+        "id": 28292,
         "nodeType": "ImportDirective",
-        "src": "416:32:21",
+        "src": "416:32:27",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-721-delegate/contracts/structs/JBTiered721Flags.sol",
         "file": "./JBTiered721Flags.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 24101,
-        "sourceUnit": 24113,
+        "scope": 28323,
+        "sourceUnit": 28335,
         "symbolAliases": [],
         "unitAlias": ""
       },
       {
-        "id": 24100,
+        "id": 28322,
         "nodeType": "StructDefinition",
-        "src": "1325:384:21",
+        "src": "1325:384:27",
         "nodes": [],
         "canonicalName": "JBDeployTiered721DelegateData",
         "documentation": {
-          "id": 24071,
+          "id": 28293,
           "nodeType": "StructuredDocumentation",
-          "src": "450:875:21",
+          "src": "450:875:27",
           "text": "@custom:member name The name of the token.\n @custom:member symbol The symbol that the token should be represented by.\n @custom:member fundingCycleStore A contract storing all funding cycle configurations.\n @custom:member baseUri A URI to use as a base for full token URIs.\n @custom:member tokenUriResolver A contract responsible for resolving the token URI for each token ID.\n @custom:member contractUri A URI where contract metadata can be found. \n @custom:member pricing The tier pricing according to which token distribution will be made. \n @custom:member reservedTokenBeneficiary The address receiving the reserved token\n @custom:member store The store contract to use.\n @custom:member flags A set of flags that help define how this contract works.\n @custom:member governanceType The type of governance to allow the NFTs to be used for."
         },
         "members": [
           {
             "constant": false,
-            "id": 24073,
+            "id": 28295,
             "mutability": "mutable",
             "name": "name",
-            "nameLocation": "1375:4:21",
+            "nameLocation": "1375:4:27",
             "nodeType": "VariableDeclaration",
-            "scope": 24100,
-            "src": "1368:11:21",
+            "scope": 28322,
+            "src": "1368:11:27",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -199,10 +199,10 @@
               "typeString": "string"
             },
             "typeName": {
-              "id": 24072,
+              "id": 28294,
               "name": "string",
               "nodeType": "ElementaryTypeName",
-              "src": "1368:6:21",
+              "src": "1368:6:27",
               "typeDescriptions": {
                 "typeIdentifier": "t_string_storage_ptr",
                 "typeString": "string"
@@ -212,13 +212,13 @@
           },
           {
             "constant": false,
-            "id": 24075,
+            "id": 28297,
             "mutability": "mutable",
             "name": "symbol",
-            "nameLocation": "1392:6:21",
+            "nameLocation": "1392:6:27",
             "nodeType": "VariableDeclaration",
-            "scope": 24100,
-            "src": "1385:13:21",
+            "scope": 28322,
+            "src": "1385:13:27",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -226,10 +226,10 @@
               "typeString": "string"
             },
             "typeName": {
-              "id": 24074,
+              "id": 28296,
               "name": "string",
               "nodeType": "ElementaryTypeName",
-              "src": "1385:6:21",
+              "src": "1385:6:27",
               "typeDescriptions": {
                 "typeIdentifier": "t_string_storage_ptr",
                 "typeString": "string"
@@ -239,36 +239,36 @@
           },
           {
             "constant": false,
-            "id": 24078,
+            "id": 28300,
             "mutability": "mutable",
             "name": "fundingCycleStore",
-            "nameLocation": "1425:17:21",
+            "nameLocation": "1425:17:27",
             "nodeType": "VariableDeclaration",
-            "scope": 24100,
-            "src": "1404:38:21",
+            "scope": 28322,
+            "src": "1404:38:27",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
-              "typeIdentifier": "t_contract$_IJBFundingCycleStore_$24956",
+              "typeIdentifier": "t_contract$_IJBFundingCycleStore_$29875",
               "typeString": "contract IJBFundingCycleStore"
             },
             "typeName": {
-              "id": 24077,
+              "id": 28299,
               "nodeType": "UserDefinedTypeName",
               "pathNode": {
-                "id": 24076,
+                "id": 28298,
                 "name": "IJBFundingCycleStore",
                 "nameLocations": [
-                  "1404:20:21"
+                  "1404:20:27"
                 ],
                 "nodeType": "IdentifierPath",
-                "referencedDeclaration": 24956,
-                "src": "1404:20:21"
+                "referencedDeclaration": 29875,
+                "src": "1404:20:27"
               },
-              "referencedDeclaration": 24956,
-              "src": "1404:20:21",
+              "referencedDeclaration": 29875,
+              "src": "1404:20:27",
               "typeDescriptions": {
-                "typeIdentifier": "t_contract$_IJBFundingCycleStore_$24956",
+                "typeIdentifier": "t_contract$_IJBFundingCycleStore_$29875",
                 "typeString": "contract IJBFundingCycleStore"
               }
             },
@@ -276,13 +276,13 @@
           },
           {
             "constant": false,
-            "id": 24080,
+            "id": 28302,
             "mutability": "mutable",
             "name": "baseUri",
-            "nameLocation": "1455:7:21",
+            "nameLocation": "1455:7:27",
             "nodeType": "VariableDeclaration",
-            "scope": 24100,
-            "src": "1448:14:21",
+            "scope": 28322,
+            "src": "1448:14:27",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -290,10 +290,10 @@
               "typeString": "string"
             },
             "typeName": {
-              "id": 24079,
+              "id": 28301,
               "name": "string",
               "nodeType": "ElementaryTypeName",
-              "src": "1448:6:21",
+              "src": "1448:6:27",
               "typeDescriptions": {
                 "typeIdentifier": "t_string_storage_ptr",
                 "typeString": "string"
@@ -303,36 +303,36 @@
           },
           {
             "constant": false,
-            "id": 24083,
+            "id": 28305,
             "mutability": "mutable",
             "name": "tokenUriResolver",
-            "nameLocation": "1491:16:21",
+            "nameLocation": "1491:16:27",
             "nodeType": "VariableDeclaration",
-            "scope": 24100,
-            "src": "1468:39:21",
+            "scope": 28322,
+            "src": "1468:39:27",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
-              "typeIdentifier": "t_contract$_IJB721TokenUriResolver_$23407",
+              "typeIdentifier": "t_contract$_IJB721TokenUriResolver_$27625",
               "typeString": "contract IJB721TokenUriResolver"
             },
             "typeName": {
-              "id": 24082,
+              "id": 28304,
               "nodeType": "UserDefinedTypeName",
               "pathNode": {
-                "id": 24081,
+                "id": 28303,
                 "name": "IJB721TokenUriResolver",
                 "nameLocations": [
-                  "1468:22:21"
+                  "1468:22:27"
                 ],
                 "nodeType": "IdentifierPath",
-                "referencedDeclaration": 23407,
-                "src": "1468:22:21"
+                "referencedDeclaration": 27625,
+                "src": "1468:22:27"
               },
-              "referencedDeclaration": 23407,
-              "src": "1468:22:21",
+              "referencedDeclaration": 27625,
+              "src": "1468:22:27",
               "typeDescriptions": {
-                "typeIdentifier": "t_contract$_IJB721TokenUriResolver_$23407",
+                "typeIdentifier": "t_contract$_IJB721TokenUriResolver_$27625",
                 "typeString": "contract IJB721TokenUriResolver"
               }
             },
@@ -340,13 +340,13 @@
           },
           {
             "constant": false,
-            "id": 24085,
+            "id": 28307,
             "mutability": "mutable",
             "name": "contractUri",
-            "nameLocation": "1520:11:21",
+            "nameLocation": "1520:11:27",
             "nodeType": "VariableDeclaration",
-            "scope": 24100,
-            "src": "1513:18:21",
+            "scope": 28322,
+            "src": "1513:18:27",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -354,10 +354,10 @@
               "typeString": "string"
             },
             "typeName": {
-              "id": 24084,
+              "id": 28306,
               "name": "string",
               "nodeType": "ElementaryTypeName",
-              "src": "1513:6:21",
+              "src": "1513:6:27",
               "typeDescriptions": {
                 "typeIdentifier": "t_string_storage_ptr",
                 "typeString": "string"
@@ -367,36 +367,36 @@
           },
           {
             "constant": false,
-            "id": 24088,
+            "id": 28310,
             "mutability": "mutable",
             "name": "pricing",
-            "nameLocation": "1556:7:21",
+            "nameLocation": "1556:7:27",
             "nodeType": "VariableDeclaration",
-            "scope": 24100,
-            "src": "1537:26:21",
+            "scope": 28322,
+            "src": "1537:26:27",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
-              "typeIdentifier": "t_struct$_JB721PricingParams_$24007_storage_ptr",
+              "typeIdentifier": "t_struct$_JB721PricingParams_$28229_storage_ptr",
               "typeString": "struct JB721PricingParams"
             },
             "typeName": {
-              "id": 24087,
+              "id": 28309,
               "nodeType": "UserDefinedTypeName",
               "pathNode": {
-                "id": 24086,
+                "id": 28308,
                 "name": "JB721PricingParams",
                 "nameLocations": [
-                  "1537:18:21"
+                  "1537:18:27"
                 ],
                 "nodeType": "IdentifierPath",
-                "referencedDeclaration": 24007,
-                "src": "1537:18:21"
+                "referencedDeclaration": 28229,
+                "src": "1537:18:27"
               },
-              "referencedDeclaration": 24007,
-              "src": "1537:18:21",
+              "referencedDeclaration": 28229,
+              "src": "1537:18:27",
               "typeDescriptions": {
-                "typeIdentifier": "t_struct$_JB721PricingParams_$24007_storage_ptr",
+                "typeIdentifier": "t_struct$_JB721PricingParams_$28229_storage_ptr",
                 "typeString": "struct JB721PricingParams"
               }
             },
@@ -404,13 +404,13 @@
           },
           {
             "constant": false,
-            "id": 24090,
+            "id": 28312,
             "mutability": "mutable",
             "name": "reservedTokenBeneficiary",
-            "nameLocation": "1577:24:21",
+            "nameLocation": "1577:24:27",
             "nodeType": "VariableDeclaration",
-            "scope": 24100,
-            "src": "1569:32:21",
+            "scope": 28322,
+            "src": "1569:32:27",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -418,10 +418,10 @@
               "typeString": "address"
             },
             "typeName": {
-              "id": 24089,
+              "id": 28311,
               "name": "address",
               "nodeType": "ElementaryTypeName",
-              "src": "1569:7:21",
+              "src": "1569:7:27",
               "stateMutability": "nonpayable",
               "typeDescriptions": {
                 "typeIdentifier": "t_address",
@@ -432,36 +432,36 @@
           },
           {
             "constant": false,
-            "id": 24093,
+            "id": 28315,
             "mutability": "mutable",
             "name": "store",
-            "nameLocation": "1633:5:21",
+            "nameLocation": "1633:5:27",
             "nodeType": "VariableDeclaration",
-            "scope": 24100,
-            "src": "1607:31:21",
+            "scope": 28322,
+            "src": "1607:31:27",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
-              "typeIdentifier": "t_contract$_IJBTiered721DelegateStore_$23990",
+              "typeIdentifier": "t_contract$_IJBTiered721DelegateStore_$28199",
               "typeString": "contract IJBTiered721DelegateStore"
             },
             "typeName": {
-              "id": 24092,
+              "id": 28314,
               "nodeType": "UserDefinedTypeName",
               "pathNode": {
-                "id": 24091,
+                "id": 28313,
                 "name": "IJBTiered721DelegateStore",
                 "nameLocations": [
-                  "1607:25:21"
+                  "1607:25:27"
                 ],
                 "nodeType": "IdentifierPath",
-                "referencedDeclaration": 23990,
-                "src": "1607:25:21"
+                "referencedDeclaration": 28199,
+                "src": "1607:25:27"
               },
-              "referencedDeclaration": 23990,
-              "src": "1607:25:21",
+              "referencedDeclaration": 28199,
+              "src": "1607:25:27",
               "typeDescriptions": {
-                "typeIdentifier": "t_contract$_IJBTiered721DelegateStore_$23990",
+                "typeIdentifier": "t_contract$_IJBTiered721DelegateStore_$28199",
                 "typeString": "contract IJBTiered721DelegateStore"
               }
             },
@@ -469,36 +469,36 @@
           },
           {
             "constant": false,
-            "id": 24096,
+            "id": 28318,
             "mutability": "mutable",
             "name": "flags",
-            "nameLocation": "1661:5:21",
+            "nameLocation": "1661:5:27",
             "nodeType": "VariableDeclaration",
-            "scope": 24100,
-            "src": "1644:22:21",
+            "scope": 28322,
+            "src": "1644:22:27",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
-              "typeIdentifier": "t_struct$_JBTiered721Flags_$24112_storage_ptr",
+              "typeIdentifier": "t_struct$_JBTiered721Flags_$28334_storage_ptr",
               "typeString": "struct JBTiered721Flags"
             },
             "typeName": {
-              "id": 24095,
+              "id": 28317,
               "nodeType": "UserDefinedTypeName",
               "pathNode": {
-                "id": 24094,
+                "id": 28316,
                 "name": "JBTiered721Flags",
                 "nameLocations": [
-                  "1644:16:21"
+                  "1644:16:27"
                 ],
                 "nodeType": "IdentifierPath",
-                "referencedDeclaration": 24112,
-                "src": "1644:16:21"
+                "referencedDeclaration": 28334,
+                "src": "1644:16:27"
               },
-              "referencedDeclaration": 24112,
-              "src": "1644:16:21",
+              "referencedDeclaration": 28334,
+              "src": "1644:16:27",
               "typeDescriptions": {
-                "typeIdentifier": "t_struct$_JBTiered721Flags_$24112_storage_ptr",
+                "typeIdentifier": "t_struct$_JBTiered721Flags_$28334_storage_ptr",
                 "typeString": "struct JBTiered721Flags"
               }
             },
@@ -506,36 +506,36 @@
           },
           {
             "constant": false,
-            "id": 24099,
+            "id": 28321,
             "mutability": "mutable",
             "name": "governanceType",
-            "nameLocation": "1692:14:21",
+            "nameLocation": "1692:14:27",
             "nodeType": "VariableDeclaration",
-            "scope": 24100,
-            "src": "1672:34:21",
+            "scope": 28322,
+            "src": "1672:34:27",
             "stateVariable": false,
             "storageLocation": "default",
             "typeDescriptions": {
-              "typeIdentifier": "t_enum$_JB721GovernanceType_$23379",
+              "typeIdentifier": "t_enum$_JB721GovernanceType_$27587",
               "typeString": "enum JB721GovernanceType"
             },
             "typeName": {
-              "id": 24098,
+              "id": 28320,
               "nodeType": "UserDefinedTypeName",
               "pathNode": {
-                "id": 24097,
+                "id": 28319,
                 "name": "JB721GovernanceType",
                 "nameLocations": [
-                  "1672:19:21"
+                  "1672:19:27"
                 ],
                 "nodeType": "IdentifierPath",
-                "referencedDeclaration": 23379,
-                "src": "1672:19:21"
+                "referencedDeclaration": 27587,
+                "src": "1672:19:27"
               },
-              "referencedDeclaration": 23379,
-              "src": "1672:19:21",
+              "referencedDeclaration": 27587,
+              "src": "1672:19:27",
               "typeDescriptions": {
-                "typeIdentifier": "t_enum$_JB721GovernanceType_$23379",
+                "typeIdentifier": "t_enum$_JB721GovernanceType_$27587",
                 "typeString": "enum JB721GovernanceType"
               }
             },
@@ -543,12 +543,12 @@
           }
         ],
         "name": "JBDeployTiered721DelegateData",
-        "nameLocation": "1332:29:21",
-        "scope": 24101,
+        "nameLocation": "1332:29:27",
+        "scope": 28323,
         "visibility": "public"
       }
     ],
     "license": "MIT"
   },
-  "id": 21
+  "id": 27
 }

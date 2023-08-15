@@ -2,10 +2,11 @@
   "name": "@breadfruit/retailism",
   "version": "0.0.1",
   "dependencies": {
-    "@jbx-protocol/juice-contracts-v3": "^4.0.2",
-    "@jbx-protocol/juice-721-delegate": "^7.0.0",
+    "@jbx-protocol/juice-contracts-v3": "^5.0.0",
+    "@jbx-protocol/juice-721-delegate": "^8.0.0",
+    "@jbx-protocol/juice-buyback-delegate": "^1.0.1",
     "@openzeppelin/contracts": "^4.8.1",
-    "@croptop/publisher": "ˆ0.0.0"
+    "@croptop/publisher": "^0.0.3"
   },
   "scripts": {
     "preinstall": "forge install",

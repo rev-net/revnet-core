@@ -28,23 +28,23 @@
     }
   ],
   "bytecode": {
-    "object": "0x6098610038600b82828239805160001a607314602b57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c806368fc68c7146042578063ad8710ad14605b575b600080fd5b6049600281565b60405190815260200160405180910390f35b604960018156fea264697066735822122079d0eafe43f0d22cd4cc0cbe5ee55dc8598d295a7184d82a7f5520015860dced64736f6c63430008140033",
-    "sourceMap": "57:115:51:-:0;;;;;;;;;;;;;;;-1:-1:-1;;;57:115:51;;;;;;;;;;;;;;;;;",
+    "object": "0x6098610038600b82828239805160001a607314602b57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c806368fc68c7146042578063ad8710ad14605b575b600080fd5b6049600281565b60405190815260200160405180910390f35b604960018156fea2646970667358221220b4708020cea1f0da8bd3a8819c065d079ea5b03768ab7f541c61be42c0f26f8064736f6c63430008150033",
+    "sourceMap": "57:115:70:-:0;;;;;;;;;;;;;;;-1:-1:-1;;;57:115:70;;;;;;;;;;;;;;;;;",
     "linkReferences": {}
   },
   "deployedBytecode": {
-    "object": "0x7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c806368fc68c7146042578063ad8710ad14605b575b600080fd5b6049600281565b60405190815260200160405180910390f35b604960018156fea264697066735822122079d0eafe43f0d22cd4cc0cbe5ee55dc8598d295a7184d82a7f5520015860dced64736f6c63430008140033",
-    "sourceMap": "57:115:51:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;126:43;;168:1;126:43;;;;;168:25:75;;;156:2;141:18;126:43:51;;;;;;;84:38;;121:1;84:38;",
+    "object": "0x7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c806368fc68c7146042578063ad8710ad14605b575b600080fd5b6049600281565b60405190815260200160405180910390f35b604960018156fea2646970667358221220b4708020cea1f0da8bd3a8819c065d079ea5b03768ab7f541c61be42c0f26f8064736f6c63430008150033",
+    "sourceMap": "57:115:70:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;126:43;;168:1;126:43;;;;;168:25:114;;;156:2;141:18;126:43:70;;;;;;;84:38;;121:1;84:38;",
     "linkReferences": {}
   },
   "methodIdentifiers": {
     "ETH_PAYOUT()": "ad8710ad",
     "RESERVED_TOKENS()": "68fc68c7"
   },
-  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.20+commit.a1b79de6\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"ETH_PAYOUT\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"RESERVED_TOKENS\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/libraries/JBSplitsGroups.sol\":\"JBSplitsGroups\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":1000000000},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@ensdomains/=node_modules/@ensdomains/\",\":@jbx-protocol/=node_modules/@jbx-protocol/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@paulrberg/=node_modules/@paulrberg/\",\":@prb/=node_modules/@prb/\",\":ds-test/=lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\",\":prb-math/=node_modules/prb-math/\"]},\"sources\":{\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/libraries/JBSplitsGroups.sol\":{\"keccak256\":\"0x4183db6087bd8db645fc3a0d3d8afb0d6356e003650793f63c301ebbbae47269\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://0114af7edb6cdc38cd472fea4e88bb4766c78290ddf97323ee40a4554d541124\",\"dweb:/ipfs/QmYmYmhSDRYKvxQoEBpaSabEiVrz9CV7A9dTCrXP3ZVNov\"]}},\"version\":1}",
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.21+commit.d9974bed\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"ETH_PAYOUT\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"RESERVED_TOKENS\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/libraries/JBSplitsGroups.sol\":\"JBSplitsGroups\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":1000000000},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@croptop/=node_modules/@croptop/\",\":@ensdomains/=node_modules/@ensdomains/\",\":@jbx-protocol/=node_modules/@jbx-protocol/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@paulrberg/=node_modules/@paulrberg/\",\":@prb/=node_modules/@prb/\",\":@uniswap/=node_modules/@uniswap/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\",\":prb-math/=node_modules/prb-math/\"]},\"sources\":{\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/libraries/JBSplitsGroups.sol\":{\"keccak256\":\"0x4183db6087bd8db645fc3a0d3d8afb0d6356e003650793f63c301ebbbae47269\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://0114af7edb6cdc38cd472fea4e88bb4766c78290ddf97323ee40a4554d541124\",\"dweb:/ipfs/QmYmYmhSDRYKvxQoEBpaSabEiVrz9CV7A9dTCrXP3ZVNov\"]}},\"version\":1}",
   "metadata": {
     "compiler": {
-      "version": "0.8.20+commit.a1b79de6"
+      "version": "0.8.21+commit.d9974bed"
     },
     "language": "Solidity",
     "output": {
@@ -89,15 +89,18 @@
     },
     "settings": {
       "remappings": [
-        ":@chainlink/=node_modules/@chainlink/",
-        ":@ensdomains/=node_modules/@ensdomains/",
-        ":@jbx-protocol/=node_modules/@jbx-protocol/",
-        ":@openzeppelin/=node_modules/@openzeppelin/",
-        ":@paulrberg/=node_modules/@paulrberg/",
-        ":@prb/=node_modules/@prb/",
-        ":ds-test/=lib/ds-test/src/",
-        ":forge-std/=lib/forge-std/src/",
-        ":prb-math/=node_modules/prb-math/"
+        "@chainlink/=node_modules/@chainlink/",
+        "@croptop/=node_modules/@croptop/",
+        "@ensdomains/=node_modules/@ensdomains/",
+        "@jbx-protocol/=node_modules/@jbx-protocol/",
+        "@openzeppelin/=node_modules/@openzeppelin/",
+        "@paulrberg/=node_modules/@paulrberg/",
+        "@prb/=node_modules/@prb/",
+        "@uniswap/=node_modules/@uniswap/",
+        "base64-sol/=node_modules/base64-sol/",
+        "ds-test/=lib/ds-test/src/",
+        "forge-std/=lib/forge-std/src/",
+        "prb-math/=node_modules/prb-math/"
       ],
       "optimizer": {
         "enabled": true,
@@ -125,19 +128,19 @@
   },
   "ast": {
     "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/libraries/JBSplitsGroups.sol",
-    "id": 29371,
+    "id": 31520,
     "exportedSymbols": {
       "JBSplitsGroups": [
-        29370
+        31519
       ]
     },
     "nodeType": "SourceUnit",
-    "src": "32:141:51",
+    "src": "32:141:70",
     "nodes": [
       {
-        "id": 29363,
+        "id": 31512,
         "nodeType": "PragmaDirective",
-        "src": "32:23:51",
+        "src": "32:23:70",
         "nodes": [],
         "literals": [
           "solidity",
@@ -147,21 +150,21 @@
         ]
       },
       {
-        "id": 29370,
+        "id": 31519,
         "nodeType": "ContractDefinition",
-        "src": "57:115:51",
+        "src": "57:115:70",
         "nodes": [
           {
-            "id": 29366,
+            "id": 31515,
             "nodeType": "VariableDeclaration",
-            "src": "84:38:51",
+            "src": "84:38:70",
             "nodes": [],
             "constant": true,
             "functionSelector": "ad8710ad",
             "mutability": "constant",
             "name": "ETH_PAYOUT",
-            "nameLocation": "108:10:51",
-            "scope": 29370,
+            "nameLocation": "108:10:70",
+            "scope": 31519,
             "stateVariable": true,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -169,10 +172,10 @@
               "typeString": "uint256"
             },
             "typeName": {
-              "id": 29364,
+              "id": 31513,
               "name": "uint256",
               "nodeType": "ElementaryTypeName",
-              "src": "84:7:51",
+              "src": "84:7:70",
               "typeDescriptions": {
                 "typeIdentifier": "t_uint256",
                 "typeString": "uint256"
@@ -180,14 +183,14 @@
             },
             "value": {
               "hexValue": "31",
-              "id": 29365,
+              "id": 31514,
               "isConstant": false,
               "isLValue": false,
               "isPure": true,
               "kind": "number",
               "lValueRequested": false,
               "nodeType": "Literal",
-              "src": "121:1:51",
+              "src": "121:1:70",
               "typeDescriptions": {
                 "typeIdentifier": "t_rational_1_by_1",
                 "typeString": "int_const 1"
@@ -197,16 +200,16 @@
             "visibility": "public"
           },
           {
-            "id": 29369,
+            "id": 31518,
             "nodeType": "VariableDeclaration",
-            "src": "126:43:51",
+            "src": "126:43:70",
             "nodes": [],
             "constant": true,
             "functionSelector": "68fc68c7",
             "mutability": "constant",
             "name": "RESERVED_TOKENS",
-            "nameLocation": "150:15:51",
-            "scope": 29370,
+            "nameLocation": "150:15:70",
+            "scope": 31519,
             "stateVariable": true,
             "storageLocation": "default",
             "typeDescriptions": {
@@ -214,10 +217,10 @@
               "typeString": "uint256"
             },
             "typeName": {
-              "id": 29367,
+              "id": 31516,
               "name": "uint256",
               "nodeType": "ElementaryTypeName",
-              "src": "126:7:51",
+              "src": "126:7:70",
               "typeDescriptions": {
                 "typeIdentifier": "t_uint256",
                 "typeString": "uint256"
@@ -225,14 +228,14 @@
             },
             "value": {
               "hexValue": "32",
-              "id": 29368,
+              "id": 31517,
               "isConstant": false,
               "isLValue": false,
               "isPure": true,
               "kind": "number",
               "lValueRequested": false,
               "nodeType": "Literal",
-              "src": "168:1:51",
+              "src": "168:1:70",
               "typeDescriptions": {
                 "typeIdentifier": "t_rational_2_by_1",
                 "typeString": "int_const 2"
@@ -249,16 +252,16 @@
         "contractKind": "library",
         "fullyImplemented": true,
         "linearizedBaseContracts": [
-          29370
+          31519
         ],
         "name": "JBSplitsGroups",
-        "nameLocation": "65:14:51",
-        "scope": 29371,
+        "nameLocation": "65:14:70",
+        "scope": 31520,
         "usedErrors": [],
         "usedEvents": []
       }
     ],
     "license": "MIT"
   },
-  "id": 51
+  "id": 70
 }

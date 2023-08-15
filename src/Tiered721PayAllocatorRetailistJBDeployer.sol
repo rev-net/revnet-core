@@ -1,24 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IJBTiered721Delegate} from "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721Delegate.sol";
-import {IJBTiered721DelegateDeployer} from
+import { IJBTiered721Delegate } from "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721Delegate.sol";
+import { IJBTiered721DelegateDeployer } from
     "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721DelegateDeployer.sol";
-import {JBDeployTiered721DelegateData} from
+import { JBDeployTiered721DelegateData } from
     "@jbx-protocol/juice-721-delegate/contracts/structs/JBDeployTiered721DelegateData.sol";
-import {IJBController3_1} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController3_1.sol";
-import {IJBDirectory} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol";
-import {IJBPayoutRedemptionPaymentTerminal3_1_1} from
+import { IJBController3_1 } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController3_1.sol";
+import { IJBDirectory } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol";
+import { IJBPayoutRedemptionPaymentTerminal3_1_1 } from
     "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayoutRedemptionPaymentTerminal3_1_1.sol";
-import {IJBPayDelegate3_1_1} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayDelegate3_1_1.sol";
-import {JBPayDelegateAllocation3_1_1} from
+import { IJBPayDelegate3_1_1 } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayDelegate3_1_1.sol";
+import { JBPayDelegateAllocation3_1_1 } from
     "@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayDelegateAllocation3_1_1.sol";
-import {JBProjectMetadata} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBProjectMetadata.sol";
-import {BasicRetailistJBParams, PayAllocatorRetailistJBDeployer} from "./PayAllocatorRetailistJBDeployer.sol";
+import { JBProjectMetadata } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBProjectMetadata.sol";
+import { IJBGenericBuybackDelegate } from
+    "@jbx-protocol/juice-buyback-delegate/contracts/interfaces/IJBGenericBuybackDelegate.sol";
+import { BasicRetailistJBParams, PayAllocatorRetailistJBDeployer } from "./PayAllocatorRetailistJBDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic Retailist treasury that also can mint tiered 721s.
 contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDeployer {
-
     /// @notice The directory of terminals and controllers for projects.
     IJBDirectory public immutable directory;
 
@@ -29,18 +30,24 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
     /// @param _delegateDeployer The delegate deployer.
     /// @param _controller The controller that projects are made from.
     /// @param _terminal The terminal that projects use to accept payments from.
+    /// @param _buybackDelegate The buyback delegate to use.
     constructor(
         IJBDirectory _directory,
         IJBTiered721DelegateDeployer _delegateDeployer,
         IJBController3_1 _controller,
-        IJBPayoutRedemptionPaymentTerminal3_1_1 _terminal
-    ) PayAllocatorRetailistJBDeployer(_controller, _terminal) {
+        IJBPayoutRedemptionPaymentTerminal3_1_1 _terminal,
+        IJBGenericBuybackDelegate _buybackDelegate
+    )
+        PayAllocatorRetailistJBDeployer(_controller, _terminal, _buybackDelegate)
+    {
         directory = _directory;
         delegateDeployer = _delegateDeployer;
     }
 
-    /// @notice Deploy a project with basic Retailism constraints that includes Tiered 721s and also calls other pay delegates that are specified.
-    /// @param _operator The address that will receive the token premint, initial reserved token allocations, and who is allowed to change the allocated reserved rate distribution.
+    /// @notice Deploy a project with basic Retailism constraints that includes Tiered 721s and also calls other pay
+    /// delegates that are specified.
+    /// @param _operator The address that will receive the token premint, initial reserved token allocations, and who is
+    /// allowed to change the allocated reserved rate distribution.
     /// @param _projectMetadata The metadata containing project info.
     /// @param _name The name of the ERC-20 token being create for the project.
     /// @param _symbol The symbol of the ERC-20 token being created for the project.
@@ -57,13 +64,16 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
         JBDeployTiered721DelegateData calldata _deployTiered721DelegateData,
         JBPayDelegateAllocation3_1_1[] calldata _otherDelegateAllocations,
         uint8 _extraFundingCycleMetadata
-    ) public returns (uint256 projectId) {
+    )
+        public
+        returns (uint256 projectId)
+    {
         // Get the project ID, optimistically knowing it will be one greater than the current count.
         projectId = directory.projects().count() + 1;
 
         // Deploy the delegate contract.
         IJBTiered721Delegate _delegate =
-            delegateDeployer.deployDelegateFor(projectId, _deployTiered721DelegateData, directory);
+            delegateDeployer.deployDelegateFor(projectId, _deployTiered721DelegateData);
 
         // Keep a reference to the number of delegate allocations passed in.
         uint256 _numberOfOtherDelegateAllocations = _otherDelegateAllocations.length;

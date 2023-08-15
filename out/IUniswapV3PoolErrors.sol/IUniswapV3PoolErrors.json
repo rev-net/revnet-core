@@ -1,0 +1,441 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "name": "AI",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "AS",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "F0",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "F1",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "IIA",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "L",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "LOK",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "M0",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "M1",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "TLM",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "TLU",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "TUM",
+      "type": "error"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {},
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.21+commit.d9974bed\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"AI\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AS\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"F0\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"F1\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"IIA\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"L\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"LOK\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"M0\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"M1\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TLM\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TLU\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TUM\",\"type\":\"error\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"title\":\"Errors emitted by a pool\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"Contains all events emitted by the pool\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"node_modules/@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolErrors.sol\":\"IUniswapV3PoolErrors\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":1000000000},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@croptop/=node_modules/@croptop/\",\":@ensdomains/=node_modules/@ensdomains/\",\":@jbx-protocol/=node_modules/@jbx-protocol/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@paulrberg/=node_modules/@paulrberg/\",\":@prb/=node_modules/@prb/\",\":@uniswap/=node_modules/@uniswap/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\",\":prb-math/=node_modules/prb-math/\"]},\"sources\":{\"node_modules/@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolErrors.sol\":{\"keccak256\":\"0xf80abf13fb1fafc127ba4e792f240dd8ea7c8c893978cdfd8439c27fae9a037b\",\"license\":\"GPL-2.0-or-later\",\"urls\":[\"bzz-raw://b04fc72a656bbf3631e9c2e67b9870a2d9d235185e833fe050e9606e6816a9aa\",\"dweb:/ipfs/QmUcz4bkEkJ9pwzFu1C3n97hBQ3st9U6qTAqCdyFwddKco\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.21+commit.d9974bed"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "AI"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "AS"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "F0"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "F1"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "IIA"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "L"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "LOK"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "M0"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "M1"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "TLM"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "TLU"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "TUM"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        "@chainlink/=node_modules/@chainlink/",
+        "@croptop/=node_modules/@croptop/",
+        "@ensdomains/=node_modules/@ensdomains/",
+        "@jbx-protocol/=node_modules/@jbx-protocol/",
+        "@openzeppelin/=node_modules/@openzeppelin/",
+        "@paulrberg/=node_modules/@paulrberg/",
+        "@prb/=node_modules/@prb/",
+        "@uniswap/=node_modules/@uniswap/",
+        "base64-sol/=node_modules/base64-sol/",
+        "ds-test/=lib/ds-test/src/",
+        "forge-std/=lib/forge-std/src/",
+        "prb-math/=node_modules/prb-math/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 1000000000
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "node_modules/@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolErrors.sol": "IUniswapV3PoolErrors"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "node_modules/@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolErrors.sol": {
+        "keccak256": "0xf80abf13fb1fafc127ba4e792f240dd8ea7c8c893978cdfd8439c27fae9a037b",
+        "urls": [
+          "bzz-raw://b04fc72a656bbf3631e9c2e67b9870a2d9d235185e833fe050e9606e6816a9aa",
+          "dweb:/ipfs/QmUcz4bkEkJ9pwzFu1C3n97hBQ3st9U6qTAqCdyFwddKco"
+        ],
+        "license": "GPL-2.0-or-later"
+      }
+    },
+    "version": 1
+  },
+  "ast": {
+    "absolutePath": "node_modules/@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolErrors.sol",
+    "id": 32776,
+    "exportedSymbols": {
+      "IUniswapV3PoolErrors": [
+        32775
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "45:345:102",
+    "nodes": [
+      {
+        "id": 32749,
+        "nodeType": "PragmaDirective",
+        "src": "45:24:102",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          ">=",
+          "0.5",
+          ".0"
+        ]
+      },
+      {
+        "id": 32775,
+        "nodeType": "ContractDefinition",
+        "src": "159:230:102",
+        "nodes": [
+          {
+            "id": 32752,
+            "nodeType": "ErrorDefinition",
+            "src": "196:12:102",
+            "nodes": [],
+            "errorSelector": "a1bf7886",
+            "name": "LOK",
+            "nameLocation": "202:3:102",
+            "parameters": {
+              "id": 32751,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "205:2:102"
+            }
+          },
+          {
+            "id": 32754,
+            "nodeType": "ErrorDefinition",
+            "src": "213:12:102",
+            "nodes": [],
+            "errorSelector": "2fe0284f",
+            "name": "TLU",
+            "nameLocation": "219:3:102",
+            "parameters": {
+              "id": 32753,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "222:2:102"
+            }
+          },
+          {
+            "id": 32756,
+            "nodeType": "ErrorDefinition",
+            "src": "230:12:102",
+            "nodes": [],
+            "errorSelector": "9ad612e8",
+            "name": "TLM",
+            "nameLocation": "236:3:102",
+            "parameters": {
+              "id": 32755,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "239:2:102"
+            }
+          },
+          {
+            "id": 32758,
+            "nodeType": "ErrorDefinition",
+            "src": "247:12:102",
+            "nodes": [],
+            "errorSelector": "d7b54ab1",
+            "name": "TUM",
+            "nameLocation": "253:3:102",
+            "parameters": {
+              "id": 32757,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "256:2:102"
+            }
+          },
+          {
+            "id": 32760,
+            "nodeType": "ErrorDefinition",
+            "src": "264:11:102",
+            "nodes": [],
+            "errorSelector": "9cc0b7f8",
+            "name": "AI",
+            "nameLocation": "270:2:102",
+            "parameters": {
+              "id": 32759,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "272:2:102"
+            }
+          },
+          {
+            "id": 32762,
+            "nodeType": "ErrorDefinition",
+            "src": "280:11:102",
+            "nodes": [],
+            "errorSelector": "748800af",
+            "name": "M0",
+            "nameLocation": "286:2:102",
+            "parameters": {
+              "id": 32761,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "288:2:102"
+            }
+          },
+          {
+            "id": 32764,
+            "nodeType": "ErrorDefinition",
+            "src": "296:11:102",
+            "nodes": [],
+            "errorSelector": "20e5672e",
+            "name": "M1",
+            "nameLocation": "302:2:102",
+            "parameters": {
+              "id": 32763,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "304:2:102"
+            }
+          },
+          {
+            "id": 32766,
+            "nodeType": "ErrorDefinition",
+            "src": "312:11:102",
+            "nodes": [],
+            "errorSelector": "03fff018",
+            "name": "AS",
+            "nameLocation": "318:2:102",
+            "parameters": {
+              "id": 32765,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "320:2:102"
+            }
+          },
+          {
+            "id": 32768,
+            "nodeType": "ErrorDefinition",
+            "src": "328:12:102",
+            "nodes": [],
+            "errorSelector": "ba0b951e",
+            "name": "IIA",
+            "nameLocation": "334:3:102",
+            "parameters": {
+              "id": 32767,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "337:2:102"
+            }
+          },
+          {
+            "id": 32770,
+            "nodeType": "ErrorDefinition",
+            "src": "345:10:102",
+            "nodes": [],
+            "errorSelector": "9f13f76d",
+            "name": "L",
+            "nameLocation": "351:1:102",
+            "parameters": {
+              "id": 32769,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "352:2:102"
+            }
+          },
+          {
+            "id": 32772,
+            "nodeType": "ErrorDefinition",
+            "src": "360:11:102",
+            "nodes": [],
+            "errorSelector": "f704e899",
+            "name": "F0",
+            "nameLocation": "366:2:102",
+            "parameters": {
+              "id": 32771,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "368:2:102"
+            }
+          },
+          {
+            "id": 32774,
+            "nodeType": "ErrorDefinition",
+            "src": "376:11:102",
+            "nodes": [],
+            "errorSelector": "e90c3493",
+            "name": "F1",
+            "nameLocation": "382:2:102",
+            "parameters": {
+              "id": 32773,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "384:2:102"
+            }
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "IUniswapV3PoolErrors",
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "documentation": {
+          "id": 32750,
+          "nodeType": "StructuredDocumentation",
+          "src": "71:88:102",
+          "text": "@title Errors emitted by a pool\n @notice Contains all events emitted by the pool"
+        },
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          32775
+        ],
+        "name": "IUniswapV3PoolErrors",
+        "nameLocation": "169:20:102",
+        "scope": 32776,
+        "usedErrors": [
+          32752,
+          32754,
+          32756,
+          32758,
+          32760,
+          32762,
+          32764,
+          32766,
+          32768,
+          32770,
+          32772,
+          32774
+        ],
+        "usedEvents": []
+      }
+    ],
+    "license": "GPL-2.0-or-later"
+  },
+  "id": 102
+}

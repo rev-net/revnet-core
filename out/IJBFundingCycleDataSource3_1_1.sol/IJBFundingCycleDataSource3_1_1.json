@@ -285,10 +285,10 @@
     "redeemParams((address,address,uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256),bool,uint256,string,bytes))": "a51cfd18",
     "supportsInterface(bytes4)": "01ffc9a7"
   },
-  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.20+commit.a1b79de6\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"components\":[{\"internalType\":\"contract IJBPaymentTerminal\",\"name\":\"terminal\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"payer\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"decimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"currency\",\"type\":\"uint256\"}],\"internalType\":\"struct JBTokenAmount\",\"name\":\"amount\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"projectId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"currentFundingCycleConfiguration\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"beneficiary\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"weight\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reservedRate\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"metadata\",\"type\":\"bytes\"}],\"internalType\":\"struct JBPayParamsData\",\"name\":\"data\",\"type\":\"tuple\"}],\"name\":\"payParams\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"weight\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"contract IJBPayDelegate3_1_1\",\"name\":\"delegate\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"metadata\",\"type\":\"bytes\"}],\"internalType\":\"struct JBPayDelegateAllocation3_1_1[]\",\"name\":\"delegateAllocations\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"contract IJBPaymentTerminal\",\"name\":\"terminal\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"holder\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"projectId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"currentFundingCycleConfiguration\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"tokenCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"totalSupply\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"overflow\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"decimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"currency\",\"type\":\"uint256\"}],\"internalType\":\"struct JBTokenAmount\",\"name\":\"reclaimAmount\",\"type\":\"tuple\"},{\"internalType\":\"bool\",\"name\":\"useTotalOverflow\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"redemptionRate\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"metadata\",\"type\":\"bytes\"}],\"internalType\":\"struct JBRedeemParamsData\",\"name\":\"data\",\"type\":\"tuple\"}],\"name\":\"redeemParams\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"reclaimAmount\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"contract IJBRedemptionDelegate3_1_1\",\"name\":\"delegate\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"metadata\",\"type\":\"bytes\"}],\"internalType\":\"struct JBRedemptionDelegateAllocation3_1_1[]\",\"name\":\"delegateAllocations\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"payParams((address,address,(address,uint256,uint256,uint256),uint256,uint256,address,uint256,uint256,string,bytes))\":{\"params\":{\"data\":\"the data passed to the data source in terminal.pay(..), as a JBPayParamsData struct:\"},\"returns\":{\"delegateAllocations\":\"The amount to send to delegates instead of adding to the local balance.\",\"memo\":\"the memo to override the pay(..) memo\",\"weight\":\"the weight to use to override the funding cycle weight\"}},\"redeemParams((address,address,uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256),bool,uint256,string,bytes))\":{\"params\":{\"data\":\"the data passed to the data source in terminal.redeemTokensOf(..), as a JBRedeemParamsData struct:\"},\"returns\":{\"delegateAllocations\":\"The amount to send to delegates instead of adding to the beneficiary.\",\"memo\":\"The memo to override the redeemTokensOf(..) memo.\",\"reclaimAmount\":\"The amount to claim, overriding the terminal logic.\"}},\"supportsInterface(bytes4)\":{\"details\":\"Returns true if this contract implements the interface defined by `interfaceId`. See the corresponding https://eips.ethereum.org/EIPS/eip-165#how-interfaces-are-identified[EIP section] to learn more about how these ids are created. This function call must use less than 30 000 gas.\"}},\"title\":\"Datasource\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"payParams((address,address,(address,uint256,uint256,uint256),uint256,uint256,address,uint256,uint256,string,bytes))\":{\"notice\":\"The datasource implementation for JBPaymentTerminal.pay(..)\"},\"redeemParams((address,address,uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256),bool,uint256,string,bytes))\":{\"notice\":\"The datasource implementation for JBPaymentTerminal.redeemTokensOf(..)\"}},\"notice\":\"The datasource is called by JBPayoutRedemptionPaymentTerminals on pay and redemption, and provide an extra layer of logic to use a custom weight, a custom memo and/or a pay/redeem delegate\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleDataSource3_1_1.sol\":\"IJBFundingCycleDataSource3_1_1\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":1000000000},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@ensdomains/=node_modules/@ensdomains/\",\":@jbx-protocol/=node_modules/@jbx-protocol/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@paulrberg/=node_modules/@paulrberg/\",\":@prb/=node_modules/@prb/\",\":ds-test/=lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\",\":prb-math/=node_modules/prb-math/\"]},\"sources\":{\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleDataSource3_1_1.sol\":{\"keccak256\":\"0xe216214090650d29af2577c7106076b8a5232de6df86035fd206602017b2b7d7\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://1d03c6175d2de49216f04f7fb67709cd200e71651719a0d90bb8dd99462fb8d0\",\"dweb:/ipfs/QmQmWRdqu2GbX4djt2NHbrjvsbe9WpETAPDLth5Po6buwz\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayDelegate3_1_1.sol\":{\"keccak256\":\"0x9448d24cd9c559b44c468c6a76d850f6eaadf31446db903092a2f32503a67294\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://34260a97d33ca38f39c1a94e3a009647d2f66ed72c05865a0123f1d8a143005e\",\"dweb:/ipfs/QmZXcyCKyVZxLNdsCcYcLMt7SmyDCF3L3d1eB5jeBHpDHY\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPaymentTerminal.sol\":{\"keccak256\":\"0x273bc1fa373fac08e5635fce7d38fd92e9fabba353568b3f7a5be54c01fe4d27\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://cc095a25121e0f665d8e4ef331a1e9c7e99017411bec3ac9a8bb76046340f77c\",\"dweb:/ipfs/QmbfcURUEoP7mihobZ69VpHwDCZeuhiqPERM1z1mTJRZUT\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBRedemptionDelegate3_1_1.sol\":{\"keccak256\":\"0x6034773b78e98902625563bd176a97267e729cb5205d25b06e8a2262b131c0d8\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://de3546775e0add44520b7b767e05975dc162c73712e5dd43630a4f49a942590b\",\"dweb:/ipfs/Qmb6Yz7y1Ux34jdkfweJKVw2tisE1ry4kg9whY3AbV6nNh\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidPayData3_1_1.sol\":{\"keccak256\":\"0x2e659555149ff14c045b749b1d1a3156b8296ab08375ac2abec92afc43bf3acf\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://77123eaa84b6b3fcbedbd9379c6e1182ee89d7c1f0e5b8db20d119964cd3e475\",\"dweb:/ipfs/QmYJDDtxMEgF5evbxDrTmEPjqqhS1pDd3HWdVViPAx7bPD\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidRedeemData3_1_1.sol\":{\"keccak256\":\"0x23848d41aa179d16e9b7033befd3a855d43f6a009e24030c2ba1bb5b06cb3924\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://3c86b3879ddb123e6911a78be5d15e3ebe3f50394009ff8eb6251d4d337d6f8d\",\"dweb:/ipfs/Qma23jknbjhAgEroYiTqQaj6kAwoVHrGFfjNJzBeCuYmqj\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayDelegateAllocation3_1_1.sol\":{\"keccak256\":\"0x8d87206a7015af9ec9e5fc059e39bfcea44aa007f8812213c6fd489d0a9c2e17\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://e5c098a8f497ebc98372740f8ebbecc387e661069c08c66a7c5f21961fcec41c\",\"dweb:/ipfs/QmcSraaXpge5a4AW4Xs4wBXN3s1cYSycj7cACxLApSWiQM\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayParamsData.sol\":{\"keccak256\":\"0xc7909dfe6de88faca33a47a588559c80e14d3d1256f2c17e13f5ea6e23ce8732\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://d6c3b23f49411316c08b24805a964c8000f605ff632bf7c202fc2808937a8afe\",\"dweb:/ipfs/QmeM9SvoNmhL2UFaeTUte1sPRccthhSfS4bqSzf3rpcrTh\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedeemParamsData.sol\":{\"keccak256\":\"0x2eada17b425e75bfeffa786dc5b5ef13407b798cc1822597dd0d3389e67e9229\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5414600cba2385d23fba49dd082f349865f38c9963f09c8a4d778b0f7722473e\",\"dweb:/ipfs/QmPQTxGae21ZqPgCaT8rNK3NaVpMwhMuk357XHGGds12JR\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedemptionDelegateAllocation3_1_1.sol\":{\"keccak256\":\"0x16d2b586f4591b0d18324f233b4d4a13c6dc687b5f2c5becadbedbbdc373cdc4\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://a50138e2effb7d24a1a851dc83936e330e72021eeae17086b09a45aa2537bdb1\",\"dweb:/ipfs/QmUPAQuydtw8UPdqutb9CFTwCKFbdCLLAQXyxk94eY5top\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBTokenAmount.sol\":{\"keccak256\":\"0x9317f1f47aef544de592a48a4b20fa3d54586d988c8bb7420b40076920ea200d\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://2b65390899ff8ce51fd1ea2c8bb260b8da8d1b9693acb5ac44d0c153f32aaa7d\",\"dweb:/ipfs/QmNv2UiAT1gWdW79xqav7F8M6ecwzbmf4opCuquni4Fg4d\"]},\"node_modules/@openzeppelin/contracts/utils/introspection/IERC165.sol\":{\"keccak256\":\"0x447a5f3ddc18419d41ff92b3773fb86471b1db25773e07f877f548918a185bf1\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://be161e54f24e5c6fae81a12db1a8ae87bc5ae1b0ddc805d82a1440a68455088f\",\"dweb:/ipfs/QmP7C3CHdY9urF4dEMb9wmsp1wMxHF6nhA2yQE5SKiPAdy\"]}},\"version\":1}",
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.21+commit.d9974bed\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"components\":[{\"internalType\":\"contract IJBPaymentTerminal\",\"name\":\"terminal\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"payer\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"decimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"currency\",\"type\":\"uint256\"}],\"internalType\":\"struct JBTokenAmount\",\"name\":\"amount\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"projectId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"currentFundingCycleConfiguration\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"beneficiary\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"weight\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reservedRate\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"metadata\",\"type\":\"bytes\"}],\"internalType\":\"struct JBPayParamsData\",\"name\":\"data\",\"type\":\"tuple\"}],\"name\":\"payParams\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"weight\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"contract IJBPayDelegate3_1_1\",\"name\":\"delegate\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"metadata\",\"type\":\"bytes\"}],\"internalType\":\"struct JBPayDelegateAllocation3_1_1[]\",\"name\":\"delegateAllocations\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"contract IJBPaymentTerminal\",\"name\":\"terminal\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"holder\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"projectId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"currentFundingCycleConfiguration\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"tokenCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"totalSupply\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"overflow\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"decimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"currency\",\"type\":\"uint256\"}],\"internalType\":\"struct JBTokenAmount\",\"name\":\"reclaimAmount\",\"type\":\"tuple\"},{\"internalType\":\"bool\",\"name\":\"useTotalOverflow\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"redemptionRate\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"metadata\",\"type\":\"bytes\"}],\"internalType\":\"struct JBRedeemParamsData\",\"name\":\"data\",\"type\":\"tuple\"}],\"name\":\"redeemParams\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"reclaimAmount\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"memo\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"contract IJBRedemptionDelegate3_1_1\",\"name\":\"delegate\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"metadata\",\"type\":\"bytes\"}],\"internalType\":\"struct JBRedemptionDelegateAllocation3_1_1[]\",\"name\":\"delegateAllocations\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"payParams((address,address,(address,uint256,uint256,uint256),uint256,uint256,address,uint256,uint256,string,bytes))\":{\"params\":{\"data\":\"the data passed to the data source in terminal.pay(..), as a JBPayParamsData struct:\"},\"returns\":{\"delegateAllocations\":\"The amount to send to delegates instead of adding to the local balance.\",\"memo\":\"the memo to override the pay(..) memo\",\"weight\":\"the weight to use to override the funding cycle weight\"}},\"redeemParams((address,address,uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256),bool,uint256,string,bytes))\":{\"params\":{\"data\":\"the data passed to the data source in terminal.redeemTokensOf(..), as a JBRedeemParamsData struct:\"},\"returns\":{\"delegateAllocations\":\"The amount to send to delegates instead of adding to the beneficiary.\",\"memo\":\"The memo to override the redeemTokensOf(..) memo.\",\"reclaimAmount\":\"The amount to claim, overriding the terminal logic.\"}},\"supportsInterface(bytes4)\":{\"details\":\"Returns true if this contract implements the interface defined by `interfaceId`. See the corresponding https://eips.ethereum.org/EIPS/eip-165#how-interfaces-are-identified[EIP section] to learn more about how these ids are created. This function call must use less than 30 000 gas.\"}},\"title\":\"Datasource\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"payParams((address,address,(address,uint256,uint256,uint256),uint256,uint256,address,uint256,uint256,string,bytes))\":{\"notice\":\"The datasource implementation for JBPaymentTerminal.pay(..)\"},\"redeemParams((address,address,uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256),bool,uint256,string,bytes))\":{\"notice\":\"The datasource implementation for JBPaymentTerminal.redeemTokensOf(..)\"}},\"notice\":\"The datasource is called by JBPayoutRedemptionPaymentTerminals on pay and redemption, and provide an extra layer of logic to use a custom weight, a custom memo and/or a pay/redeem delegate\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleDataSource3_1_1.sol\":\"IJBFundingCycleDataSource3_1_1\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":1000000000},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@croptop/=node_modules/@croptop/\",\":@ensdomains/=node_modules/@ensdomains/\",\":@jbx-protocol/=node_modules/@jbx-protocol/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@paulrberg/=node_modules/@paulrberg/\",\":@prb/=node_modules/@prb/\",\":@uniswap/=node_modules/@uniswap/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\",\":prb-math/=node_modules/prb-math/\"]},\"sources\":{\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleDataSource3_1_1.sol\":{\"keccak256\":\"0xe216214090650d29af2577c7106076b8a5232de6df86035fd206602017b2b7d7\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://1d03c6175d2de49216f04f7fb67709cd200e71651719a0d90bb8dd99462fb8d0\",\"dweb:/ipfs/QmQmWRdqu2GbX4djt2NHbrjvsbe9WpETAPDLth5Po6buwz\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayDelegate3_1_1.sol\":{\"keccak256\":\"0x9448d24cd9c559b44c468c6a76d850f6eaadf31446db903092a2f32503a67294\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://34260a97d33ca38f39c1a94e3a009647d2f66ed72c05865a0123f1d8a143005e\",\"dweb:/ipfs/QmZXcyCKyVZxLNdsCcYcLMt7SmyDCF3L3d1eB5jeBHpDHY\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPaymentTerminal.sol\":{\"keccak256\":\"0x273bc1fa373fac08e5635fce7d38fd92e9fabba353568b3f7a5be54c01fe4d27\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://cc095a25121e0f665d8e4ef331a1e9c7e99017411bec3ac9a8bb76046340f77c\",\"dweb:/ipfs/QmbfcURUEoP7mihobZ69VpHwDCZeuhiqPERM1z1mTJRZUT\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBRedemptionDelegate3_1_1.sol\":{\"keccak256\":\"0x6034773b78e98902625563bd176a97267e729cb5205d25b06e8a2262b131c0d8\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://de3546775e0add44520b7b767e05975dc162c73712e5dd43630a4f49a942590b\",\"dweb:/ipfs/Qmb6Yz7y1Ux34jdkfweJKVw2tisE1ry4kg9whY3AbV6nNh\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidPayData3_1_1.sol\":{\"keccak256\":\"0x2e659555149ff14c045b749b1d1a3156b8296ab08375ac2abec92afc43bf3acf\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://77123eaa84b6b3fcbedbd9379c6e1182ee89d7c1f0e5b8db20d119964cd3e475\",\"dweb:/ipfs/QmYJDDtxMEgF5evbxDrTmEPjqqhS1pDd3HWdVViPAx7bPD\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidRedeemData3_1_1.sol\":{\"keccak256\":\"0x23848d41aa179d16e9b7033befd3a855d43f6a009e24030c2ba1bb5b06cb3924\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://3c86b3879ddb123e6911a78be5d15e3ebe3f50394009ff8eb6251d4d337d6f8d\",\"dweb:/ipfs/Qma23jknbjhAgEroYiTqQaj6kAwoVHrGFfjNJzBeCuYmqj\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayDelegateAllocation3_1_1.sol\":{\"keccak256\":\"0x8d87206a7015af9ec9e5fc059e39bfcea44aa007f8812213c6fd489d0a9c2e17\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://e5c098a8f497ebc98372740f8ebbecc387e661069c08c66a7c5f21961fcec41c\",\"dweb:/ipfs/QmcSraaXpge5a4AW4Xs4wBXN3s1cYSycj7cACxLApSWiQM\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayParamsData.sol\":{\"keccak256\":\"0xc7909dfe6de88faca33a47a588559c80e14d3d1256f2c17e13f5ea6e23ce8732\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://d6c3b23f49411316c08b24805a964c8000f605ff632bf7c202fc2808937a8afe\",\"dweb:/ipfs/QmeM9SvoNmhL2UFaeTUte1sPRccthhSfS4bqSzf3rpcrTh\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedeemParamsData.sol\":{\"keccak256\":\"0x2eada17b425e75bfeffa786dc5b5ef13407b798cc1822597dd0d3389e67e9229\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5414600cba2385d23fba49dd082f349865f38c9963f09c8a4d778b0f7722473e\",\"dweb:/ipfs/QmPQTxGae21ZqPgCaT8rNK3NaVpMwhMuk357XHGGds12JR\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedemptionDelegateAllocation3_1_1.sol\":{\"keccak256\":\"0x16d2b586f4591b0d18324f233b4d4a13c6dc687b5f2c5becadbedbbdc373cdc4\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://a50138e2effb7d24a1a851dc83936e330e72021eeae17086b09a45aa2537bdb1\",\"dweb:/ipfs/QmUPAQuydtw8UPdqutb9CFTwCKFbdCLLAQXyxk94eY5top\"]},\"node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBTokenAmount.sol\":{\"keccak256\":\"0x9317f1f47aef544de592a48a4b20fa3d54586d988c8bb7420b40076920ea200d\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://2b65390899ff8ce51fd1ea2c8bb260b8da8d1b9693acb5ac44d0c153f32aaa7d\",\"dweb:/ipfs/QmNv2UiAT1gWdW79xqav7F8M6ecwzbmf4opCuquni4Fg4d\"]},\"node_modules/@openzeppelin/contracts/utils/introspection/IERC165.sol\":{\"keccak256\":\"0x447a5f3ddc18419d41ff92b3773fb86471b1db25773e07f877f548918a185bf1\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://be161e54f24e5c6fae81a12db1a8ae87bc5ae1b0ddc805d82a1440a68455088f\",\"dweb:/ipfs/QmP7C3CHdY9urF4dEMb9wmsp1wMxHF6nhA2yQE5SKiPAdy\"]}},\"version\":1}",
   "metadata": {
     "compiler": {
-      "version": "0.8.20+commit.a1b79de6"
+      "version": "0.8.21+commit.d9974bed"
     },
     "language": "Solidity",
     "output": {
@@ -607,15 +607,18 @@
     },
     "settings": {
       "remappings": [
-        ":@chainlink/=node_modules/@chainlink/",
-        ":@ensdomains/=node_modules/@ensdomains/",
-        ":@jbx-protocol/=node_modules/@jbx-protocol/",
-        ":@openzeppelin/=node_modules/@openzeppelin/",
-        ":@paulrberg/=node_modules/@paulrberg/",
-        ":@prb/=node_modules/@prb/",
-        ":ds-test/=lib/ds-test/src/",
-        ":forge-std/=lib/forge-std/src/",
-        ":prb-math/=node_modules/prb-math/"
+        "@chainlink/=node_modules/@chainlink/",
+        "@croptop/=node_modules/@croptop/",
+        "@ensdomains/=node_modules/@ensdomains/",
+        "@jbx-protocol/=node_modules/@jbx-protocol/",
+        "@openzeppelin/=node_modules/@openzeppelin/",
+        "@paulrberg/=node_modules/@paulrberg/",
+        "@prb/=node_modules/@prb/",
+        "@uniswap/=node_modules/@uniswap/",
+        "base64-sol/=node_modules/base64-sol/",
+        "ds-test/=lib/ds-test/src/",
+        "forge-std/=lib/forge-std/src/",
+        "prb-math/=node_modules/prb-math/"
       ],
       "optimizer": {
         "enabled": true,
@@ -731,34 +734,34 @@
   },
   "ast": {
     "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleDataSource3_1_1.sol",
-    "id": 24103,
+    "id": 29777,
     "exportedSymbols": {
       "IERC165": [
-        26036
+        32574
       ],
       "IJBFundingCycleDataSource3_1_1": [
-        24102
+        29776
       ],
       "JBPayDelegateAllocation3_1_1": [
-        25753
+        31801
       ],
       "JBPayParamsData": [
-        25783
+        31831
       ],
       "JBRedeemParamsData": [
-        25825
+        31873
       ],
       "JBRedemptionDelegateAllocation3_1_1": [
-        25838
+        31886
       ]
     },
     "nodeType": "SourceUnit",
-    "src": "32:2044:20",
+    "src": "32:2044:44",
     "nodes": [
       {
-        "id": 24058,
+        "id": 29732,
         "nodeType": "PragmaDirective",
-        "src": "32:23:20",
+        "src": "32:23:44",
         "nodes": [],
         "literals": [
           "solidity",
@@ -768,24 +771,24 @@
         ]
       },
       {
-        "id": 24060,
+        "id": 29734,
         "nodeType": "ImportDirective",
-        "src": "57:80:20",
+        "src": "57:80:44",
         "nodes": [],
         "absolutePath": "node_modules/@openzeppelin/contracts/utils/introspection/IERC165.sol",
         "file": "@openzeppelin/contracts/utils/introspection/IERC165.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 24103,
-        "sourceUnit": 26037,
+        "scope": 29777,
+        "sourceUnit": 32575,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 24059,
+              "id": 29733,
               "name": "IERC165",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 26036,
-              "src": "65:7:20",
+              "referencedDeclaration": 32574,
+              "src": "65:7:44",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -794,24 +797,24 @@
         "unitAlias": ""
       },
       {
-        "id": 24062,
+        "id": 29736,
         "nodeType": "ImportDirective",
-        "src": "138:91:20",
+        "src": "138:91:44",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayDelegateAllocation3_1_1.sol",
         "file": "./../structs/JBPayDelegateAllocation3_1_1.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 24103,
-        "sourceUnit": 25754,
+        "scope": 29777,
+        "sourceUnit": 31802,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 24061,
+              "id": 29735,
               "name": "JBPayDelegateAllocation3_1_1",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 25753,
-              "src": "146:28:20",
+              "referencedDeclaration": 31801,
+              "src": "146:28:44",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -820,24 +823,24 @@
         "unitAlias": ""
       },
       {
-        "id": 24064,
+        "id": 29738,
         "nodeType": "ImportDirective",
-        "src": "230:65:20",
+        "src": "230:65:44",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayParamsData.sol",
         "file": "./../structs/JBPayParamsData.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 24103,
-        "sourceUnit": 25784,
+        "scope": 29777,
+        "sourceUnit": 31832,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 24063,
+              "id": 29737,
               "name": "JBPayParamsData",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 25783,
-              "src": "238:15:20",
+              "referencedDeclaration": 31831,
+              "src": "238:15:44",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -846,24 +849,24 @@
         "unitAlias": ""
       },
       {
-        "id": 24066,
+        "id": 29740,
         "nodeType": "ImportDirective",
-        "src": "296:71:20",
+        "src": "296:71:44",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedeemParamsData.sol",
         "file": "./../structs/JBRedeemParamsData.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 24103,
-        "sourceUnit": 25826,
+        "scope": 29777,
+        "sourceUnit": 31874,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 24065,
+              "id": 29739,
               "name": "JBRedeemParamsData",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 25825,
-              "src": "304:18:20",
+              "referencedDeclaration": 31873,
+              "src": "304:18:44",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -872,24 +875,24 @@
         "unitAlias": ""
       },
       {
-        "id": 24068,
+        "id": 29742,
         "nodeType": "ImportDirective",
-        "src": "368:105:20",
+        "src": "368:105:44",
         "nodes": [],
         "absolutePath": "node_modules/@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedemptionDelegateAllocation3_1_1.sol",
         "file": "./../structs/JBRedemptionDelegateAllocation3_1_1.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 24103,
-        "sourceUnit": 25839,
+        "scope": 29777,
+        "sourceUnit": 31887,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 24067,
+              "id": 29741,
               "name": "JBRedemptionDelegateAllocation3_1_1",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 25838,
-              "src": "376:35:20",
+              "referencedDeclaration": 31886,
+              "src": "376:35:44",
               "typeDescriptions": {}
             },
             "nameLocation": "-1:-1:-1"
@@ -898,19 +901,19 @@
         "unitAlias": ""
       },
       {
-        "id": 24102,
+        "id": 29776,
         "nodeType": "ContractDefinition",
-        "src": "698:1377:20",
+        "src": "698:1377:44",
         "nodes": [
           {
-            "id": 24086,
+            "id": 29760,
             "nodeType": "FunctionDefinition",
-            "src": "1170:212:20",
+            "src": "1170:212:44",
             "nodes": [],
             "documentation": {
-              "id": 24072,
+              "id": 29746,
               "nodeType": "StructuredDocumentation",
-              "src": "754:413:20",
+              "src": "754:413:44",
               "text": "@notice The datasource implementation for JBPaymentTerminal.pay(..)\n @param data the data passed to the data source in terminal.pay(..), as a JBPayParamsData struct:\n @return weight the weight to use to override the funding cycle weight\n @return memo the memo to override the pay(..) memo\n @return delegateAllocations The amount to send to delegates instead of adding to the local balance."
             },
             "functionSelector": "d46cf171",
@@ -918,64 +921,64 @@
             "kind": "function",
             "modifiers": [],
             "name": "payParams",
-            "nameLocation": "1179:9:20",
+            "nameLocation": "1179:9:44",
             "parameters": {
-              "id": 24076,
+              "id": 29750,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 24075,
+                  "id": 29749,
                   "mutability": "mutable",
                   "name": "data",
-                  "nameLocation": "1219:4:20",
+                  "nameLocation": "1219:4:44",
                   "nodeType": "VariableDeclaration",
-                  "scope": 24086,
-                  "src": "1194:29:20",
+                  "scope": 29760,
+                  "src": "1194:29:44",
                   "stateVariable": false,
                   "storageLocation": "calldata",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_struct$_JBPayParamsData_$25783_calldata_ptr",
+                    "typeIdentifier": "t_struct$_JBPayParamsData_$31831_calldata_ptr",
                     "typeString": "struct JBPayParamsData"
                   },
                   "typeName": {
-                    "id": 24074,
+                    "id": 29748,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 24073,
+                      "id": 29747,
                       "name": "JBPayParamsData",
                       "nameLocations": [
-                        "1194:15:20"
+                        "1194:15:44"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 25783,
-                      "src": "1194:15:20"
+                      "referencedDeclaration": 31831,
+                      "src": "1194:15:44"
                     },
-                    "referencedDeclaration": 25783,
-                    "src": "1194:15:20",
+                    "referencedDeclaration": 31831,
+                    "src": "1194:15:44",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_struct$_JBPayParamsData_$25783_storage_ptr",
+                      "typeIdentifier": "t_struct$_JBPayParamsData_$31831_storage_ptr",
                       "typeString": "struct JBPayParamsData"
                     }
                   },
                   "visibility": "internal"
                 }
               ],
-              "src": "1188:39:20"
+              "src": "1188:39:44"
             },
             "returnParameters": {
-              "id": 24085,
+              "id": 29759,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 24078,
+                  "id": 29752,
                   "mutability": "mutable",
                   "name": "weight",
-                  "nameLocation": "1278:6:20",
+                  "nameLocation": "1278:6:44",
                   "nodeType": "VariableDeclaration",
-                  "scope": 24086,
-                  "src": "1270:14:20",
+                  "scope": 29760,
+                  "src": "1270:14:44",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -983,10 +986,10 @@
                     "typeString": "uint256"
                   },
                   "typeName": {
-                    "id": 24077,
+                    "id": 29751,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
-                    "src": "1270:7:20",
+                    "src": "1270:7:44",
                     "typeDescriptions": {
                       "typeIdentifier": "t_uint256",
                       "typeString": "uint256"
@@ -996,13 +999,13 @@
                 },
                 {
                   "constant": false,
-                  "id": 24080,
+                  "id": 29754,
                   "mutability": "mutable",
                   "name": "memo",
-                  "nameLocation": "1306:4:20",
+                  "nameLocation": "1306:4:44",
                   "nodeType": "VariableDeclaration",
-                  "scope": 24086,
-                  "src": "1292:18:20",
+                  "scope": 29760,
+                  "src": "1292:18:44",
                   "stateVariable": false,
                   "storageLocation": "memory",
                   "typeDescriptions": {
@@ -1010,10 +1013,10 @@
                     "typeString": "string"
                   },
                   "typeName": {
-                    "id": 24079,
+                    "id": 29753,
                     "name": "string",
                     "nodeType": "ElementaryTypeName",
-                    "src": "1292:6:20",
+                    "src": "1292:6:44",
                     "typeDescriptions": {
                       "typeIdentifier": "t_string_storage_ptr",
                       "typeString": "string"
@@ -1023,67 +1026,67 @@
                 },
                 {
                   "constant": false,
-                  "id": 24084,
+                  "id": 29758,
                   "mutability": "mutable",
                   "name": "delegateAllocations",
-                  "nameLocation": "1356:19:20",
+                  "nameLocation": "1356:19:44",
                   "nodeType": "VariableDeclaration",
-                  "scope": 24086,
-                  "src": "1318:57:20",
+                  "scope": 29760,
+                  "src": "1318:57:44",
                   "stateVariable": false,
                   "storageLocation": "memory",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_array$_t_struct$_JBPayDelegateAllocation3_1_1_$25753_memory_ptr_$dyn_memory_ptr",
+                    "typeIdentifier": "t_array$_t_struct$_JBPayDelegateAllocation3_1_1_$31801_memory_ptr_$dyn_memory_ptr",
                     "typeString": "struct JBPayDelegateAllocation3_1_1[]"
                   },
                   "typeName": {
                     "baseType": {
-                      "id": 24082,
+                      "id": 29756,
                       "nodeType": "UserDefinedTypeName",
                       "pathNode": {
-                        "id": 24081,
+                        "id": 29755,
                         "name": "JBPayDelegateAllocation3_1_1",
                         "nameLocations": [
-                          "1318:28:20"
+                          "1318:28:44"
                         ],
                         "nodeType": "IdentifierPath",
-                        "referencedDeclaration": 25753,
-                        "src": "1318:28:20"
+                        "referencedDeclaration": 31801,
+                        "src": "1318:28:44"
                       },
-                      "referencedDeclaration": 25753,
-                      "src": "1318:28:20",
+                      "referencedDeclaration": 31801,
+                      "src": "1318:28:44",
                       "typeDescriptions": {
-                        "typeIdentifier": "t_struct$_JBPayDelegateAllocation3_1_1_$25753_storage_ptr",
+                        "typeIdentifier": "t_struct$_JBPayDelegateAllocation3_1_1_$31801_storage_ptr",
                         "typeString": "struct JBPayDelegateAllocation3_1_1"
                       }
                     },
-                    "id": 24083,
+                    "id": 29757,
                     "nodeType": "ArrayTypeName",
-                    "src": "1318:30:20",
+                    "src": "1318:30:44",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_array$_t_struct$_JBPayDelegateAllocation3_1_1_$25753_storage_$dyn_storage_ptr",
+                      "typeIdentifier": "t_array$_t_struct$_JBPayDelegateAllocation3_1_1_$31801_storage_$dyn_storage_ptr",
                       "typeString": "struct JBPayDelegateAllocation3_1_1[]"
                     }
                   },
                   "visibility": "internal"
                 }
               ],
-              "src": "1262:119:20"
+              "src": "1262:119:44"
             },
-            "scope": 24102,
+            "scope": 29776,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 24101,
+            "id": 29775,
             "nodeType": "FunctionDefinition",
-            "src": "1841:232:20",
+            "src": "1841:232:44",
             "nodes": [],
             "documentation": {
-              "id": 24087,
+              "id": 29761,
               "nodeType": "StructuredDocumentation",
-              "src": "1386:452:20",
+              "src": "1386:452:44",
               "text": "@notice The datasource implementation for JBPaymentTerminal.redeemTokensOf(..)\n @param data the data passed to the data source in terminal.redeemTokensOf(..), as a JBRedeemParamsData struct:\n @return reclaimAmount The amount to claim, overriding the terminal logic.\n @return memo The memo to override the redeemTokensOf(..) memo.\n @return delegateAllocations The amount to send to delegates instead of adding to the beneficiary."
             },
             "functionSelector": "a51cfd18",
@@ -1091,64 +1094,64 @@
             "kind": "function",
             "modifiers": [],
             "name": "redeemParams",
-            "nameLocation": "1850:12:20",
+            "nameLocation": "1850:12:44",
             "parameters": {
-              "id": 24091,
+              "id": 29765,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 24090,
+                  "id": 29764,
                   "mutability": "mutable",
                   "name": "data",
-                  "nameLocation": "1896:4:20",
+                  "nameLocation": "1896:4:44",
                   "nodeType": "VariableDeclaration",
-                  "scope": 24101,
-                  "src": "1868:32:20",
+                  "scope": 29775,
+                  "src": "1868:32:44",
                   "stateVariable": false,
                   "storageLocation": "calldata",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_struct$_JBRedeemParamsData_$25825_calldata_ptr",
+                    "typeIdentifier": "t_struct$_JBRedeemParamsData_$31873_calldata_ptr",
                     "typeString": "struct JBRedeemParamsData"
                   },
                   "typeName": {
-                    "id": 24089,
+                    "id": 29763,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 24088,
+                      "id": 29762,
                       "name": "JBRedeemParamsData",
                       "nameLocations": [
-                        "1868:18:20"
+                        "1868:18:44"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 25825,
-                      "src": "1868:18:20"
+                      "referencedDeclaration": 31873,
+                      "src": "1868:18:44"
                     },
-                    "referencedDeclaration": 25825,
-                    "src": "1868:18:20",
+                    "referencedDeclaration": 31873,
+                    "src": "1868:18:44",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_struct$_JBRedeemParamsData_$25825_storage_ptr",
+                      "typeIdentifier": "t_struct$_JBRedeemParamsData_$31873_storage_ptr",
                       "typeString": "struct JBRedeemParamsData"
                     }
                   },
                   "visibility": "internal"
                 }
               ],
-              "src": "1862:42:20"
+              "src": "1862:42:44"
             },
             "returnParameters": {
-              "id": 24100,
+              "id": 29774,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 24093,
+                  "id": 29767,
                   "mutability": "mutable",
                   "name": "reclaimAmount",
-                  "nameLocation": "1955:13:20",
+                  "nameLocation": "1955:13:44",
                   "nodeType": "VariableDeclaration",
-                  "scope": 24101,
-                  "src": "1947:21:20",
+                  "scope": 29775,
+                  "src": "1947:21:44",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -1156,10 +1159,10 @@
                     "typeString": "uint256"
                   },
                   "typeName": {
-                    "id": 24092,
+                    "id": 29766,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
-                    "src": "1947:7:20",
+                    "src": "1947:7:44",
                     "typeDescriptions": {
                       "typeIdentifier": "t_uint256",
                       "typeString": "uint256"
@@ -1169,13 +1172,13 @@
                 },
                 {
                   "constant": false,
-                  "id": 24095,
+                  "id": 29769,
                   "mutability": "mutable",
                   "name": "memo",
-                  "nameLocation": "1990:4:20",
+                  "nameLocation": "1990:4:44",
                   "nodeType": "VariableDeclaration",
-                  "scope": 24101,
-                  "src": "1976:18:20",
+                  "scope": 29775,
+                  "src": "1976:18:44",
                   "stateVariable": false,
                   "storageLocation": "memory",
                   "typeDescriptions": {
@@ -1183,10 +1186,10 @@
                     "typeString": "string"
                   },
                   "typeName": {
-                    "id": 24094,
+                    "id": 29768,
                     "name": "string",
                     "nodeType": "ElementaryTypeName",
-                    "src": "1976:6:20",
+                    "src": "1976:6:44",
                     "typeDescriptions": {
                       "typeIdentifier": "t_string_storage_ptr",
                       "typeString": "string"
@@ -1196,54 +1199,54 @@
                 },
                 {
                   "constant": false,
-                  "id": 24099,
+                  "id": 29773,
                   "mutability": "mutable",
                   "name": "delegateAllocations",
-                  "nameLocation": "2047:19:20",
+                  "nameLocation": "2047:19:44",
                   "nodeType": "VariableDeclaration",
-                  "scope": 24101,
-                  "src": "2002:64:20",
+                  "scope": 29775,
+                  "src": "2002:64:44",
                   "stateVariable": false,
                   "storageLocation": "memory",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_array$_t_struct$_JBRedemptionDelegateAllocation3_1_1_$25838_memory_ptr_$dyn_memory_ptr",
+                    "typeIdentifier": "t_array$_t_struct$_JBRedemptionDelegateAllocation3_1_1_$31886_memory_ptr_$dyn_memory_ptr",
                     "typeString": "struct JBRedemptionDelegateAllocation3_1_1[]"
                   },
                   "typeName": {
                     "baseType": {
-                      "id": 24097,
+                      "id": 29771,
                       "nodeType": "UserDefinedTypeName",
                       "pathNode": {
-                        "id": 24096,
+                        "id": 29770,
                         "name": "JBRedemptionDelegateAllocation3_1_1",
                         "nameLocations": [
-                          "2002:35:20"
+                          "2002:35:44"
                         ],
                         "nodeType": "IdentifierPath",
-                        "referencedDeclaration": 25838,
-                        "src": "2002:35:20"
+                        "referencedDeclaration": 31886,
+                        "src": "2002:35:44"
                       },
-                      "referencedDeclaration": 25838,
-                      "src": "2002:35:20",
+                      "referencedDeclaration": 31886,
+                      "src": "2002:35:44",
                       "typeDescriptions": {
-                        "typeIdentifier": "t_struct$_JBRedemptionDelegateAllocation3_1_1_$25838_storage_ptr",
+                        "typeIdentifier": "t_struct$_JBRedemptionDelegateAllocation3_1_1_$31886_storage_ptr",
                         "typeString": "struct JBRedemptionDelegateAllocation3_1_1"
                       }
                     },
-                    "id": 24098,
+                    "id": 29772,
                     "nodeType": "ArrayTypeName",
-                    "src": "2002:37:20",
+                    "src": "2002:37:44",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_array$_t_struct$_JBRedemptionDelegateAllocation3_1_1_$25838_storage_$dyn_storage_ptr",
+                      "typeIdentifier": "t_array$_t_struct$_JBRedemptionDelegateAllocation3_1_1_$31886_storage_$dyn_storage_ptr",
                       "typeString": "struct JBRedemptionDelegateAllocation3_1_1[]"
                     }
                   },
                   "visibility": "internal"
                 }
               ],
-              "src": "1939:133:20"
+              "src": "1939:133:44"
             },
-            "scope": 24102,
+            "scope": 29776,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
@@ -1253,42 +1256,42 @@
         "baseContracts": [
           {
             "baseName": {
-              "id": 24070,
+              "id": 29744,
               "name": "IERC165",
               "nameLocations": [
-                "742:7:20"
+                "742:7:44"
               ],
               "nodeType": "IdentifierPath",
-              "referencedDeclaration": 26036,
-              "src": "742:7:20"
+              "referencedDeclaration": 32574,
+              "src": "742:7:44"
             },
-            "id": 24071,
+            "id": 29745,
             "nodeType": "InheritanceSpecifier",
-            "src": "742:7:20"
+            "src": "742:7:44"
           }
         ],
         "canonicalName": "IJBFundingCycleDataSource3_1_1",
         "contractDependencies": [],
         "contractKind": "interface",
         "documentation": {
-          "id": 24069,
+          "id": 29743,
           "nodeType": "StructuredDocumentation",
-          "src": "475:223:20",
+          "src": "475:223:44",
           "text": "@title Datasource\n @notice The datasource is called by JBPayoutRedemptionPaymentTerminals on pay and redemption, and provide an extra layer of logic to use a custom weight, a custom memo and/or a pay/redeem delegate"
         },
         "fullyImplemented": false,
         "linearizedBaseContracts": [
-          24102,
-          26036
+          29776,
+          32574
         ],
         "name": "IJBFundingCycleDataSource3_1_1",
-        "nameLocation": "708:30:20",
-        "scope": 24103,
+        "nameLocation": "708:30:44",
+        "scope": 29777,
         "usedErrors": [],
         "usedEvents": []
       }
     ],
     "license": "MIT"
   },
-  "id": 20
+  "id": 44
 }
