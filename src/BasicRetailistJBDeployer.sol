@@ -40,7 +40,7 @@ import { JBBuybackDelegateOperations } from
 /// @custom:member reservedRate The percentage of newly issued tokens that should be reserved for the _operator. This
 /// percentage is out of 10_000 (JBConstants.MAX_RESERVED_RATE).
 /// @custom:member reservedRateDuration The number of seconds the reserved rate should be active for.
-/// @custom:member poolFee The fee of the pool in which swaps occur when seeking the best price for a new participant. This incentivizes liquidity providers. Out of 1000000.
+/// @custom:member poolFee The fee of the pool in which swaps occur when seeking the best price for a new participant. This incentivizes liquidity providers. Out of 1000000. A common value is 3%, or 30000.
 struct BasicRetailistJBParams {
     uint256 initialIssuanceRate;
     uint256 premintTokenAmount;
