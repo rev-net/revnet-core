@@ -8,6 +8,7 @@ import { JBDeployTiered721DelegateData } from
     "@jbx-protocol/juice-721-delegate/contracts/structs/JBDeployTiered721DelegateData.sol";
 import { IJBController3_1 } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController3_1.sol";
 import { IJBDirectory } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol";
+import { IJBPaymentTerminal } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPaymentTerminal.sol";
 import { IJBPayoutRedemptionPaymentTerminal3_1_1 } from
     "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayoutRedemptionPaymentTerminal3_1_1.sol";
 import { IJBPayDelegate3_1_1 } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayDelegate3_1_1.sol";
@@ -29,16 +30,14 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
     /// @param _directory The directory of terminals and controllers for projects.
     /// @param _delegateDeployer The delegate deployer.
     /// @param _controller The controller that projects are made from.
-    /// @param _terminal The terminal that projects use to accept payments from.
     /// @param _buybackDelegate The buyback delegate to use.
     constructor(
         IJBDirectory _directory,
         IJBTiered721DelegateDeployer _delegateDeployer,
         IJBController3_1 _controller,
-        IJBPayoutRedemptionPaymentTerminal3_1_1 _terminal,
         IJBGenericBuybackDelegate _buybackDelegate
     )
-        PayAllocatorRetailistJBDeployer(_controller, _terminal, _buybackDelegate)
+        PayAllocatorRetailistJBDeployer(_controller, _buybackDelegate)
     {
         directory = _directory;
         delegateDeployer = _delegateDeployer;
@@ -51,18 +50,21 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
     /// @param _projectMetadata The metadata containing project info.
     /// @param _name The name of the ERC-20 token being create for the project.
     /// @param _symbol The symbol of the ERC-20 token being created for the project.
+    /// @param _data The data needed to deploy a basic retailist project.
+    /// @param _terminals The terminals that project uses to accept payments through.
     /// @param _deployTiered721DelegateData Structure containing data necessary for delegate deployment.
     /// @param _otherDelegateAllocations Any pay delegate allocations that should run when the project is paid.
     /// @param _extraFundingCycleMetadata Extra metadata to attach to the funding cycle for the delegates to use.
     /// @return projectId The ID of the newly created Retailist project.
     function deployTiered721PayAllocatorProjectFor(
         address _operator,
-        JBProjectMetadata memory _projectMetadata,
-        string memory _name,
-        string memory _symbol,
+        JBProjectMetadata calldata _projectMetadata,
+        string calldata _name,
+        string calldata _symbol,
         BasicRetailistJBParams calldata _data,
-        JBDeployTiered721DelegateData calldata _deployTiered721DelegateData,
-        JBPayDelegateAllocation3_1_1[] calldata _otherDelegateAllocations,
+        IJBPaymentTerminal[] memory _terminals,
+        JBDeployTiered721DelegateData memory _deployTiered721DelegateData,
+        JBPayDelegateAllocation3_1_1[] memory _otherDelegateAllocations,
         uint8 _extraFundingCycleMetadata
     )
         public
@@ -72,8 +74,7 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
         projectId = directory.projects().count() + 1;
 
         // Deploy the delegate contract.
-        IJBTiered721Delegate _delegate =
-            delegateDeployer.deployDelegateFor(projectId, _deployTiered721DelegateData);
+        IJBTiered721Delegate _delegate = delegateDeployer.deployDelegateFor(projectId, _deployTiered721DelegateData);
 
         // Keep a reference to the number of delegate allocations passed in.
         uint256 _numberOfOtherDelegateAllocations = _otherDelegateAllocations.length;
@@ -98,7 +99,14 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
         });
 
         super.deployPayAllocatorProjectFor(
-            _operator, _projectMetadata, _name, _symbol, _data, _delegateAllocations, _extraFundingCycleMetadata
+            _operator,
+            _projectMetadata,
+            _name,
+            _symbol,
+            _data,
+            _terminals,
+            _delegateAllocations,
+            _extraFundingCycleMetadata
         );
     }
 }

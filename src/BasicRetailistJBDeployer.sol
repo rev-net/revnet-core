@@ -40,7 +40,8 @@ import { JBBuybackDelegateOperations } from
 /// @custom:member reservedRate The percentage of newly issued tokens that should be reserved for the _operator. This
 /// percentage is out of 10_000 (JBConstants.MAX_RESERVED_RATE).
 /// @custom:member reservedRateDuration The number of seconds the reserved rate should be active for.
-/// @custom:member poolFee The fee of the pool in which swaps occur when seeking the best price for a new participant. This incentivizes liquidity providers. Out of 1_000_000. A common value is 3%, or 30_000.
+/// @custom:member poolFee The fee of the pool in which swaps occur when seeking the best price for a new participant.
+/// This incentivizes liquidity providers. Out of 1_000_000. A common value is 3%, or 30_000.
 struct BasicRetailistJBParams {
     uint256 initialIssuanceRate;
     uint256 premintTokenAmount;
@@ -62,10 +63,6 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
     /// @notice The buyback delegate.
     IJBGenericBuybackDelegate public immutable buybackDelegate;
 
-    /// @notice The terminals that projects use to accept payments from. This is set once in the constructor to be the
-    /// 3.1.1 payment terminal.
-    IJBPaymentTerminal[] public terminals;
-
     /// @notice The permissions that the provided _operator should be granted. This is set once in the constructor to
     /// contain only the SET_SPLITS operation.
     uint256[] public permissionIndexes;
@@ -85,16 +82,10 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
     }
 
     /// @param _controller The controller that projects are made from.
-    /// @param _terminal The terminal that projects use to accept payments from.
     /// @param _buybackDelegate The buyback delegate to use.
-    constructor(
-        IJBController3_1 _controller,
-        IJBPayoutRedemptionPaymentTerminal3_1_1 _terminal,
-        IJBGenericBuybackDelegate _buybackDelegate
-    ) {
+    constructor(IJBController3_1 _controller, IJBGenericBuybackDelegate _buybackDelegate) {
         controller = _controller;
         buybackDelegate = _buybackDelegate;
-        terminals.push(_terminal);
 
         permissionIndexes.push(JBOperations.SET_SPLITS);
         permissionIndexes.push(JBBuybackDelegateOperations.SET_POOL_PARAMS);
@@ -107,13 +98,15 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
     /// @param _name The name of the ERC-20 token being create for the project.
     /// @param _symbol The symbol of the ERC-20 token being created for the project.
     /// @param _data The data needed to deploy a basic retailist project.
+    /// @param _terminals The terminals that project uses to accept payments through.
     /// @return projectId The ID of the newly created Retailist project.
     function deployBasicProjectFor(
         address _operator,
         JBProjectMetadata calldata _projectMetadata,
         string calldata _name,
         string calldata _symbol,
-        BasicRetailistJBParams calldata _data
+        BasicRetailistJBParams calldata _data,
+        IJBPaymentTerminal[] memory _terminals
     )
         public
         returns (uint256 projectId)
@@ -194,7 +187,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
             mustStartAtOrAfter: 0,
             groupedSplits: _groupedSplits,
             fundAccessConstraints: new JBFundAccessConstraints[](0), // Funds can't be accessed by the project owner.
-            terminals: terminals,
+            terminals: _terminals,
             memo: "Deployed Retailist treasury"
         });
 

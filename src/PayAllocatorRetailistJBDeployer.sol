@@ -116,14 +116,12 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
     }
 
     /// @param _controller The controller that projects are made from.
-    /// @param _terminal The terminal that projects use to accept payments from.
     /// @param _buybackDelegate The buyback delegate to use.
     constructor(
         IJBController3_1 _controller,
-        IJBPayoutRedemptionPaymentTerminal3_1_1 _terminal,
         IJBGenericBuybackDelegate _buybackDelegate
     )
-        BasicRetailistJBDeployer(_controller, _terminal, _buybackDelegate)
+        BasicRetailistJBDeployer(_controller, _buybackDelegate)
     { }
 
     /// @notice Deploy a project with basic Retailism constraints that also calls other pay delegates that are
@@ -134,15 +132,17 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
     /// @param _name The name of the ERC-20 token being create for the project.
     /// @param _symbol The symbol of the ERC-20 token being created for the project.
     /// @param _data The data needed to deploy a basic retailist project.
+    /// @param _terminals The terminals that project uses to accept payments through.
     /// @param _delegateAllocations Any pay delegate allocations that should run when the project is paid.
     /// @param _extraFundingCycleMetadata Extra metadata to attach to the funding cycle for the delegates to use.
     /// @return projectId The ID of the newly created Retailist project.
     function deployPayAllocatorProjectFor(
         address _operator,
-        JBProjectMetadata memory _projectMetadata,
-        string memory _name,
-        string memory _symbol,
+        JBProjectMetadata calldata _projectMetadata,
+        string calldata _name,
+        string calldata _symbol,
         BasicRetailistJBParams calldata _data,
+        IJBPaymentTerminal[] memory _terminals,
         JBPayDelegateAllocation3_1_1[] memory _delegateAllocations,
         uint8 _extraFundingCycleMetadata
     )
@@ -226,7 +226,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
             mustStartAtOrAfter: 0,
             groupedSplits: _groupedSplits,
             fundAccessConstraints: new JBFundAccessConstraints[](0), // Funds can't be accessed by the project owner.
-            terminals: terminals,
+            terminals: _terminals,
             memo: "Deployed Retailist treasury"
         });
 
