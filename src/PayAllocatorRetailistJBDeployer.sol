@@ -40,7 +40,7 @@ import { BasicRetailistJBParams, BasicRetailistJBDeployer } from "./BasicRetaili
 contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFundingCycleDataSource3_1_1 {
     /// @notice The data source that returns the correct values for the Buyback Delegate of each project.
     /// @custom:param projectId The ID of the project to which the Buyback Delegate allocations apply.
-    mapping(uint256 => IJBFundingCycleDataSource3_1_1) public buybackDelegateDataSourceOf;
+    mapping(uint256 => IJBGenericBuybackDelegate) public buybackDelegateDataSourceOf;
 
     /// @notice The delegate allocations to include during payments to projects.
     /// @custom:param projectId The ID of the project to which the delegate allocations apply.
@@ -233,7 +233,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         }
 
         // Keep a reference to this data source.
-        buybackDelegateDataSourceOf[projectId] = IJBFundingCycleDataSource3_1_1(_buybackDelegate);
+        buybackDelegateDataSourceOf[projectId] = _buybackDelegate;
 
         // Premint tokens to the Operator.
         controller.mintTokensOf({
