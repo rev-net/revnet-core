@@ -183,7 +183,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         // Set the pool for the buyback delegate.
         buybackDelegate.setPoolFor({
             _projectId: projectId,
-            _fee: 1,
+            _fee: _data.poolFee,
             _secondsAgo: uint32(buybackDelegate.MIN_SECONDS_AGO()),
             _twapDelta: uint32(buybackDelegate.MAX_TWAP_DELTA()),
             _terminalToken: JBTokens.ETH
