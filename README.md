@@ -1,6 +1,6 @@
 # Retailism Template
 
-This repo provides tools for deploying Retailistic projects. It's an implementation using Juicebox and Uniswap.
+This repo provides tools for deploying Retailistic network. It's an implementation using Juicebox and Uniswap.
 
 For a Retailism TLDR, see https://jango.eth.limo/9E01E72C-6028-48B7-AD04-F25393307132/.
 
@@ -21,9 +21,9 @@ https://jango.eth.limo/CF40F5D2-7BFE-43A3-9C15-1C6547FBD15C/
 
 In this repo, you'll find:
 - a basic retailistic design implemented in `BasicRetailistJBDeployer`.
-- a Pay Allocator design implemented in `PayAllocatorRetailistJBDeployer` which accepts other Pay Allocators that'll get used throughout the project's lifetime.
-- a Tiered 721 Pay Allocator design implemented in `Tiered721PayAllocatorRetailistJBDeployer` which accepts data to deploy a Tiered 721 Delegate that'll get used throughout the project's lifetime, alongside other Pay Allocators that may also be specified.
-- a Croptop Tiered 721 Pay Allocator design implemented in `CroptopTiered721PayAllocatorRetailistJBDeployer` which accepts data to deploy a Tiered 721 Delegate that'll get used throughut the project's lifetime that can be posted to by the public through the Croptop Publisher contract, alongside other Pay Allocators that may also be specified.
+- a Pay Allocator design implemented in `PayAllocatorRetailistJBDeployer` which accepts other Pay Allocators that'll get used throughout the network's lifetime as it receives payments.
+- a Tiered 721 Pay Allocator design implemented in `Tiered721PayAllocatorRetailistJBDeployer` which accepts data to deploy a Tiered 721 Delegate that'll get used throughout the network's lifetime as people pay in, alongside other Pay Allocators that may also be specified.
+- a Croptop Tiered 721 Pay Allocator design implemented in `CroptopTiered721PayAllocatorRetailistJBDeployer` which accepts data to deploy a Tiered 721 Delegate that'll get used throughut the project's lifetime as people pay in that can be posted to by the public through the Croptop Publisher contract, alongside other Pay Allocators that may also be specified. See https://croptop.eth.limo for more context.
 
  You can use these contracts to deploy treasuries from etherscan, or wherever else they've been exposed from.
 
