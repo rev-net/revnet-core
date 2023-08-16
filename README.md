@@ -1,6 +1,6 @@
 # Retailism Template
 
-This repo provides tools for deploying Retailistic network. It's an implementation using Juicebox and Uniswap.
+This repo provides tools for deploying Retailistic networks. It's an implementation using Juicebox and Uniswap.
 
 For a Retailism TLDR, see https://jango.eth.limo/9E01E72C-6028-48B7-AD04-F25393307132/.
 
