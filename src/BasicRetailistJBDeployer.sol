@@ -41,7 +41,7 @@ import { JBBuybackDelegateOperations } from
 /// percentage is out of 10_000 (JBConstants.MAX_RESERVED_RATE).
 /// @custom:member devTaxDuration The number of seconds the dev tax should be active for.
 /// @custom:member poolFee The fee of the pool in which swaps occur when seeking the best price for a new participant.
-/// This incentivizes liquidity providers. Out of 1_000_000. A common value is 3%, or 30_000.
+/// This incentivizes liquidity providers. Out of 1_000_000. A common value is 1%, or 10_000. Other passible values are 0.3% and 0.1%.
 struct BasicRetailistJBParams {
     uint256 initialIssuanceRate;
     uint256 premintTokenAmount;
