@@ -33,23 +33,23 @@ import { JBBuybackDelegateOperations } from
 /// treasury. This should _not_ be specified as a fixed point number with 18 decimals, this will be applied internally.
 /// @custom:member premintTokenAmount The number of tokens that should be preminted to the _operator. This should _not_
 /// be specified as a fixed point number with 18 decimals, this will be applied internally.
-/// @custom:member discountRate The rate at which the issuance rate should decrease over time.
-/// @custom:member cycleDurations The number of seconds between applied discounts.
-/// @custom:member redemptionRate The bonding curve rate determining how much each token can access from the treasury at
-/// any current total supply. This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE).
-/// @custom:member reservedRate The percentage of newly issued tokens that should be reserved for the _operator. This
+/// @custom:member issuanceReductionRate The rate at which the issuance rate should decrease over time.
+/// @custom:member generationDuration The number of seconds between applied issuance reduction.
+/// @custom:member exitTaxRate The bonding curve rate determining how much each token can access from the treasury at
+/// any current total supply. This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no tax (100% redemption rate).
+/// @custom:member devTaxRate The percentage of newly issued tokens that should be reserved for the _operator. This
 /// percentage is out of 10_000 (JBConstants.MAX_RESERVED_RATE).
-/// @custom:member reservedRateDuration The number of seconds the reserved rate should be active for.
+/// @custom:member devTaxDuration The number of seconds the dev tax should be active for.
 /// @custom:member poolFee The fee of the pool in which swaps occur when seeking the best price for a new participant.
 /// This incentivizes liquidity providers. Out of 1_000_000. A common value is 3%, or 30_000.
 struct BasicRetailistJBParams {
     uint256 initialIssuanceRate;
     uint256 premintTokenAmount;
-    uint256 discountRate;
-    uint256 cycleDurations;
-    uint256 redemptionRate;
-    uint256 reservedRate;
-    uint48 reservedRateDuration;
+    uint256 issuanceReductionRate;
+    uint256 generationDuration;
+    uint256 exitTaxRate;
+    uint256 devTaxRate;
+    uint48 devTaxDuration;
     uint24 poolFee;
 }
 
@@ -151,9 +151,9 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
         controller.launchFundingCyclesFor({
             projectId: projectId,
             data: JBFundingCycleData({
-                duration: _data.cycleDurations,
+                duration: _data.generationDuration,
                 weight: _data.initialIssuanceRate ** 18,
-                discountRate: _data.discountRate,
+                discountRate: _data.issuanceReductionRate,
                 ballot: IJBFundingCycleBallot(address(0))
             }),
             metadata: JBFundingCycleMetadata({
@@ -162,8 +162,8 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
                     allowSetController: false,
                     pauseTransfers: false
                 }),
-                reservedRate: _data.reservedRate, // Set the reserved rate.
-                redemptionRate: _data.redemptionRate, // Set the redemption rate.
+                reservedRate: _data.devTaxRate, // Set the reserved rate.
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _data.exitTaxRate, // Set the redemption rate.
                 ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
                 pausePay: false,
                 pauseDistributions: false, // There will never be distributions accessible anyways.
@@ -204,7 +204,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
 
         // Store the timestamp after which the project's reconfigurd funding cycles can start. A separate transaction to
         // `scheduledReconfigurationOf` must be called to formally scheduled it.
-        reconfigurationStartTimestampOf[projectId] = block.timestamp + _data.reservedRateDuration;
+        reconfigurationStartTimestampOf[projectId] = block.timestamp + _data.devTaxDuration;
     }
 
     /// @notice Schedules the funding cycle reconfiguration that removes the reserved rate based on the

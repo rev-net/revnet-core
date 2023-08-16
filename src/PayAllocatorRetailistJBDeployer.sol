@@ -193,9 +193,9 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
             controller.launchFundingCyclesFor({
                 projectId: projectId,
                 data: JBFundingCycleData({
-                    duration: _data.cycleDurations,
+                    duration: _data.generationDuration,
                     weight: _data.initialIssuanceRate ** 18,
-                    discountRate: _data.discountRate,
+                    discountRate: _data.issuanceReductionRate,
                     ballot: IJBFundingCycleBallot(address(0))
                 }),
                 metadata: JBFundingCycleMetadata({
@@ -204,8 +204,8 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
                         allowSetController: false,
                         pauseTransfers: false
                     }),
-                    reservedRate: _data.reservedRate, // Set the reserved rate.
-                    redemptionRate: _data.redemptionRate, // Set the redemption rate.
+                    reservedRate: _data.devTaxRate, // Set the reserved rate.
+                    redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _data.exitTaxRate, // Set the redemption rate.
                     ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
                     pausePay: false,
                     pauseDistributions: false, // There will never be distributions accessible anyways.
@@ -252,7 +252,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
 
         // Store the timestamp after which the project's reconfigurd funding cycles can start. A separate transaction to
         // `scheduledReconfigurationOf` must be called to formally scheduled it.
-        reconfigurationStartTimestampOf[projectId] = block.timestamp + _data.reservedRateDuration;
+        reconfigurationStartTimestampOf[projectId] = block.timestamp + _data.devTaxDuration;
 
         // Store the pay delegate allocations.
         uint256 _numberOfDelegateAllocations = _delegateAllocations.length;
