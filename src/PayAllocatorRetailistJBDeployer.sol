@@ -195,7 +195,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
                 data: JBFundingCycleData({
                     duration: _data.generationDuration,
                     weight: _data.initialIssuanceRate ** 18,
-                    discountRate: _data.issuanceReductionRate,
+                    discountRate: _data.generationTax,
                     ballot: IJBFundingCycleBallot(address(0))
                 }),
                 metadata: JBFundingCycleMetadata({
