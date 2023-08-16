@@ -33,7 +33,8 @@ import { JBBuybackDelegateOperations } from
 /// treasury. This should _not_ be specified as a fixed point number with 18 decimals, this will be applied internally.
 /// @custom:member premintTokenAmount The number of tokens that should be preminted to the _operator. This should _not_
 /// be specified as a fixed point number with 18 decimals, this will be applied internally.
-/// @custom:member generationTax The rate at which the issuance rate should decrease over time. This percentage is out of 1_000_000_000 (JBConstants.MAX_DISCOUNT_RATE). 0% corresponds to no tax, everyone is treated equally over time.
+/// @custom:member generationTax The rate at which the issuance rate should decrease over time. This percentage is out of 1_000_000_000 (JBConstants.MAX_DISCOUNT_RATE). 
+/// 0% corresponds to no tax, everyone is treated equally over time.
 /// @custom:member generationDuration The number of seconds between applied issuance reduction.
 /// @custom:member exitTaxRate The bonding curve rate determining how much each token can access from the treasury at
 /// any current total supply. This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no tax (100% redemption rate).
