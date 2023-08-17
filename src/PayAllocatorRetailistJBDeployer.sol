@@ -69,6 +69,9 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         // Set the values to be those returned by the Buyback Data Source.
         (weight,, _buybackDelegateAllocations) = buybackDelegateDataSourceOf[_data.projectId].payParams(_data);
 
+        // Keep a reference to the number of buyback delegation allocations are returned.
+        bool _usesBuybackDelegate = _buybackDelegateAllocations.length != 0;
+
         // Cache the delegate allocations.
         JBPayDelegateAllocation3_1_1[] memory _delegateAllocations = delegateAllocationsOf[_data.projectId];
 
@@ -76,7 +79,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         uint256 _numberOfDelegateAllocations = _delegateAllocations.length;
 
         // Each delegate allocation must run, plus the buyback delegate.
-        delegateAllocations = new JBPayDelegateAllocation3_1_1[](_numberOfDelegateAllocations + 1);
+        delegateAllocations = new JBPayDelegateAllocation3_1_1[](_numberOfDelegateAllocations + (_usesBuybackDelegate ? 1 : 0));
 
         // All the rest of the delegate allocations the project expects.
         for (uint256 _i; _i < _numberOfDelegateAllocations;) {
@@ -87,7 +90,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         }
 
         // Add the buyback delegate as the last element.
-        delegateAllocations[_numberOfDelegateAllocations] = _buybackDelegateAllocations[0];
+        if (_usesBuybackDelegate) delegateAllocations[_numberOfDelegateAllocations] = _buybackDelegateAllocations[0];
 
         // Set the default memo.
         memo = _data.memo;
