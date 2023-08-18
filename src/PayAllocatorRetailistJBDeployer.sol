@@ -16,6 +16,7 @@ import { IJBFundingCycleDataSource3_1_1 } from
 import { JBConstants } from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBConstants.sol";
 import { JBTokens } from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBTokens.sol";
 import { JBSplitsGroups } from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBSplitsGroups.sol";
+import { JBOperations } from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBOperations.sol";
 import { JBFundingCycleData } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycleData.sol";
 import { JBFundingCycleMetadata } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycleMetadata.sol";
 import { JBPayDelegateAllocation3_1_1 } from
@@ -45,6 +46,11 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
     /// @notice The delegate allocations to include during payments to projects.
     /// @custom:param projectId The ID of the project to which the delegate allocations apply.
     mapping(uint256 => JBPayDelegateAllocation3_1_1[]) public delegateAllocationsOf;
+
+    /// @notice The permissions that the provided buyback delegate should be granted since it wont be used as the data
+    /// source. This is set once in the constructor to
+    /// contain only the MINT operation.
+    uint256[] public buybackDelegatePermissionIndexes;
 
     /// @notice This function gets called when the project receives a payment.
     /// @dev Part of IJBFundingCycleDataSource.
@@ -79,7 +85,8 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         uint256 _numberOfDelegateAllocations = _delegateAllocations.length;
 
         // Each delegate allocation must run, plus the buyback delegate.
-        delegateAllocations = new JBPayDelegateAllocation3_1_1[](_numberOfDelegateAllocations + (_usesBuybackDelegate ? 1 : 0));
+        delegateAllocations =
+            new JBPayDelegateAllocation3_1_1[](_numberOfDelegateAllocations + (_usesBuybackDelegate ? 1 : 0));
 
         // All the rest of the delegate allocations the project expects.
         for (uint256 _i; _i < _numberOfDelegateAllocations;) {
@@ -123,7 +130,9 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
     }
 
     /// @param _controller The controller that projects are made from.
-    constructor(IJBController3_1 _controller) BasicRetailistJBDeployer(_controller) { }
+    constructor(IJBController3_1 _controller) BasicRetailistJBDeployer(_controller) {
+        buybackDelegatePermissionIndexes.push(JBOperations.MINT);
+    }
 
     /// @notice Deploy a project with basic Retailism constraints that also calls other pay delegates that are
     /// specified.
@@ -152,7 +161,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         public
         returns (uint256 projectId)
     {
-        // Scoped section to prevent Stack Too Deep. 
+        // Scoped section to prevent Stack Too Deep.
         {
             // Package the reserved token splits.
             JBGroupedSplits[] memory _groupedSplits = new JBGroupedSplits[](1);
@@ -250,8 +259,23 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
 
         // Give the operator permission to change the allocated reserved rate distribution destination.
         IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
-            JBOperatorData({ operator: _operator, domain: projectId, permissionIndexes: permissionIndexes })
+            JBOperatorData({ operator: _operator, domain: projectId, permissionIndexes: operatorPermissionIndexes })
         );
+
+        // Give the buyback delegate permission to mint on this contract's behald if it doesn't yet have it.
+        if (
+            !IJBOperatable(address(controller.splitsStore())).operatorStore().hasPermissions(
+                address(_buybackDelegate), address(this), 0, buybackDelegatePermissionIndexes
+            )
+        ) {
+            IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
+                JBOperatorData({
+                    operator: address(_buybackDelegate),
+                    domain: 0,
+                    permissionIndexes: buybackDelegatePermissionIndexes
+                })
+            );
+        }
 
         // Store the timestamp after which the project's reconfigurd funding cycles can start. A separate transaction to
         // `scheduledReconfigurationOf` must be called to formally scheduled it.

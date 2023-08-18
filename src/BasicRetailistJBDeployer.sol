@@ -33,16 +33,19 @@ import { JBBuybackDelegateOperations } from
 /// treasury. This should _not_ be specified as a fixed point number with 18 decimals, this will be applied internally.
 /// @custom:member premintTokenAmount The number of tokens that should be preminted to the _operator. This should _not_
 /// be specified as a fixed point number with 18 decimals, this will be applied internally.
-/// @custom:member generationTax The rate at which the issuance rate should decrease over time. This percentage is out of 1_000_000_000 (JBConstants.MAX_DISCOUNT_RATE). 
+/// @custom:member generationTax The rate at which the issuance rate should decrease over time. This percentage is out
+/// of 1_000_000_000 (JBConstants.MAX_DISCOUNT_RATE).
 /// 0% corresponds to no tax, everyone is treated equally over time.
 /// @custom:member generationDuration The number of seconds between applied issuance reduction.
 /// @custom:member exitTaxRate The bonding curve rate determining how much each token can access from the treasury at
-/// any current total supply. This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no tax (100% redemption rate).
+/// any current total supply. This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no
+/// tax (100% redemption rate).
 /// @custom:member devTaxRate The percentage of newly issued tokens that should be reserved for the _operator. This
 /// percentage is out of 10_000 (JBConstants.MAX_RESERVED_RATE).
 /// @custom:member devTaxDuration The number of seconds the dev tax should be active for.
 /// @custom:member poolFee The fee of the pool in which swaps occur when seeking the best price for a new participant.
-/// This incentivizes liquidity providers. Out of 1_000_000. A common value is 1%, or 10_000. Other passible values are 0.3% and 0.1%.
+/// This incentivizes liquidity providers. Out of 1_000_000. A common value is 1%, or 10_000. Other passible values are
+/// 0.3% and 0.1%.
 struct BasicRetailistJBParams {
     uint256 initialIssuanceRate;
     uint256 premintTokenAmount;
@@ -63,7 +66,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
 
     /// @notice The permissions that the provided _operator should be granted. This is set once in the constructor to
     /// contain only the SET_SPLITS operation.
-    uint256[] public permissionIndexes;
+    uint256[] public operatorPermissionIndexes;
 
     /// @notice The start time of the reconfigurations for each project.
     /// @dev A basic retailist treasury consists of two funding cycles, one created on launch with a reserved rate, and
@@ -82,8 +85,8 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
     /// @param _controller The controller that projects are made from.
     constructor(IJBController3_1 _controller) {
         controller = _controller;
-        permissionIndexes.push(JBOperations.SET_SPLITS);
-        permissionIndexes.push(JBBuybackDelegateOperations.SET_POOL_PARAMS);
+        operatorPermissionIndexes.push(JBOperations.SET_SPLITS);
+        operatorPermissionIndexes.push(JBBuybackDelegateOperations.SET_POOL_PARAMS);
     }
 
     /// @notice Deploy a project with basic Retailism constraints.
@@ -200,7 +203,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
 
         // Give the operator permission to change the allocated reserved rate distribution destination.
         IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
-            JBOperatorData({ operator: _operator, domain: projectId, permissionIndexes: permissionIndexes })
+            JBOperatorData({ operator: _operator, domain: projectId, permissionIndexes: operatorPermissionIndexes })
         );
 
         // Store the timestamp after which the project's reconfigurd funding cycles can start. A separate transaction to
