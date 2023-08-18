@@ -60,7 +60,8 @@ struct BasicRetailistJBParams {
 /// @notice A contract that facilitates deploying a basic Retailist treasury.
 contract BasicRetailistJBDeployer is IERC721Receiver {
     error RECONFIGURATION_ALREADY_SCHEDULED();
-
+    error RECONFIGURATION_NOT_POSSIBLE();
+    
     /// @notice The controller that projects are made from.
     IJBController3_1 public immutable controller;
 
@@ -208,7 +209,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
 
         // Store the timestamp after which the project's reconfigurd funding cycles can start. A separate transaction to
         // `scheduledReconfigurationOf` must be called to formally scheduled it.
-        reconfigurationStartTimestampOf[projectId] = block.timestamp + _data.devTaxDuration;
+        if (_data.devTaxDuration != 0) reconfigurationStartTimestampOf[projectId] = block.timestamp + _data.devTaxDuration;
     }
 
     /// @notice Schedules the funding cycle reconfiguration that removes the reserved rate based on the
@@ -221,6 +222,12 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
 
         // Make sure the latest funding cycle scheduled was the first funding cycle.
         if (_latestFundingCycleConfiguration.number != 1) revert RECONFIGURATION_ALREADY_SCHEDULED();
+
+        // Get a reference to the reconfiguration start time.
+        uint256 _reconfigurationStartTimestamp = reconfigurationStartTimestampOf[_projectId];
+
+        // Make sure there is a dev tax duration.
+        if (_reconfigurationStartTimestamp == 0) revert RECONFIGURATION_NOT_POSSIBLE();
 
         // Schedule a funding cycle reconfiguration.
         controller.reconfigureFundingCyclesOf({
@@ -255,7 +262,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
                 dataSource: _metadata.dataSource,
                 metadata: _metadata.metadata
             }),
-            mustStartAtOrAfter: reconfigurationStartTimestampOf[_projectId],
+            mustStartAtOrAfter: _reconfigurationStartTimestamp,
             groupedSplits: new JBGroupedSplits[](0), // No more splits.
             fundAccessConstraints: new JBFundAccessConstraints[](0),
             memo: "Scheduled boost expiry of Retailist treasury"
