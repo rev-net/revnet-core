@@ -220,37 +220,6 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
         _storeDevTaxPeriods(networkId, _data.devTaxPeriods, _data.generationDuration);
     }
 
-    function _storeDevTaxPeriods(
-        uint256 _networkId,
-        DevTaxPeriod[] memory _devTaxPeriods,
-        uint256 _generationDuration
-    )
-        internal
-    {
-        // Keep a reference to the number of dev tax periods.
-        uint256 _numberOfDevTaxPeriods = _devTaxPeriods.length;
-
-        // Store the dev tax periods. Separate transactions to
-        // `scheduleNextDevTaxPeriodOf` must be called to formally scheduled them.
-        if (_devTaxPeriods.length != 0) {
-            for (uint256 _i; _i < _numberOfDevTaxPeriods;) {
-                // Make sure the dev taxes have incrementally positive start times, and are each at least one generation
-                // long.
-                if (
-                    _i != 0
-                        && _devTaxPeriods[_i].startsAtOrAfter
-                            <= _devTaxPeriods[_i - 1].startsAtOrAfter + _generationDuration
-                ) revert BAD_DEV_TAX_SEQUENCE();
-
-                // Store the dev tax period.
-                devTaxPeriodsOf[_networkId][_i] = _devTaxPeriods[_i];
-                unchecked {
-                    ++_i;
-                }
-            }
-        }
-    }
-
     /// @notice Schedules the new dev tax period that adjusts the reserved rate based on the
     /// dev tax periods passed when the network was deployed.
     /// @param _networkId The ID of the network who is having its dev tax periods scheduled.
@@ -335,5 +304,40 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
         // Make sure the 721 is being received as a mint.
         if (_from != address(0)) revert();
         return IERC721Receiver.onERC721Received.selector;
+    }
+
+    /// @notice Stores dev tax periods after checking if they were provided in an acceptable order.
+    /// @param _networkId The ID to which the dev taxes apply.
+    /// @param _devTaxPeriods The dev tax periods to store.
+    /// @param _generationDuration The generation duration to expect each dev tax period to be at least as long.
+    function _storeDevTaxPeriods(
+        uint256 _networkId,
+        DevTaxPeriod[] memory _devTaxPeriods,
+        uint256 _generationDuration
+    )
+        internal
+    {
+        // Keep a reference to the number of dev tax periods.
+        uint256 _numberOfDevTaxPeriods = _devTaxPeriods.length;
+
+        // Store the dev tax periods. Separate transactions to
+        // `scheduleNextDevTaxPeriodOf` must be called to formally scheduled them.
+        if (_devTaxPeriods.length != 0) {
+            for (uint256 _i; _i < _numberOfDevTaxPeriods;) {
+                // Make sure the dev taxes have incrementally positive start times, and are each at least one generation
+                // long.
+                if (
+                    _i != 0
+                        && _devTaxPeriods[_i].startsAtOrAfter
+                            <= _devTaxPeriods[_i - 1].startsAtOrAfter + _generationDuration
+                ) revert BAD_DEV_TAX_SEQUENCE();
+
+                // Store the dev tax period.
+                devTaxPeriodsOf[_networkId][_i] = _devTaxPeriods[_i];
+                unchecked {
+                    ++_i;
+                }
+            }
+        }
     }
 }
