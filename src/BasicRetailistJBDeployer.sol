@@ -364,7 +364,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
 
         // Store the dev tax periods. Separate transactions to
         // `scheduleNextDevTaxPeriodOf` must be called to formally scheduled them.
-        if (_devTaxPeriods.length != 0) {
+        if (_numberOfDevTaxPeriods != 0) {
             for (uint256 _i; _i < _numberOfDevTaxPeriods;) {
                 // Make sure the dev taxes have incrementally positive start times, and are each at least one generation
                 // long.

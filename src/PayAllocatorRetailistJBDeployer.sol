@@ -261,11 +261,24 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         // Store the dev tax periods so they can be queued via calls to `scheduleNextDevTaxPeriodOf(...)`.
         _storeDevTaxPeriodsOf(networkId, _data.devTaxPeriods, _data.generationDuration);
 
+        // Store the delegate allocations.
+        _storeDelegateAllocationsOf(networkId, _delegateAllocations);
+    }
+
+    /// @notice Stores delegate allocations for the provided network.
+    /// @param _networkId The ID to which the delegate allocations apply.
+    /// @param _delegateAllocations The delegate allocations to store.
+    function _storeDelegateAllocationsOf(
+        uint256 _networkId,
+        JBPayDelegateAllocation3_1_1[] memory _delegateAllocations
+    )
+        internal
+    {
         // Store the pay delegate allocations.
         uint256 _numberOfDelegateAllocations = _delegateAllocations.length;
 
         for (uint256 _i; _i < _numberOfDelegateAllocations;) {
-            delegateAllocationsOf[networkId][_i] = _delegateAllocations[_i];
+            delegateAllocationsOf[_networkId][_i] = _delegateAllocations[_i];
             unchecked {
                 ++_i;
             }
