@@ -260,7 +260,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
 
         // Store the dev tax periods so they can be queued via calls to `scheduleNextDevTaxPeriodOf(...)`.
         _storeDevTaxPeriodsOf(networkId, _data.devTaxPeriods, _data.generationDuration);
-        
+
         // Store the pay delegate allocations.
         uint256 _numberOfDelegateAllocations = _delegateAllocations.length;
 

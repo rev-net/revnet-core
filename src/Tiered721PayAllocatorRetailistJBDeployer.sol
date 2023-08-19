@@ -88,17 +88,15 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
             }
         }
 
-        {
-            // Deploy the delegate contract.
-            IJBTiered721Delegate _delegate = delegateDeployer.deployDelegateFor(networkId, _deployTiered721DelegateData);
+        // Deploy the delegate contract.
+        IJBTiered721Delegate _delegate = delegateDeployer.deployDelegateFor(networkId, _deployTiered721DelegateData);
 
-            // Add the Tiered 721 Allocation at the end.
-            _delegateAllocations[_numberOfOtherDelegateAllocations] = JBPayDelegateAllocation3_1_1({
-                delegate: IJBPayDelegate3_1_1(address(_delegate)),
-                amount: 0,
-                metadata: bytes("")
-            });
-        }
+        // Add the Tiered 721 Allocation at the end.
+        _delegateAllocations[_numberOfOtherDelegateAllocations] = JBPayDelegateAllocation3_1_1({
+            delegate: IJBPayDelegate3_1_1(address(_delegate)),
+            amount: 0,
+            metadata: bytes("")
+        });
 
         super.deployPayAllocatorNetworkFor(
             _operator,
