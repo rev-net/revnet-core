@@ -34,7 +34,7 @@ import { JBFundAccessConstraints } from "@jbx-protocol/juice-contracts-v3/contra
 import { JBProjectMetadata } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBProjectMetadata.sol";
 import { IJBGenericBuybackDelegate } from
     "@jbx-protocol/juice-buyback-delegate/contracts/interfaces/IJBGenericBuybackDelegate.sol";
-import { BasicRetailistJBParams, BasicRetailistJBDeployer } from "./BasicRetailistJBDeployer.sol";
+import { BuybackDelegateSetup, BasicRetailistJBParams, BasicRetailistJBDeployer } from "./BasicRetailistJBDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic Retailist treasury that also calls other pay delegates that
 /// are specified when the network is deployed.
@@ -143,7 +143,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
     /// @param _symbol The symbol of the ERC-20 token being created for the network.
     /// @param _data The data needed to deploy a basic retailist network.
     /// @param _terminals The terminals that the network uses to accept payments through.
-    /// @param _buybackDelegate The buyback delegate to use when determining the best price for new participants.
+    /// @param _buybackDelegateSetup Info for setting up the buyback delegate to use when determining the best price for new participants.
     /// @param _delegateAllocations Any pay delegate allocations that should run when the network is paid.
     /// @param _extraFundingCycleMetadata Extra metadata to attach to the funding cycle for the delegates to use.
     /// @return networkId The ID of the newly created Retailist network.
@@ -154,7 +154,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         string memory _symbol,
         BasicRetailistJBParams memory _data,
         IJBPaymentTerminal[] memory _terminals,
-        IJBGenericBuybackDelegate _buybackDelegate,
+        BuybackDelegateSetup memory _buybackDelegateSetup,
         JBPayDelegateAllocation3_1_1[] memory _delegateAllocations,
         uint8 _extraFundingCycleMetadata
     )
@@ -173,14 +173,8 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         // Issue the network's ERC-20 token.
         controller.tokenStore().issueFor({ projectId: networkId, name: _name, symbol: _symbol });
 
-        // Set the pool for the buyback delegate.
-        _buybackDelegate.setPoolFor({
-            _projectId: networkId,
-            _fee: _data.poolFee,
-            _secondsAgo: uint32(_buybackDelegate.MIN_SECONDS_AGO()),
-            _twapDelta: uint32(_buybackDelegate.MAX_TWAP_DELTA()),
-            _terminalToken: JBTokens.ETH
-        });
+        // Setup the buyback delegate.
+        _setupBuybackDelegate(networkId, _buybackDelegateSetup);
 
         // Configure the network's funding cycles using BBD.
         controller.launchFundingCyclesFor({
@@ -226,7 +220,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         });
 
         // Keep a reference to this data source.
-        buybackDelegateDataSourceOf[networkId] = _buybackDelegate;
+        buybackDelegateDataSourceOf[networkId] = _buybackDelegateSetup.delegate;
 
         // Premint tokens to the Operator.
         controller.mintTokensOf({
@@ -246,12 +240,12 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         // Give the buyback delegate permission to mint on this contract's behald if it doesn't yet have it.
         if (
             !IJBOperatable(address(controller.splitsStore())).operatorStore().hasPermissions(
-                address(_buybackDelegate), address(this), 0, buybackDelegatePermissionIndexes
+                address(_buybackDelegateSetup.delegate), address(this), 0, buybackDelegatePermissionIndexes
             )
         ) {
             IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
                 JBOperatorData({
-                    operator: address(_buybackDelegate),
+                    operator: address(_buybackDelegateSetup.delegate),
                     domain: 0,
                     permissionIndexes: buybackDelegatePermissionIndexes
                 })

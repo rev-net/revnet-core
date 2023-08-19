@@ -20,6 +20,7 @@ import { JBProjectMetadata } from "@jbx-protocol/juice-contracts-v3/contracts/st
 import { IJBGenericBuybackDelegate } from
     "@jbx-protocol/juice-buyback-delegate/contracts/interfaces/IJBGenericBuybackDelegate.sol";
 import {
+    BuybackDelegateSetup,
     BasicRetailistJBParams,
     Tiered721PayAllocatorRetailistJBDeployer
 } from "./Tiered721PayAllocatorRetailistJBDeployer.sol";
@@ -60,7 +61,7 @@ contract CroptopTiered721PayAllocatorRetailistJBDeployer is Tiered721PayAllocato
     /// @param _symbol The symbol of the ERC-20 token being created for the network.
     /// @param _data The data needed to deploy a basic retailist network.
     /// @param _terminals The terminals that the network uses to accept payments through.
-    /// @param _buybackDelegate The buyback delegate to use when determining the best price for new participants.
+    /// @param _buybackDelegateSetup Info for setting up the buyback delegate to use when determining the best price for new participants.
     /// @param _deployTiered721DelegateData Structure containing data necessary for delegate deployment.
     /// @param _otherDelegateAllocations Any pay delegate allocations that should run when the network is paid.
     /// @param _extraFundingCycleMetadata Extra metadata to attach to the funding cycle for the delegates to use.
@@ -73,7 +74,7 @@ contract CroptopTiered721PayAllocatorRetailistJBDeployer is Tiered721PayAllocato
         string memory _symbol,
         BasicRetailistJBParams memory _data,
         IJBPaymentTerminal[] memory _terminals,
-        IJBGenericBuybackDelegate _buybackDelegate,
+        BuybackDelegateSetup memory _buybackDelegateSetup,
         JBDeployTiered721DelegateData memory _deployTiered721DelegateData,
         JBPayDelegateAllocation3_1_1[] memory _otherDelegateAllocations,
         uint8 _extraFundingCycleMetadata,
@@ -89,7 +90,7 @@ contract CroptopTiered721PayAllocatorRetailistJBDeployer is Tiered721PayAllocato
             _symbol,
             _data,
             _terminals,
-            _buybackDelegate,
+            _buybackDelegateSetup,
             _deployTiered721DelegateData,
             _otherDelegateAllocations,
             _extraFundingCycleMetadata

@@ -37,6 +37,24 @@ struct DevTaxPeriod {
     uint128 startsAtOrAfter;
 }
 
+/// @custom:member token The token to setup a pool for.
+/// @custom:member fee The fee tier to setup a pool for.
+/// @custom:member twapSecondsAgo The time window to take into account when quoting a price based on TWAP.
+/// @custom:member twapDelta The price leniance to accept when quoting a price based on TWAP.
+struct BuybackDelegatePool {
+    address token;
+    uint24 fee;
+    uint32 secondsAgo;
+    uint32 delta;
+}
+
+/// @custom:member delegate The buyback delegate contract to use.
+/// @custom:member pools The pools to setup on the delegate.
+struct BuybackDelegateSetup {
+    IJBGenericBuybackDelegate delegate;
+    BuybackDelegatePool[] pools;
+}
+
 /// @custom:member initialIssuanceRate The number of tokens that should be minted initially per 1 ETH contributed to the
 /// treasury. This should _not_ be specified as a fixed point number with 18 decimals, this will be applied internally.
 /// @custom:member premintTokenAmount The number of tokens that should be preminted to the _operator. This should _not_
@@ -59,7 +77,6 @@ struct BasicRetailistJBParams {
     uint256 generationDuration;
     uint256 exitTaxRate;
     DevTaxPeriod[] devTaxPeriods;
-    uint24 poolFee;
 }
 
 /// @notice A contract that facilitates deploying a basic Retailist network.
@@ -116,7 +133,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
     /// @param _symbol The symbol of the ERC-20 token being created for the network.
     /// @param _data The data needed to deploy a basic retailist network.
     /// @param _terminals The terminals that the network uses to accept payments through.
-    /// @param _buybackDelegate The buyback delegate to use when determining the best price for new participants.
+    /// @param _buybackDelegateSetup Info for setting up the buyback delegate to use when determining the best price for new participants.
     /// @return networkId The ID of the newly created Retailist network.
     function deployBasicNetworkFor(
         address _operator,
@@ -125,7 +142,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
         string memory _symbol,
         BasicRetailistJBParams memory _data,
         IJBPaymentTerminal[] memory _terminals,
-        IJBGenericBuybackDelegate _buybackDelegate
+        BuybackDelegateSetup memory _buybackDelegateSetup
     )
         public
         returns (uint256 networkId)
@@ -141,15 +158,9 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
 
         // Issue the network's ERC-20 token.
         controller.tokenStore().issueFor({ projectId: networkId, name: _name, symbol: _symbol });
-
-        // Set the pool for the buyback delegate.
-        _buybackDelegate.setPoolFor({
-            _projectId: networkId,
-            _fee: _data.poolFee,
-            _secondsAgo: uint32(_buybackDelegate.MIN_SECONDS_AGO()),
-            _twapDelta: uint32(_buybackDelegate.MAX_TWAP_DELTA()),
-            _terminalToken: JBTokens.ETH
-        });
+        
+        // Setup the buyback delegate.
+        _setupBuybackDelegate(networkId, _buybackDelegateSetup);
 
         // Configure the network's funding cycles using BBD.
         controller.launchFundingCyclesFor({
@@ -181,7 +192,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
                 useTotalOverflowForRedemptions: false,
                 useDataSourceForPay: true, // Use the buyback delegate data source.
                 useDataSourceForRedeem: false,
-                dataSource: address(_buybackDelegate),
+                dataSource: address(_buybackDelegateSetup.delegate),
                 metadata: 0
             }),
             mustStartAtOrAfter: _data.devTaxPeriods.length == 0 ? 0 : _data.devTaxPeriods[0].startsAtOrAfter,
@@ -346,6 +357,36 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
             controller.splitsStore().splitsOf(_networkId, _baseConfiguration, JBSplitsGroups.RESERVED_TOKENS);
 
         _groupedSplits[0] = JBGroupedSplits({ group: JBSplitsGroups.RESERVED_TOKENS, splits: _splits });
+    }
+
+    /// @notice Sets up buyback delegate pools.
+    /// @param _networkId The ID of the network to which the buyback delegate should apply.
+    /// @param _buybackDelegateSetup Info to setup pools that'll be used to buyback tokens from if an optimal price is presented
+    function _setupBuybackDelegate(uint256 _networkId, BuybackDelegateSetup memory _buybackDelegateSetup) internal {
+
+        // Get a reference to the number of pools that need setting up.
+        uint256 _numberOfPoolsToSetup = _buybackDelegateSetup.pools.length;
+
+        // Keep a reference to the pool being iterated on.
+        BuybackDelegatePool memory _pool;
+
+        for (uint256 _i; _i < _numberOfPoolsToSetup;) {
+            // Get a reference to the pool being iterated on.
+            _pool = _buybackDelegateSetup.pools[_i];
+
+            // Set the pool for the buyback delegate.
+            _buybackDelegateSetup.delegate.setPoolFor({
+                _projectId: _networkId,
+                _fee: _pool.fee,
+                _secondsAgo: _pool.secondsAgo,
+                _twapDelta: _pool.delta,
+                _terminalToken: _pool.token
+            });
+
+            unchecked {
+                ++_i;
+            }
+        }
     }
 
     /// @notice Stores dev tax periods after checking if they were provided in an acceptable order.
