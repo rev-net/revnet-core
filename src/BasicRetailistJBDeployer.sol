@@ -68,6 +68,12 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
     error RECONFIGURATION_NOT_POSSIBLE();
     error BAD_DEV_TAX_SEQUENCE();
 
+    /// @notice The dev tax periods for each network.
+    /// @dev A basic retailist treasury consists of funding cycles defined by scheduled dev taxes. The only changes
+    /// between them are in their reserved rate.
+    /// @custom:param _networkId The ID of the network to which the dev tax period applies.
+    mapping(uint256 _networkId => DevTaxPeriod[]) internal _devTaxPeriodsOf;
+
     /// @notice The controller that networks are made from.
     IJBController3_1 public immutable controller;
 
@@ -75,15 +81,17 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
     /// contain only the SET_SPLITS operation.
     uint256[] public operatorPermissionIndexes;
 
+    /// @notice The current index of dev tax period that each network is in, relative to devTaxPeriodsOf.
+    /// @custom:param _networkId The ID of the network to which the dev tax period applies.
+    mapping(uint256 _networkId => uint256) public currentDevTaxPeriodNumberOf;
+
     /// @notice The dev tax periods for each network.
     /// @dev A basic retailist treasury consists of funding cycles defined by scheduled dev taxes. The only changes
     /// between them are in their reserved rate.
-    /// @custom:param networkId The ID of the network to which the dev tax period applies.
-    mapping(uint256 networkId => DevTaxPeriod[]) public devTaxPeriodsOf;
-
-    /// @notice The current index of dev tax period that each network is in, relative to devTaxPeriodsOf.
-    /// @custom:param networkId The ID of the network to which the dev tax period applies.
-    mapping(uint256 networkId => uint256) public currentDevTaxPeriodNumberOf;
+    /// @custom:param _networkId The ID of the network to which the dev tax period applies.
+    function devTaxPeriodsOf(uint256 _networkId) external view returns (DevTaxPeriod[] memory) {
+        return _devTaxPeriodsOf[_networkId];
+    }
 
     /// @notice Indicates if this contract adheres to the specified interface.
     /// @dev See {IERC165-supportsInterface}.
@@ -122,27 +130,8 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
         public
         returns (uint256 networkId)
     {
-        // Package the reserved token splits.
-        JBGroupedSplits[] memory _groupedSplits = new JBGroupedSplits[](1);
-
-        // Make the splits.
-        {
-            // Make a new splits specifying where the reserved tokens will be sent.
-            JBSplit[] memory _splits = new JBSplit[](1);
-
-            // Send the _operator all of the reserved tokens. They'll be able to change this later whenever they wish.
-            _splits[1] = JBSplit({
-                preferClaimed: false,
-                preferAddToBalance: false,
-                percent: JBConstants.SPLITS_TOTAL_PERCENT,
-                projectId: 0,
-                beneficiary: payable(_operator),
-                lockedUntil: 0,
-                allocator: IJBSplitAllocator(address(0))
-            });
-
-            _groupedSplits[0] = JBGroupedSplits({ group: JBSplitsGroups.RESERVED_TOKENS, splits: _splits });
-        }
+        // Make the dev tax allocation.
+        JBGroupedSplits[] memory _groupedSplits = _makeDevTaxSplitGroupWith(_operator);
 
         // Deploy a network.
         networkId = controller.projects().createFor({
@@ -217,7 +206,8 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
             JBOperatorData({ operator: _operator, domain: networkId, permissionIndexes: operatorPermissionIndexes })
         );
 
-        _storeDevTaxPeriods(networkId, _data.devTaxPeriods, _data.generationDuration);
+        // Store the dev tax periods so they can be queued via calls to `scheduleNextDevTaxPeriodOf(...)`.
+        _storeDevTaxPeriodsOf(networkId, _data.devTaxPeriods, _data.generationDuration);
     }
 
     /// @notice Schedules the new dev tax period that adjusts the reserved rate based on the
@@ -232,7 +222,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
         uint256 _nextDevTaxPeriodNumber = ++currentDevTaxPeriodNumberOf[_networkId];
 
         // Get a reference to the number of dev tax periods there are. One indexed.
-        uint256 _numberOfDevTaxPeriods = devTaxPeriodsOf[_networkId].length;
+        uint256 _numberOfDevTaxPeriods = _devTaxPeriodsOf[_networkId].length;
 
         // Make sure the latest funding cycle configured started in the past, and that there are more dev tax periods to
         // schedule.
@@ -242,7 +232,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
         ) revert RECONFIGURATION_ALREADY_SCHEDULED();
 
         // Get a reference to the next dev tax period.
-        DevTaxPeriod memory _devTax = devTaxPeriodsOf[_networkId][_nextDevTaxPeriodNumber];
+        DevTaxPeriod memory _devTax = _devTaxPeriodsOf[_networkId][_nextDevTaxPeriodNumber];
 
         // Schedule a funding cycle reconfiguration.
         controller.reconfigureFundingCyclesOf({
@@ -278,7 +268,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
                 metadata: _metadata.metadata
             }),
             mustStartAtOrAfter: _devTax.startsAtOrAfter,
-            groupedSplits: new JBGroupedSplits[](0), // No more splits.
+            groupedSplits: _copyDevTaxSplitGroupFrom(_networkId, _latestFundingCycleConfiguration.configuration),
             fundAccessConstraints: new JBFundAccessConstraints[](0),
             memo: "Scheduled next dev tax period of Retailist network"
         });
@@ -306,11 +296,63 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
         return IERC721Receiver.onERC721Received.selector;
     }
 
+    /// @notice Creates a group of splits that goes entirely to the provided operator address.
+    /// @param _operator The address to send the entire split amount to.
+    /// @return _groupedSplits The grouped splits to be used in a configuration.
+    function _makeDevTaxSplitGroupWith(address _operator)
+        internal
+        pure
+        returns (JBGroupedSplits[] memory _groupedSplits)
+    {
+        // Package the reserved token splits.
+        _groupedSplits = new JBGroupedSplits[](1);
+
+        // Make the splits.
+
+        // Make a new splits specifying where the reserved tokens will be sent.
+        JBSplit[] memory _splits = new JBSplit[](1);
+
+        // Send the _operator all of the reserved tokens. They'll be able to change this later whenever they wish.
+        _splits[1] = JBSplit({
+            preferClaimed: false,
+            preferAddToBalance: false,
+            percent: JBConstants.SPLITS_TOTAL_PERCENT,
+            projectId: 0,
+            beneficiary: payable(_operator),
+            lockedUntil: 0,
+            allocator: IJBSplitAllocator(address(0))
+        });
+
+        _groupedSplits[0] = JBGroupedSplits({ group: JBSplitsGroups.RESERVED_TOKENS, splits: _splits });
+    }
+
+    /// @notice Copies a group of splits from  the one stored in the provided configuration.
+    /// @param _networkId The network to which the splits apply.
+    /// @param _baseConfiguration The configuration to copy configurations from.
+    /// @return _groupedSplits The grouped splits to be used in a configuration.
+    function _copyDevTaxSplitGroupFrom(
+        uint256 _networkId,
+        uint256 _baseConfiguration
+    )
+        internal
+        view
+        returns (JBGroupedSplits[] memory _groupedSplits)
+    {
+        // Package the reserved token splits.
+        _groupedSplits = new JBGroupedSplits[](1);
+
+        // Make a new splits specifying where the reserved tokens will be sent.
+        JBSplit[] memory _splits =
+            controller.splitsStore().splitsOf(_networkId, _baseConfiguration, JBSplitsGroups.RESERVED_TOKENS);
+
+        _groupedSplits[0] = JBGroupedSplits({ group: JBSplitsGroups.RESERVED_TOKENS, splits: _splits });
+    }
+
     /// @notice Stores dev tax periods after checking if they were provided in an acceptable order.
     /// @param _networkId The ID to which the dev taxes apply.
     /// @param _devTaxPeriods The dev tax periods to store.
     /// @param _generationDuration The generation duration to expect each dev tax period to be at least as long.
-    function _storeDevTaxPeriods(
+    function _storeDevTaxPeriodsOf(
         uint256 _networkId,
         DevTaxPeriod[] memory _devTaxPeriods,
         uint256 _generationDuration
@@ -333,7 +375,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
                 ) revert BAD_DEV_TAX_SEQUENCE();
 
                 // Store the dev tax period.
-                devTaxPeriodsOf[_networkId][_i] = _devTaxPeriods[_i];
+                _devTaxPeriodsOf[_networkId][_i] = _devTaxPeriods[_i];
                 unchecked {
                     ++_i;
                 }

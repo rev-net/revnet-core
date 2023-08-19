@@ -161,89 +161,69 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         public
         returns (uint256 networkId)
     {
-        // Scoped section to prevent Stack Too Deep.
-        {
-            // Package the reserved token splits.
-            JBGroupedSplits[] memory _groupedSplits = new JBGroupedSplits[](1);
+        // Package the reserved token splits.
+        JBGroupedSplits[] memory _groupedSplits = _makeDevTaxSplitGroupWith(_operator);
 
-            // Make a new splits specifying where the reserved tokens will be sent.
-            JBSplit[] memory _splits = new JBSplit[](1);
+        // Deploy a network.
+        networkId = controller.projects().createFor({
+            owner: address(this), // This contract should remain the owner, forever.
+            metadata: _networkMetadata
+        });
 
-            // Send the _operator all of the reserved tokens. They'll be able to change this later whenever they
-            // wish.
-            _splits[1] = JBSplit({
-                preferClaimed: false,
-                preferAddToBalance: false,
-                percent: JBConstants.SPLITS_TOTAL_PERCENT,
-                projectId: 0,
-                beneficiary: payable(_operator),
-                lockedUntil: 0,
-                allocator: IJBSplitAllocator(address(0))
-            });
+        // Issue the network's ERC-20 token.
+        controller.tokenStore().issueFor({ projectId: networkId, name: _name, symbol: _symbol });
 
-            _groupedSplits[0] = JBGroupedSplits({ group: JBSplitsGroups.RESERVED_TOKENS, splits: _splits });
+        // Set the pool for the buyback delegate.
+        _buybackDelegate.setPoolFor({
+            _projectId: networkId,
+            _fee: _data.poolFee,
+            _secondsAgo: uint32(_buybackDelegate.MIN_SECONDS_AGO()),
+            _twapDelta: uint32(_buybackDelegate.MAX_TWAP_DELTA()),
+            _terminalToken: JBTokens.ETH
+        });
 
-            // Deploy a network.
-            networkId = controller.projects().createFor({
-                owner: address(this), // This contract should remain the owner, forever.
-                metadata: _networkMetadata
-            });
-
-            // Issue the network's ERC-20 token.
-            controller.tokenStore().issueFor({ projectId: networkId, name: _name, symbol: _symbol });
-
-            // Set the pool for the buyback delegate.
-            _buybackDelegate.setPoolFor({
-                _projectId: networkId,
-                _fee: _data.poolFee,
-                _secondsAgo: uint32(_buybackDelegate.MIN_SECONDS_AGO()),
-                _twapDelta: uint32(_buybackDelegate.MAX_TWAP_DELTA()),
-                _terminalToken: JBTokens.ETH
-            });
-
-            // Configure the network's funding cycles using BBD.
-            controller.launchFundingCyclesFor({
-                projectId: networkId,
-                data: JBFundingCycleData({
-                    duration: _data.generationDuration,
-                    weight: _data.initialIssuanceRate ** 18,
-                    discountRate: _data.generationTax,
-                    ballot: IJBFundingCycleBallot(address(0))
+        // Configure the network's funding cycles using BBD.
+        controller.launchFundingCyclesFor({
+            projectId: networkId,
+            data: JBFundingCycleData({
+                duration: _data.generationDuration,
+                weight: _data.initialIssuanceRate ** 18,
+                discountRate: _data.generationTax,
+                ballot: IJBFundingCycleBallot(address(0))
+            }),
+            metadata: JBFundingCycleMetadata({
+                global: JBGlobalFundingCycleMetadata({
+                    allowSetTerminals: false,
+                    allowSetController: false,
+                    pauseTransfers: false
                 }),
-                metadata: JBFundingCycleMetadata({
-                    global: JBGlobalFundingCycleMetadata({
-                        allowSetTerminals: false,
-                        allowSetController: false,
-                        pauseTransfers: false
-                    }),
-                    reservedRate: _data.devTaxPeriods.length == 0 ? 0 : _data.devTaxPeriods[0].rate, // Set the reserved
-                        // rate.
-                    redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _data.exitTaxRate, // Set the redemption rate.
-                    ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
-                    pausePay: false,
-                    pauseDistributions: false, // There will never be distributions accessible anyways.
-                    pauseRedeem: false, // Redemptions must be left open.
-                    pauseBurn: false,
-                    allowMinting: true, // Allow this contract to premint tokens as the network owner.
-                    allowTerminalMigration: false,
-                    allowControllerMigration: false,
-                    holdFees: false,
-                    preferClaimedTokenOverride: false,
-                    useTotalOverflowForRedemptions: false,
-                    useDataSourceForPay: true, // Use the buyback delegate data source.
-                    useDataSourceForRedeem: false,
-                    // This contract should be the data source.
-                    dataSource: address(this),
-                    metadata: _extraFundingCycleMetadata
-                }),
-                mustStartAtOrAfter: _data.devTaxPeriods.length == 0 ? 0 : _data.devTaxPeriods[0].startsAtOrAfter,
-                groupedSplits: _groupedSplits,
-                fundAccessConstraints: new JBFundAccessConstraints[](0), // Funds can't be accessed by the network
-                    // owner.
-                terminals: _terminals,
-                memo: "Deployed Retailist network"
-            });
-        }
+                reservedRate: _data.devTaxPeriods.length == 0 ? 0 : _data.devTaxPeriods[0].rate, // Set the reserved
+                    // rate.
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _data.exitTaxRate, // Set the redemption rate.
+                ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
+                pausePay: false,
+                pauseDistributions: false, // There will never be distributions accessible anyways.
+                pauseRedeem: false, // Redemptions must be left open.
+                pauseBurn: false,
+                allowMinting: true, // Allow this contract to premint tokens as the network owner.
+                allowTerminalMigration: false,
+                allowControllerMigration: false,
+                holdFees: false,
+                preferClaimedTokenOverride: false,
+                useTotalOverflowForRedemptions: false,
+                useDataSourceForPay: true, // Use the buyback delegate data source.
+                useDataSourceForRedeem: false,
+                // This contract should be the data source.
+                dataSource: address(this),
+                metadata: _extraFundingCycleMetadata
+            }),
+            mustStartAtOrAfter: _data.devTaxPeriods.length == 0 ? 0 : _data.devTaxPeriods[0].startsAtOrAfter,
+            groupedSplits: _groupedSplits,
+            fundAccessConstraints: new JBFundAccessConstraints[](0), // Funds can't be accessed by the network
+                // owner.
+            terminals: _terminals,
+            memo: "Deployed Retailist network"
+        });
 
         // Keep a reference to this data source.
         buybackDelegateDataSourceOf[networkId] = _buybackDelegate;
@@ -278,8 +258,9 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
             );
         }
 
-        _storeDevTaxPeriods(networkId, _data.devTaxPeriods, _data.generationDuration);
-
+        // Store the dev tax periods so they can be queued via calls to `scheduleNextDevTaxPeriodOf(...)`.
+        _storeDevTaxPeriodsOf(networkId, _data.devTaxPeriods, _data.generationDuration);
+        
         // Store the pay delegate allocations.
         uint256 _numberOfDelegateAllocations = _delegateAllocations.length;
 
