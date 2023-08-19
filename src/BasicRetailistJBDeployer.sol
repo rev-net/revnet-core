@@ -228,7 +228,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
         // schedule.
         if (
             _numberOfDevTaxPeriods == 0 || _nextDevTaxPeriodNumber == _numberOfDevTaxPeriods
-                || _latestFundingCycleConfiguration.start > block.timestamp
+                || _latestFundingCycleConfiguration.start >= block.timestamp
         ) revert RECONFIGURATION_ALREADY_SCHEDULED();
 
         // Get a reference to the next dev tax period.
