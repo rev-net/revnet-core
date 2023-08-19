@@ -21,15 +21,15 @@ import { BasicRetailistJBParams, PayAllocatorRetailistJBDeployer } from "./PayAl
 
 /// @notice A contract that facilitates deploying a basic Retailist treasury that also can mint tiered 721s.
 contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDeployer {
-    /// @notice The directory of terminals and controllers for projects.
+    /// @notice The directory of terminals and controllers for networks.
     IJBDirectory public immutable directory;
 
     /// @notice The contract responsible for deploying the delegate.
     IJBTiered721DelegateDeployer public immutable delegateDeployer;
 
-    /// @param _directory The directory of terminals and controllers for projects.
+    /// @param _directory The directory of terminals and controllers for networks.
     /// @param _delegateDeployer The delegate deployer.
-    /// @param _controller The controller that projects are made from.
+    /// @param _controller The controller that networks are made from.
     constructor(
         IJBDirectory _directory,
         IJBTiered721DelegateDeployer _delegateDeployer,
@@ -41,23 +41,23 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
         delegateDeployer = _delegateDeployer;
     }
 
-    /// @notice Deploy a project with basic Retailism constraints that includes Tiered 721s and also calls other pay
+    /// @notice Deploy a network with basic Retailism constraints that includes Tiered 721s and also calls other pay
     /// delegates that are specified.
     /// @param _operator The address that will receive the token premint, initial reserved token allocations, and who is
     /// allowed to change the allocated reserved rate distribution.
-    /// @param _projectMetadata The metadata containing project info.
-    /// @param _name The name of the ERC-20 token being create for the project.
-    /// @param _symbol The symbol of the ERC-20 token being created for the project.
-    /// @param _data The data needed to deploy a basic retailist project.
-    /// @param _terminals The terminals that project uses to accept payments through.
+    /// @param _networkMetadata The metadata containing network info.
+    /// @param _name The name of the ERC-20 token being create for the network.
+    /// @param _symbol The symbol of the ERC-20 token being created for the network.
+    /// @param _data The data needed to deploy a basic retailist network.
+    /// @param _terminals The terminals that the network uses to accept payments through.
     /// @param _buybackDelegate The buyback delegate to use when determining the best price for new participants.
     /// @param _deployTiered721DelegateData Structure containing data necessary for delegate deployment.
-    /// @param _otherDelegateAllocations Any pay delegate allocations that should run when the project is paid.
+    /// @param _otherDelegateAllocations Any pay delegate allocations that should run when the network is paid.
     /// @param _extraFundingCycleMetadata Extra metadata to attach to the funding cycle for the delegates to use.
-    /// @return projectId The ID of the newly created Retailist project.
-    function deployTiered721PayAllocatorProjectFor(
+    /// @return networkId The ID of the newly created Retailist network.
+    function deployTiered721PayAllocatorNetworkFor(
         address _operator,
-        JBProjectMetadata memory _projectMetadata,
+        JBProjectMetadata memory _networkMetadata,
         string memory _name,
         string memory _symbol,
         BasicRetailistJBParams memory _data,
@@ -68,10 +68,10 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
         uint8 _extraFundingCycleMetadata
     )
         public
-        returns (uint256 projectId)
+        returns (uint256 networkId)
     {
-        // Get the project ID, optimistically knowing it will be one greater than the current count.
-        projectId = directory.projects().count() + 1;
+        // Get the network ID, optimistically knowing it will be one greater than the current count.
+        networkId = directory.projects().count() + 1;
 
         // Keep a reference to the number of delegate allocations passed in.
         uint256 _numberOfOtherDelegateAllocations = _otherDelegateAllocations.length;
@@ -90,7 +90,7 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
 
         {
             // Deploy the delegate contract.
-            IJBTiered721Delegate _delegate = delegateDeployer.deployDelegateFor(projectId, _deployTiered721DelegateData);
+            IJBTiered721Delegate _delegate = delegateDeployer.deployDelegateFor(networkId, _deployTiered721DelegateData);
 
             // Add the Tiered 721 Allocation at the end.
             _delegateAllocations[_numberOfOtherDelegateAllocations] = JBPayDelegateAllocation3_1_1({
@@ -100,9 +100,9 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
             });
         }
 
-        super.deployPayAllocatorProjectFor(
+        super.deployPayAllocatorNetworkFor(
             _operator,
-            _projectMetadata,
+            _networkMetadata,
             _name,
             _symbol,
             _data,

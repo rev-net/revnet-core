@@ -34,11 +34,11 @@ contract CroptopTiered721PayAllocatorRetailistJBDeployer is Tiered721PayAllocato
     /// contain only the SET_SPLITS operation.
     uint256[] public croptopPermissionIndexes;
 
-    /// @param _directory The directory of terminals and controllers for projects.
+    /// @param _directory The directory of terminals and controllers for networks.
     /// @param _delegateDeployer The delegate deployer.
     /// @param _publisher The Croptop publisher that facilitates the permissioned publishing of NFT posts to a Juicebox
-    /// project.
-    /// @param _controller The controller that projects are made from.
+    /// network.
+    /// @param _controller The controller that networks are made from.
     constructor(
         CroptopPublisher _publisher,
         IJBDirectory _directory,
@@ -51,24 +51,24 @@ contract CroptopTiered721PayAllocatorRetailistJBDeployer is Tiered721PayAllocato
         croptopPermissionIndexes.push(JB721Operations.ADJUST_TIERS);
     }
 
-    /// @notice Deploy a project with basic Retailism constraints that includes Tiered 721s that the Croptop publisher
+    /// @notice Deploy a network with basic Retailism constraints that includes Tiered 721s that the Croptop publisher
     /// can facilitate permissioned posts to, and also calls other pay delegates that are specified.
     /// @param _operator The address that will receive the token premint, initial reserved token allocations, and who is
     /// allowed to change the allocated reserved rate distribution.
-    /// @param _projectMetadata The metadata containing project info.
-    /// @param _name The name of the ERC-20 token being create for the project.
-    /// @param _symbol The symbol of the ERC-20 token being created for the project.
-    /// @param _data The data needed to deploy a basic retailist project.
-    /// @param _terminals The terminals that project uses to accept payments through.
+    /// @param _networkMetadata The metadata containing network info.
+    /// @param _name The name of the ERC-20 token being create for the network.
+    /// @param _symbol The symbol of the ERC-20 token being created for the network.
+    /// @param _data The data needed to deploy a basic retailist network.
+    /// @param _terminals The terminals that the network uses to accept payments through.
     /// @param _buybackDelegate The buyback delegate to use when determining the best price for new participants.
     /// @param _deployTiered721DelegateData Structure containing data necessary for delegate deployment.
-    /// @param _otherDelegateAllocations Any pay delegate allocations that should run when the project is paid.
+    /// @param _otherDelegateAllocations Any pay delegate allocations that should run when the network is paid.
     /// @param _extraFundingCycleMetadata Extra metadata to attach to the funding cycle for the delegates to use.
-    /// @param _allowedPosts The type of posts that the project should allow.
-    /// @return projectId The ID of the newly created Retailist project.
-    function deployCroptopTiered721PayAllocatorProjectFor(
+    /// @param _allowedPosts The type of posts that the network should allow.
+    /// @return networkId The ID of the newly created Retailist network.
+    function deployCroptopTiered721PayAllocatorNetworkFor(
         address _operator,
-        JBProjectMetadata memory _projectMetadata,
+        JBProjectMetadata memory _networkMetadata,
         string memory _name,
         string memory _symbol,
         BasicRetailistJBParams memory _data,
@@ -80,11 +80,11 @@ contract CroptopTiered721PayAllocatorRetailistJBDeployer is Tiered721PayAllocato
         AllowedPost[] memory _allowedPosts
     )
         public
-        returns (uint256 projectId)
+        returns (uint256 networkId)
     {
-        projectId = super.deployTiered721PayAllocatorProjectFor(
+        networkId = super.deployTiered721PayAllocatorNetworkFor(
             _operator,
-            _projectMetadata,
+            _networkMetadata,
             _name,
             _symbol,
             _data,
@@ -96,13 +96,13 @@ contract CroptopTiered721PayAllocatorRetailistJBDeployer is Tiered721PayAllocato
         );
 
         // Configure allowed posts.
-        if (_allowedPosts.length != 0) publisher.configureFor(projectId, _allowedPosts);
+        if (_allowedPosts.length != 0) publisher.configureFor(networkId, _allowedPosts);
 
         // Give the croptop publisher permission to post on this contract's behalf.
         IJBOperatable(address(directory)).operatorStore().setOperator(
             JBOperatorData({
                 operator: address(publisher),
-                domain: projectId,
+                domain: networkId,
                 permissionIndexes: croptopPermissionIndexes
             })
         );

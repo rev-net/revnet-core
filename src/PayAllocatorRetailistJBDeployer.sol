@@ -37,14 +37,14 @@ import { IJBGenericBuybackDelegate } from
 import { BasicRetailistJBParams, BasicRetailistJBDeployer } from "./BasicRetailistJBDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic Retailist treasury that also calls other pay delegates that
-/// are specified when the project is deployed.
+/// are specified when the network is deployed.
 contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFundingCycleDataSource3_1_1 {
-    /// @notice The data source that returns the correct values for the Buyback Delegate of each project.
-    /// @custom:param projectId The ID of the project to which the Buyback Delegate allocations apply.
+    /// @notice The data source that returns the correct values for the Buyback Delegate of each network.
+    /// @custom:param networkId The ID of the network to which the Buyback Delegate allocations apply.
     mapping(uint256 => IJBGenericBuybackDelegate) public buybackDelegateDataSourceOf;
 
-    /// @notice The delegate allocations to include during payments to projects.
-    /// @custom:param projectId The ID of the project to which the delegate allocations apply.
+    /// @notice The delegate allocations to include during payments to networks.
+    /// @custom:param networkId The ID of the network to which the delegate allocations apply.
     mapping(uint256 => JBPayDelegateAllocation3_1_1[]) public delegateAllocationsOf;
 
     /// @notice The permissions that the provided buyback delegate should be granted since it wont be used as the data
@@ -52,12 +52,12 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
     /// contain only the MINT operation.
     uint256[] public buybackDelegatePermissionIndexes;
 
-    /// @notice This function gets called when the project receives a payment.
+    /// @notice This function gets called when the network receives a payment.
     /// @dev Part of IJBFundingCycleDataSource.
     /// @dev This implementation just sets this contract up to receive a `didPay` call.
-    /// @param _data The Juicebox standard project payment data. See
+    /// @param _data The Juicebox standard network payment data. See
     /// https://docs.juicebox.money/dev/api/data-structures/jbpayparamsdata/.
-    /// @return weight The weight that project tokens should get minted relative to. This is useful for optionally
+    /// @return weight The weight that network tokens should get minted relative to. This is useful for optionally
     /// customizing how many tokens are issued per payment.
     /// @return memo A memo to be forwarded to the event. Useful for describing any new actions that are being taken.
     /// @return delegateAllocations Amount to be sent to delegates instead of adding to local balance. Useful for
@@ -88,7 +88,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         delegateAllocations =
             new JBPayDelegateAllocation3_1_1[](_numberOfDelegateAllocations + (_usesBuybackDelegate ? 1 : 0));
 
-        // All the rest of the delegate allocations the project expects.
+        // All the rest of the delegate allocations the network expects.
         for (uint256 _i; _i < _numberOfDelegateAllocations;) {
             delegateAllocations[_i] = _delegateAllocations[_i];
             unchecked {
@@ -129,27 +129,27 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         return _interfaceId == type(IJBFundingCycleDataSource3_1_1).interfaceId || super.supportsInterface(_interfaceId);
     }
 
-    /// @param _controller The controller that projects are made from.
+    /// @param _controller The controller tha networks are made from.
     constructor(IJBController3_1 _controller) BasicRetailistJBDeployer(_controller) {
         buybackDelegatePermissionIndexes.push(JBOperations.MINT);
     }
 
-    /// @notice Deploy a project with basic Retailism constraints that also calls other pay delegates that are
+    /// @notice Deploy a network with basic Retailism constraints that also calls other pay delegates that are
     /// specified.
     /// @param _operator The address that will receive the token premint, initial reserved token allocations, and who is
     /// allowed to change the allocated reserved rate distribution.
-    /// @param _projectMetadata The metadata containing project info.
-    /// @param _name The name of the ERC-20 token being create for the project.
-    /// @param _symbol The symbol of the ERC-20 token being created for the project.
-    /// @param _data The data needed to deploy a basic retailist project.
-    /// @param _terminals The terminals that project uses to accept payments through.
+    /// @param _networkMetadata The metadata containing network info.
+    /// @param _name The name of the ERC-20 token being create for the network.
+    /// @param _symbol The symbol of the ERC-20 token being created for the network.
+    /// @param _data The data needed to deploy a basic retailist network.
+    /// @param _terminals The terminals that the network uses to accept payments through.
     /// @param _buybackDelegate The buyback delegate to use when determining the best price for new participants.
-    /// @param _delegateAllocations Any pay delegate allocations that should run when the project is paid.
+    /// @param _delegateAllocations Any pay delegate allocations that should run when the network is paid.
     /// @param _extraFundingCycleMetadata Extra metadata to attach to the funding cycle for the delegates to use.
-    /// @return projectId The ID of the newly created Retailist project.
-    function deployPayAllocatorProjectFor(
+    /// @return networkId The ID of the newly created Retailist network.
+    function deployPayAllocatorNetworkFor(
         address _operator,
-        JBProjectMetadata memory _projectMetadata,
+        JBProjectMetadata memory _networkMetadata,
         string memory _name,
         string memory _symbol,
         BasicRetailistJBParams memory _data,
@@ -159,7 +159,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
         uint8 _extraFundingCycleMetadata
     )
         public
-        returns (uint256 projectId)
+        returns (uint256 networkId)
     {
         // Scoped section to prevent Stack Too Deep.
         {
@@ -183,27 +183,27 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
 
             _groupedSplits[0] = JBGroupedSplits({ group: JBSplitsGroups.RESERVED_TOKENS, splits: _splits });
 
-            // Deploy a project.
-            projectId = controller.projects().createFor({
+            // Deploy a network.
+            networkId = controller.projects().createFor({
                 owner: address(this), // This contract should remain the owner, forever.
-                metadata: _projectMetadata
+                metadata: _networkMetadata
             });
 
-            // Issue the project's ERC-20 token.
-            controller.tokenStore().issueFor({ projectId: projectId, name: _name, symbol: _symbol });
+            // Issue the network's ERC-20 token.
+            controller.tokenStore().issueFor({ projectId: networkId, name: _name, symbol: _symbol });
 
             // Set the pool for the buyback delegate.
             _buybackDelegate.setPoolFor({
-                _projectId: projectId,
+                _projectId: networkId,
                 _fee: _data.poolFee,
                 _secondsAgo: uint32(_buybackDelegate.MIN_SECONDS_AGO()),
                 _twapDelta: uint32(_buybackDelegate.MAX_TWAP_DELTA()),
                 _terminalToken: JBTokens.ETH
             });
 
-            // Configure the project's funding cycles using BBD.
+            // Configure the network's funding cycles using BBD.
             controller.launchFundingCyclesFor({
-                projectId: projectId,
+                projectId: networkId,
                 data: JBFundingCycleData({
                     duration: _data.generationDuration,
                     weight: _data.initialIssuanceRate ** 18,
@@ -216,14 +216,15 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
                         allowSetController: false,
                         pauseTransfers: false
                     }),
-                    reservedRate: _data.devTaxRate, // Set the reserved rate.
+                    reservedRate: _data.devTaxPeriods.length == 0 ? 0 : _data.devTaxPeriods[0].rate, // Set the reserved
+                        // rate.
                     redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _data.exitTaxRate, // Set the redemption rate.
                     ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
                     pausePay: false,
                     pauseDistributions: false, // There will never be distributions accessible anyways.
                     pauseRedeem: false, // Redemptions must be left open.
                     pauseBurn: false,
-                    allowMinting: true, // Allow this contract to premint tokens as the project owner.
+                    allowMinting: true, // Allow this contract to premint tokens as the network owner.
                     allowTerminalMigration: false,
                     allowControllerMigration: false,
                     holdFees: false,
@@ -235,21 +236,21 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
                     dataSource: address(this),
                     metadata: _extraFundingCycleMetadata
                 }),
-                mustStartAtOrAfter: 0,
+                mustStartAtOrAfter: _data.devTaxPeriods.length == 0 ? 0 : _data.devTaxPeriods[0].startsAtOrAfter,
                 groupedSplits: _groupedSplits,
-                fundAccessConstraints: new JBFundAccessConstraints[](0), // Funds can't be accessed by the project
+                fundAccessConstraints: new JBFundAccessConstraints[](0), // Funds can't be accessed by the network
                     // owner.
                 terminals: _terminals,
-                memo: "Deployed Retailist treasury"
+                memo: "Deployed Retailist network"
             });
         }
 
         // Keep a reference to this data source.
-        buybackDelegateDataSourceOf[projectId] = _buybackDelegate;
+        buybackDelegateDataSourceOf[networkId] = _buybackDelegate;
 
         // Premint tokens to the Operator.
         controller.mintTokensOf({
-            projectId: projectId,
+            projectId: networkId,
             tokenCount: _data.premintTokenAmount ** 18,
             beneficiary: _operator,
             memo: string.concat("Preminted $", _symbol),
@@ -259,7 +260,7 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
 
         // Give the operator permission to change the allocated reserved rate distribution destination.
         IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
-            JBOperatorData({ operator: _operator, domain: projectId, permissionIndexes: operatorPermissionIndexes })
+            JBOperatorData({ operator: _operator, domain: networkId, permissionIndexes: operatorPermissionIndexes })
         );
 
         // Give the buyback delegate permission to mint on this contract's behald if it doesn't yet have it.
@@ -277,15 +278,13 @@ contract PayAllocatorRetailistJBDeployer is BasicRetailistJBDeployer, IJBFunding
             );
         }
 
-        // Store the timestamp after which the project's reconfigurd funding cycles can start. A separate transaction to
-        // `scheduledReconfigurationOf` must be called to formally scheduled it.
-        reconfigurationStartTimestampOf[projectId] = block.timestamp + _data.devTaxDuration;
+        _storeDevTaxPeriods(networkId, _data.devTaxPeriods, _data.generationDuration);
 
         // Store the pay delegate allocations.
         uint256 _numberOfDelegateAllocations = _delegateAllocations.length;
 
         for (uint256 _i; _i < _numberOfDelegateAllocations;) {
-            delegateAllocationsOf[projectId][_i] = _delegateAllocations[_i];
+            delegateAllocationsOf[networkId][_i] = _delegateAllocations[_i];
             unchecked {
                 ++_i;
             }

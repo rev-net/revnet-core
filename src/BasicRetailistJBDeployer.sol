@@ -29,6 +29,14 @@ import { IJBGenericBuybackDelegate } from
 import { JBBuybackDelegateOperations } from
     "@jbx-protocol/juice-buyback-delegate/contracts/libraries/JBBuybackDelegateOperations.sol";
 
+/// @custom:member rate The percentage of newly issued tokens that should be reserved for the _operator. This
+/// percentage is out of 10_000 (JBConstants.MAX_RESERVED_RATE).
+/// @custom:member startsAtOrAfter The timestamp to start the dev tax at the given rate at or after.
+struct DevTaxPeriod {
+    uint128 rate;
+    uint128 startsAtOrAfter;
+}
+
 /// @custom:member initialIssuanceRate The number of tokens that should be minted initially per 1 ETH contributed to the
 /// treasury. This should _not_ be specified as a fixed point number with 18 decimals, this will be applied internally.
 /// @custom:member premintTokenAmount The number of tokens that should be preminted to the _operator. This should _not_
@@ -40,9 +48,7 @@ import { JBBuybackDelegateOperations } from
 /// @custom:member exitTaxRate The bonding curve rate determining how much each token can access from the treasury at
 /// any current total supply. This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no
 /// tax (100% redemption rate).
-/// @custom:member devTaxRate The percentage of newly issued tokens that should be reserved for the _operator. This
-/// percentage is out of 10_000 (JBConstants.MAX_RESERVED_RATE).
-/// @custom:member devTaxDuration The number of seconds the dev tax should be active for.
+/// @custom:member devTaxPeriods The periods of distinguished dev taxe rates that should be applied over time.
 /// @custom:member poolFee The fee of the pool in which swaps occur when seeking the best price for a new participant.
 /// This incentivizes liquidity providers. Out of 1_000_000. A common value is 1%, or 10_000. Other passible values are
 /// 0.3% and 0.1%.
@@ -52,28 +58,32 @@ struct BasicRetailistJBParams {
     uint256 generationTax;
     uint256 generationDuration;
     uint256 exitTaxRate;
-    uint256 devTaxRate;
-    uint48 devTaxDuration;
+    DevTaxPeriod[] devTaxPeriods;
     uint24 poolFee;
 }
 
-/// @notice A contract that facilitates deploying a basic Retailist treasury.
+/// @notice A contract that facilitates deploying a basic Retailist network.
 contract BasicRetailistJBDeployer is IERC721Receiver {
     error RECONFIGURATION_ALREADY_SCHEDULED();
     error RECONFIGURATION_NOT_POSSIBLE();
-    
-    /// @notice The controller that projects are made from.
+    error BAD_DEV_TAX_SEQUENCE();
+
+    /// @notice The controller that networks are made from.
     IJBController3_1 public immutable controller;
 
     /// @notice The permissions that the provided _operator should be granted. This is set once in the constructor to
     /// contain only the SET_SPLITS operation.
     uint256[] public operatorPermissionIndexes;
 
-    /// @notice The start time of the reconfigurations for each project.
-    /// @dev A basic retailist treasury consists of two funding cycles, one created on launch with a reserved rate, and
-    /// another that starts at some point in the future that removes the reserved rate.
-    /// @custom:param projectId The ID of the project to which the reconfiguration start time applies.
-    mapping(uint256 projectId => uint256) public reconfigurationStartTimestampOf;
+    /// @notice The dev tax periods for each network.
+    /// @dev A basic retailist treasury consists of funding cycles defined by scheduled dev taxes. The only changes
+    /// between them are in their reserved rate.
+    /// @custom:param networkId The ID of the network to which the dev tax period applies.
+    mapping(uint256 networkId => DevTaxPeriod[]) public devTaxPeriodsOf;
+
+    /// @notice The current index of dev tax period that each network is in, relative to devTaxPeriodsOf.
+    /// @custom:param networkId The ID of the network to which the dev tax period applies.
+    mapping(uint256 networkId => uint256) public currentDevTaxPeriodNumberOf;
 
     /// @notice Indicates if this contract adheres to the specified interface.
     /// @dev See {IERC165-supportsInterface}.
@@ -83,26 +93,26 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
         return _interfaceId == type(IERC721Receiver).interfaceId;
     }
 
-    /// @param _controller The controller that projects are made from.
+    /// @param _controller The controller that networks are made from.
     constructor(IJBController3_1 _controller) {
         controller = _controller;
         operatorPermissionIndexes.push(JBOperations.SET_SPLITS);
         operatorPermissionIndexes.push(JBBuybackDelegateOperations.SET_POOL_PARAMS);
     }
 
-    /// @notice Deploy a project with basic Retailism constraints.
+    /// @notice Deploy a network with basic Retailism constraints.
     /// @param _operator The address that will receive the token premint, initial reserved token allocations, and who is
     /// allowed to change the allocated reserved rate distribution.
-    /// @param _projectMetadata The metadata containing project info.
-    /// @param _name The name of the ERC-20 token being create for the project.
-    /// @param _symbol The symbol of the ERC-20 token being created for the project.
-    /// @param _data The data needed to deploy a basic retailist project.
-    /// @param _terminals The terminals that project uses to accept payments through.
+    /// @param _networkMetadata The metadata containing network info.
+    /// @param _name The name of the ERC-20 token being create for the network.
+    /// @param _symbol The symbol of the ERC-20 token being created for the network.
+    /// @param _data The data needed to deploy a basic retailist network.
+    /// @param _terminals The terminals that the network uses to accept payments through.
     /// @param _buybackDelegate The buyback delegate to use when determining the best price for new participants.
-    /// @return projectId The ID of the newly created Retailist project.
-    function deployBasicProjectFor(
+    /// @return networkId The ID of the newly created Retailist network.
+    function deployBasicNetworkFor(
         address _operator,
-        JBProjectMetadata memory _projectMetadata,
+        JBProjectMetadata memory _networkMetadata,
         string memory _name,
         string memory _symbol,
         BasicRetailistJBParams memory _data,
@@ -110,7 +120,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
         IJBGenericBuybackDelegate _buybackDelegate
     )
         public
-        returns (uint256 projectId)
+        returns (uint256 networkId)
     {
         // Package the reserved token splits.
         JBGroupedSplits[] memory _groupedSplits = new JBGroupedSplits[](1);
@@ -134,27 +144,27 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
             _groupedSplits[0] = JBGroupedSplits({ group: JBSplitsGroups.RESERVED_TOKENS, splits: _splits });
         }
 
-        // Deploy a project.
-        projectId = controller.projects().createFor({
+        // Deploy a network.
+        networkId = controller.projects().createFor({
             owner: address(this), // This contract should remain the owner, forever.
-            metadata: _projectMetadata
+            metadata: _networkMetadata
         });
 
-        // Issue the project's ERC-20 token.
-        controller.tokenStore().issueFor({ projectId: projectId, name: _name, symbol: _symbol });
+        // Issue the network's ERC-20 token.
+        controller.tokenStore().issueFor({ projectId: networkId, name: _name, symbol: _symbol });
 
         // Set the pool for the buyback delegate.
         _buybackDelegate.setPoolFor({
-            _projectId: projectId,
+            _projectId: networkId,
             _fee: _data.poolFee,
             _secondsAgo: uint32(_buybackDelegate.MIN_SECONDS_AGO()),
             _twapDelta: uint32(_buybackDelegate.MAX_TWAP_DELTA()),
             _terminalToken: JBTokens.ETH
         });
 
-        // Configure the project's funding cycles using BBD.
+        // Configure the network's funding cycles using BBD.
         controller.launchFundingCyclesFor({
-            projectId: projectId,
+            projectId: networkId,
             data: JBFundingCycleData({
                 duration: _data.generationDuration,
                 weight: _data.initialIssuanceRate ** 18,
@@ -167,14 +177,14 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
                     allowSetController: false,
                     pauseTransfers: false
                 }),
-                reservedRate: _data.devTaxRate, // Set the reserved rate.
+                reservedRate: _data.devTaxPeriods.length == 0 ? 0 : _data.devTaxPeriods[0].rate, // Set the reserved rate.
                 redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _data.exitTaxRate, // Set the redemption rate.
                 ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
                 pausePay: false,
                 pauseDistributions: false, // There will never be distributions accessible anyways.
                 pauseRedeem: false, // Redemptions must be left open.
                 pauseBurn: false,
-                allowMinting: true, // Allow this contract to premint tokens as the project owner.
+                allowMinting: true, // Allow this contract to premint tokens as the network owner.
                 allowTerminalMigration: false,
                 allowControllerMigration: false,
                 holdFees: false,
@@ -185,16 +195,16 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
                 dataSource: address(_buybackDelegate),
                 metadata: 0
             }),
-            mustStartAtOrAfter: 0,
+            mustStartAtOrAfter: _data.devTaxPeriods.length == 0 ? 0 : _data.devTaxPeriods[0].startsAtOrAfter,
             groupedSplits: _groupedSplits,
-            fundAccessConstraints: new JBFundAccessConstraints[](0), // Funds can't be accessed by the project owner.
+            fundAccessConstraints: new JBFundAccessConstraints[](0), // Funds can't be accessed by the network owner.
             terminals: _terminals,
-            memo: "Deployed Retailist treasury"
+            memo: "Deployed Retailist network"
         });
 
         // Premint tokens to the Operator.
         controller.mintTokensOf({
-            projectId: projectId,
+            projectId: networkId,
             tokenCount: _data.premintTokenAmount ** 18,
             beneficiary: _operator,
             memo: string.concat("Preminted $", _symbol),
@@ -204,34 +214,70 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
 
         // Give the operator permission to change the allocated reserved rate distribution destination.
         IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
-            JBOperatorData({ operator: _operator, domain: projectId, permissionIndexes: operatorPermissionIndexes })
+            JBOperatorData({ operator: _operator, domain: networkId, permissionIndexes: operatorPermissionIndexes })
         );
 
-        // Store the timestamp after which the project's reconfigurd funding cycles can start. A separate transaction to
-        // `scheduledReconfigurationOf` must be called to formally scheduled it.
-        if (_data.devTaxDuration != 0) reconfigurationStartTimestampOf[projectId] = block.timestamp + _data.devTaxDuration;
+        _storeDevTaxPeriods(networkId, _data.devTaxPeriods, _data.generationDuration);
     }
 
-    /// @notice Schedules the funding cycle reconfiguration that removes the reserved rate based on the
-    /// _reservedRateDuration timestamp passed when the project was deployed.
-    /// @param _projectId The ID of the project who is having its funding cycle reconfigation scheduled.
-    function scheduleReconfigurationOf(uint256 _projectId) external {
+    function _storeDevTaxPeriods(
+        uint256 _networkId,
+        DevTaxPeriod[] memory _devTaxPeriods,
+        uint256 _generationDuration
+    )
+        internal
+    {
+        // Keep a reference to the number of dev tax periods.
+        uint256 _numberOfDevTaxPeriods = _devTaxPeriods.length;
+
+        // Store the dev tax periods. Separate transactions to
+        // `scheduleNextDevTaxPeriodOf` must be called to formally scheduled them.
+        if (_devTaxPeriods.length != 0) {
+            for (uint256 _i; _i < _numberOfDevTaxPeriods;) {
+                // Make sure the dev taxes have incrementally positive start times, and are each at least one generation
+                // long.
+                if (
+                    _i != 0
+                        && _devTaxPeriods[_i].startsAtOrAfter
+                            <= _devTaxPeriods[_i - 1].startsAtOrAfter + _generationDuration
+                ) revert BAD_DEV_TAX_SEQUENCE();
+
+                // Store the dev tax period.
+                devTaxPeriodsOf[_networkId][_i] = _devTaxPeriods[_i];
+                unchecked {
+                    ++_i;
+                }
+            }
+        }
+    }
+
+    /// @notice Schedules the new dev tax period that adjusts the reserved rate based on the
+    /// dev tax periods passed when the network was deployed.
+    /// @param _networkId The ID of the network who is having its dev tax periods scheduled.
+    function scheduleNextDevTaxPeriodOf(uint256 _networkId) external {
         // Get a reference to the latest configured funding cycle and its metadata.
         (JBFundingCycle memory _latestFundingCycleConfiguration, JBFundingCycleMetadata memory _metadata,) =
-            controller.latestConfiguredFundingCycleOf(_projectId);
+            controller.latestConfiguredFundingCycleOf(_networkId);
 
-        // Make sure the latest funding cycle scheduled was the first funding cycle.
-        if (_latestFundingCycleConfiguration.number != 1) revert RECONFIGURATION_ALREADY_SCHEDULED();
+        // Get a reference to the next dev tax period number, while incrementing the stored value. Zero indexed.
+        uint256 _nextDevTaxPeriodNumber = ++currentDevTaxPeriodNumberOf[_networkId];
 
-        // Get a reference to the reconfiguration start time.
-        uint256 _reconfigurationStartTimestamp = reconfigurationStartTimestampOf[_projectId];
+        // Get a reference to the number of dev tax periods there are. One indexed.
+        uint256 _numberOfDevTaxPeriods = devTaxPeriodsOf[_networkId].length;
 
-        // Make sure there is a dev tax duration.
-        if (_reconfigurationStartTimestamp == 0) revert RECONFIGURATION_NOT_POSSIBLE();
+        // Make sure the latest funding cycle configured started in the past, and that there are more dev tax periods to
+        // schedule.
+        if (
+            _numberOfDevTaxPeriods == 0 || _nextDevTaxPeriodNumber == _numberOfDevTaxPeriods
+                || _latestFundingCycleConfiguration.start > block.timestamp
+        ) revert RECONFIGURATION_ALREADY_SCHEDULED();
+
+        // Get a reference to the next dev tax period.
+        DevTaxPeriod memory _devTax = devTaxPeriodsOf[_networkId][_nextDevTaxPeriodNumber];
 
         // Schedule a funding cycle reconfiguration.
         controller.reconfigureFundingCyclesOf({
-            projectId: _projectId,
+            projectId: _networkId,
             data: JBFundingCycleData({
                 duration: _latestFundingCycleConfiguration.duration,
                 weight: 0, // Inherit the weight of the current funding cycle.
@@ -244,7 +290,7 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
                     allowSetController: false,
                     pauseTransfers: false
                 }),
-                reservedRate: 0, // No more reserved rate.
+                reservedRate: _devTax.rate, // Set the reserved rate.
                 redemptionRate: _metadata.redemptionRate, // Set the same redemption rate.
                 ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
                 pausePay: false,
@@ -262,10 +308,10 @@ contract BasicRetailistJBDeployer is IERC721Receiver {
                 dataSource: _metadata.dataSource,
                 metadata: _metadata.metadata
             }),
-            mustStartAtOrAfter: _reconfigurationStartTimestamp,
+            mustStartAtOrAfter: _devTax.startsAtOrAfter,
             groupedSplits: new JBGroupedSplits[](0), // No more splits.
             fundAccessConstraints: new JBFundAccessConstraints[](0),
-            memo: "Scheduled boost expiry of Retailist treasury"
+            memo: "Scheduled next dev tax period of Retailist network"
         });
     }
 
