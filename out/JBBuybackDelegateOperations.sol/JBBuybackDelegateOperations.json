@@ -28,12 +28,12 @@
     }
   ],
   "bytecode": {
-    "object": "0x6098610038600b82828239805160001a607314602b57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c8063116e9c0914604257806328b09e9e14605b575b600080fd5b6049601981565b60405190815260200160405180910390f35b604960188156fea264697066735822122047668122e455c19dc783e774fc22522973bd2e8fe7b42ae021e72e812981969464736f6c63430008150033",
+    "object": "0x6098610038600b82828239805160001a607314602b57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c8063116e9c0914604257806328b09e9e14605b575b600080fd5b6049601981565b60405190815260200160405180910390f35b604960188156fea264697066735822122020c3f267a0376dccf588171309a3ccb4b761f652bb34cd78c80acd4e715a697f64736f6c63430008150033",
     "sourceMap": "164:283:36:-:0;;;;;;;;;;;;;;;-1:-1:-1;;;164:283:36;;;;;;;;;;;;;;;;;",
     "linkReferences": {}
   },
   "deployedBytecode": {
-    "object": "0x7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c8063116e9c0914604257806328b09e9e14605b575b600080fd5b6049601981565b60405190815260200160405180910390f35b604960188156fea264697066735822122047668122e455c19dc783e774fc22522973bd2e8fe7b42ae021e72e812981969464736f6c63430008150033",
+    "object": "0x7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c8063116e9c0914604257806328b09e9e14605b575b600080fd5b6049601981565b60405190815260200160405180910390f35b604960188156fea264697066735822122020c3f267a0376dccf588171309a3ccb4b761f652bb34cd78c80acd4e715a697f64736f6c63430008150033",
     "sourceMap": "164:283:36:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;404:40;;442:2;404:40;;;;;168:25:117;;;156:2;141:18;404:40:36;;;;;;;354:44;;396:2;354:44;",
     "linkReferences": {}
   },
@@ -41,7 +41,7 @@
     "CHANGE_POOL()": "116e9c09",
     "SET_POOL_PARAMS()": "28b09e9e"
   },
-  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.21+commit.d9974bed\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"CHANGE_POOL\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SET_POOL_PARAMS\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"title\":\"JBBuybackDelegateOperations\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"JB specific operation indexes for the JBBuybackDelegate\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"node_modules/@jbx-protocol/juice-buyback-delegate/contracts/libraries/JBBuybackDelegateOperations.sol\":\"JBBuybackDelegateOperations\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":1000000000},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@croptop/=node_modules/@croptop/\",\":@ensdomains/=node_modules/@ensdomains/\",\":@jbx-protocol/=node_modules/@jbx-protocol/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@paulrberg/=node_modules/@paulrberg/\",\":@prb/=node_modules/@prb/\",\":@uniswap/=node_modules/@uniswap/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\",\":prb-math/=node_modules/prb-math/\"]},\"sources\":{\"node_modules/@jbx-protocol/juice-buyback-delegate/contracts/libraries/JBBuybackDelegateOperations.sol\":{\"keccak256\":\"0xc3b8dae9fb0efeddef70d12834ccd34373d904c5ea5590a7e457e743b2bf1325\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://9772412f05cf9c8ff8bffb8c72e3ae2f0343d81de3afea9be5b4412179df3104\",\"dweb:/ipfs/QmRsuFXRnfjD5otVBgxjhng5LR2ALxdpcGMB3oz6HMv98F\"]}},\"version\":1}",
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.21+commit.d9974bed\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"CHANGE_POOL\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SET_POOL_PARAMS\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"title\":\"JBBuybackDelegateOperations\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"JB specific operation indexes for the JBBuybackDelegate\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"node_modules/@jbx-protocol/juice-buyback-delegate/contracts/libraries/JBBuybackDelegateOperations.sol\":\"JBBuybackDelegateOperations\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":1000000},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@croptop/=node_modules/@croptop/\",\":@ensdomains/=node_modules/@ensdomains/\",\":@jbx-protocol/=node_modules/@jbx-protocol/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@paulrberg/=node_modules/@paulrberg/\",\":@prb/=node_modules/@prb/\",\":@uniswap/=node_modules/@uniswap/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\",\":prb-math/=node_modules/prb-math/\"]},\"sources\":{\"node_modules/@jbx-protocol/juice-buyback-delegate/contracts/libraries/JBBuybackDelegateOperations.sol\":{\"keccak256\":\"0xc3b8dae9fb0efeddef70d12834ccd34373d904c5ea5590a7e457e743b2bf1325\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://9772412f05cf9c8ff8bffb8c72e3ae2f0343d81de3afea9be5b4412179df3104\",\"dweb:/ipfs/QmRsuFXRnfjD5otVBgxjhng5LR2ALxdpcGMB3oz6HMv98F\"]}},\"version\":1}",
   "metadata": {
     "compiler": {
       "version": "0.8.21+commit.d9974bed"
@@ -104,7 +104,7 @@
       ],
       "optimizer": {
         "enabled": true,
-        "runs": 1000000000
+        "runs": 1000000
       },
       "metadata": {
         "bytecodeHash": "ipfs"

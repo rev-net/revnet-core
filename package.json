@@ -1,6 +1,6 @@
 {
   "name": "@breadfruit/retailism",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "dependencies": {
     "@jbx-protocol/juice-contracts-v3": "^5.0.0",
     "@jbx-protocol/juice-721-delegate": "^8.0.0",
@@ -15,8 +15,8 @@
     "size": "forge build --sizes",
     "coverage": "forge coverage --match-path ./src/*.sol --report lcov --report summary",
     "doc": "forge doc",
-    "deploy:mainnet": "source .env && forge script DeployMainnet --broadcast --network mainnet --rpc-url $RPC_MAINNET --verify --ledger --sender $SENDER_MAINNET",
-    "deploy:goerli": "source .env && forge script DeployGoerli --broadcast --network goerli --rpc-url $RPC_GOERLI --verify --ledger --sender $SENDER_GOERLI",
+    "deploy:mainnet": "source .env && forge script DeployMainnet --chain-id 1 --rpc-url $RPC_MAINNET --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY --ledger --sender $SENDER_MAINNET -vvv",
+    "deploy:goerli": "source .env && forge script DeployGoerli --chain-id 5 --rpc-url $RPC_GOERLI --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY --ledger --sender $SENDER_GOERLI -vvv",
     "tree": "forge tree",
     "lint": "forge fmt"
   }

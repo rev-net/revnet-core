@@ -41,12 +41,12 @@
     }
   ],
   "bytecode": {
-    "object": "0x60a9610039600b82828239805160001a60731461002c57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe730000000000000000000000000000000000000000301460806040526004361060475760003560e01c8063184c79c514604c5780633e36f4c7146065578063967dad6314606c575b600080fd5b6053601681565b60405190815260200160405180910390f35b6053601781565b605360158156fea26469706673582212204cb6629f631a36897d04ba2bcbda7f13614b53fa8c452b9097beb776032cffb464736f6c63430008150033",
+    "object": "0x60a9610039600b82828239805160001a60731461002c57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe730000000000000000000000000000000000000000301460806040526004361060475760003560e01c8063184c79c514604c5780633e36f4c7146065578063967dad6314606c575b600080fd5b6053601681565b60405190815260200160405180910390f35b6053601781565b605360158156fea264697066735822122033fd1ac231348d1a45596b0a7cbe6c893cb561729d4f7295ac668af9fde64ea564736f6c63430008150033",
     "sourceMap": "133:275:26:-:0;;;;;;;;;;;;;;;-1:-1:-1;;;133:275:26;;;;;;;;;;;;;;;;;",
     "linkReferences": {}
   },
   "deployedBytecode": {
-    "object": "0x730000000000000000000000000000000000000000301460806040526004361060475760003560e01c8063184c79c514604c5780633e36f4c7146065578063967dad6314606c575b600080fd5b6053601681565b60405190815260200160405180910390f35b6053601781565b605360158156fea26469706673582212204cb6629f631a36897d04ba2bcbda7f13614b53fa8c452b9097beb776032cffb464736f6c63430008150033",
+    "object": "0x730000000000000000000000000000000000000000301460806040526004361060475760003560e01c8063184c79c514604c5780633e36f4c7146065578063967dad6314606c575b600080fd5b6053601681565b60405190815260200160405180910390f35b6053601781565b605360158156fea264697066735822122033fd1ac231348d1a45596b0a7cbe6c893cb561729d4f7295ac668af9fde64ea564736f6c63430008150033",
     "sourceMap": "133:275:26:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;322:44;;364:2;322:44;;;;;168:25:117;;;156:2;141:18;322:44:26;;;;;;;372:33;;403:2;372:33;;275:41;;314:2;275:41;",
     "linkReferences": {}
   },
@@ -55,7 +55,7 @@
     "MINT()": "3e36f4c7",
     "UPDATE_METADATA()": "184c79c5"
   },
-  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.21+commit.d9974bed\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"ADJUST_TIERS\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MINT\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"UPDATE_METADATA\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"title\":\"JBBitJB721Operationsmap\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"Occupy namespace operations.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"node_modules/@jbx-protocol/juice-721-delegate/contracts/libraries/JB721Operations.sol\":\"JB721Operations\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":1000000000},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@croptop/=node_modules/@croptop/\",\":@ensdomains/=node_modules/@ensdomains/\",\":@jbx-protocol/=node_modules/@jbx-protocol/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@paulrberg/=node_modules/@paulrberg/\",\":@prb/=node_modules/@prb/\",\":@uniswap/=node_modules/@uniswap/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\",\":prb-math/=node_modules/prb-math/\"]},\"sources\":{\"node_modules/@jbx-protocol/juice-721-delegate/contracts/libraries/JB721Operations.sol\":{\"keccak256\":\"0x375b0cdb95ed8e9b7c36aff9b87e96528458b5926ed7943cfd10b6655ab4fd98\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://551aaaddac92d0dfd172083ce2db30b78c03d6e193973e419d75aa9294430569\",\"dweb:/ipfs/QmetKCpMcPc6vJKxKHw6z7RtqgVEuvowmgoTjrMSYHDqno\"]}},\"version\":1}",
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.21+commit.d9974bed\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"ADJUST_TIERS\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MINT\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"UPDATE_METADATA\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"title\":\"JBBitJB721Operationsmap\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"Occupy namespace operations.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"node_modules/@jbx-protocol/juice-721-delegate/contracts/libraries/JB721Operations.sol\":\"JB721Operations\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":1000000},\"remappings\":[\":@chainlink/=node_modules/@chainlink/\",\":@croptop/=node_modules/@croptop/\",\":@ensdomains/=node_modules/@ensdomains/\",\":@jbx-protocol/=node_modules/@jbx-protocol/\",\":@openzeppelin/=node_modules/@openzeppelin/\",\":@paulrberg/=node_modules/@paulrberg/\",\":@prb/=node_modules/@prb/\",\":@uniswap/=node_modules/@uniswap/\",\":base64-sol/=node_modules/base64-sol/\",\":ds-test/=lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\",\":prb-math/=node_modules/prb-math/\"]},\"sources\":{\"node_modules/@jbx-protocol/juice-721-delegate/contracts/libraries/JB721Operations.sol\":{\"keccak256\":\"0x375b0cdb95ed8e9b7c36aff9b87e96528458b5926ed7943cfd10b6655ab4fd98\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://551aaaddac92d0dfd172083ce2db30b78c03d6e193973e419d75aa9294430569\",\"dweb:/ipfs/QmetKCpMcPc6vJKxKHw6z7RtqgVEuvowmgoTjrMSYHDqno\"]}},\"version\":1}",
   "metadata": {
     "compiler": {
       "version": "0.8.21+commit.d9974bed"
@@ -131,7 +131,7 @@
       ],
       "optimizer": {
         "enabled": true,
-        "runs": 1000000000
+        "runs": 1000000
       },
       "metadata": {
         "bytecodeHash": "ipfs"
