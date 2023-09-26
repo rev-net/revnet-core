@@ -29,7 +29,8 @@ import { IJBGenericBuybackDelegate } from
 import { JBBuybackDelegateOperations } from
     "@jbx-protocol/juice-buyback-delegate/contracts/libraries/JBBuybackDelegateOperations.sol";
 
-/// @custom:member rate The percentage of newly issued tokens that should be reserved for the _boostOperator, out of 10_000 (JBConstants.MAX_RESERVED_RATE).
+/// @custom:member rate The percentage of newly issued tokens that should be reserved for the _boostOperator, out of
+/// 10_000 (JBConstants.MAX_RESERVED_RATE).
 /// @custom:member startsAtOrAfter The timestamp to start a boost at the given rate at or after.
 struct Boost {
     uint128 rate;
@@ -52,26 +53,33 @@ struct BuybackPool {
 /// @custom:member contract The buyback contract contract to use.
 /// @custom:member pools The pools to setup on the given buyback contract.
 struct BuybackSetup {
-    IJBGenericBuybackDelegate contract;
-    BuybackDelegatePool[] pools;
+    IJBGenericBuybackDelegate buybackContract;
+    BuybackPool[] pools;
 }
 
-/// @custom:member initialIssuanceRate The number of tokens that should be minted initially per 1 currency unit contributed to the
+/// @custom:member initialIssuanceRate The number of tokens that should be minted initially per 1 currency unit
+/// contributed to the
 /// revnet. This should _not_ be specified as a fixed point number with 18 decimals, this will be applied internally.
-/// @custom:member premintTokenAmount The number of tokens that should be preminted to the _boostOperator. This should _not_
+/// @custom:member premintTokenAmount The number of tokens that should be preminted to the _boostOperator. This should
+/// _not_
 /// be specified as a fixed point number with 18 decimals, this will be applied internally.
-/// @custom:member generationDuration The number of seconds between applied issuance reductions. This should be at least 24 hours.
-/// @custom:member priceCeilingIncreaseRate The rate at which the issuance rate should decrease over time, which in turn increases the price ceiling. This percentage is out
-/// of 1_000_000_000 (JBConstants.MAX_DISCOUNT_RATE). 0% corresponds to no issuance reduction, everyone is treated equally over time.
-/// @custom:member priceFloorIncreaseRate The rate determining how much each token can access from the revnet any current total supply by burning tokens. 
-/// This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no floor increases when redemptions are made (100% redemption rate), everyone's redemptions are treated equally.
+/// @custom:member generationDuration The number of seconds between applied issuance reductions. This should be at least
+/// 24 hours.
+/// @custom:member priceCeilingIncreaseRate The rate at which the issuance rate should decrease over time, which in turn
+/// increases the price ceiling. This percentage is out
+/// of 1_000_000_000 (JBConstants.MAX_DISCOUNT_RATE). 0% corresponds to no issuance reduction, everyone is treated
+/// equally over time.
+/// @custom:member priceFloorIncreaseRate The rate determining how much each token can access from the revnet any
+/// current total supply by burning tokens.
+/// This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no floor increases when
+/// redemptions are made (100% redemption rate), everyone's redemptions are treated equally.
 /// @custom:member boosts The periods of distinguished boosting that should be applied over time.
 struct RevnetParams {
     uint256 initialIssuanceRate;
     uint256 premintTokenAmount;
     uint256 generationDuration;
     uint256 priceCeilingIncreaseRate;
-    uint256 priceFloorInreaseRate;
+    uint256 priceFloorIncreaseRate;
     Boost[] boosts;
 }
 
@@ -83,14 +91,16 @@ contract BasicRevnetDeployer is IERC721Receiver {
     error UNAUTHORIZED();
 
     /// @notice The boosts for each network.
-    /// @dev A basic revnet consists of cycles defined by scheduled boosts. The only changes between them are in their reserved rate.
+    /// @dev A basic revnet consists of cycles defined by scheduled boosts. The only changes between them are in their
+    /// reserved rate.
     /// @custom:param _revnetId The ID of the revnet to which the boosts apply.
     mapping(uint256 _revnetId => Boost[]) internal _boostsOf;
 
     /// @notice The controller that networks are made from.
     IJBController3_1 public immutable controller;
 
-    /// @notice The permissions that the provided _boostOperator should be granted. This is set once in the constructor to contain only the SET_SPLITS operation.
+    /// @notice The permissions that the provided _boostOperator should be granted. This is set once in the constructor
+    /// to contain only the SET_SPLITS operation.
     uint256[] public boostOperatorPermissionIndexes;
 
     /// @notice The current index of the boost that each revnet is in, relative to _boostsOf.
@@ -98,7 +108,8 @@ contract BasicRevnetDeployer is IERC721Receiver {
     mapping(uint256 _revnetId => uint256) public currentBoostNumberOf;
 
     /// @notice The boosts for each network.
-    /// @dev A basic revnet consists of cycles defined by scheduled boost periods. The only changes between them are in their reserved rate.
+    /// @dev A basic revnet consists of cycles defined by scheduled boost periods. The only changes between them are in
+    /// their reserved rate.
     /// @custom:param _revnetId The ID of the revnet to which the boost period applies.
     function boostsOf(uint256 _revnetId) external view returns (Boost[] memory) {
         return _boostsOf[_revnetId];
@@ -127,7 +138,8 @@ contract BasicRevnetDeployer is IERC721Receiver {
     /// @param _symbol The symbol of the ERC-20 token being created for the revnet.
     /// @param _revnetData The data needed to deploy a basic revnet.
     /// @param _terminals The terminals that the network uses to accept payments through.
-    /// @param _buybackSetup Info for setting up the buyback contract to use when determining the best price for new participants.
+    /// @param _buybackSetup Info for setting up the buyback contract to use when determining the best price for new
+    /// participants.
     /// @return revnetId The ID of the newly created revnet.
     function deployRevnetFor(
         address _boostOperator,
@@ -152,17 +164,17 @@ contract BasicRevnetDeployer is IERC721Receiver {
 
         // Issue the network's ERC-20 token.
         controller.tokenStore().issueFor({ projectId: revnetId, name: _name, symbol: _symbol });
-        
+
         // Setup the buyback delegate.
         _setupBuybackOf(revnetId, _buybackSetup);
 
         // Configure the revnet's cycles using BBD.
         controller.launchFundingCyclesFor({
-            projectId: networkId,
+            projectId: revnetId,
             data: JBFundingCycleData({
                 duration: _revnetData.generationDuration,
                 weight: _revnetData.initialIssuanceRate * 10 ** 18,
-                discountRate: _data.priceCeilingIncreaseRate,
+                discountRate: _revnetData.priceCeilingIncreaseRate,
                 ballot: IJBFundingCycleBallot(address(0))
             }),
             metadata: JBFundingCycleMetadata({
@@ -171,8 +183,10 @@ contract BasicRevnetDeployer is IERC721Receiver {
                     allowSetController: false,
                     pauseTransfers: false
                 }),
-                reservedRate: _revnetData.boosts.length == 0 ? 0 : _revnetData.boosts[0].rate, // Set the reserved rate that'll model the boost periods.
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _data.priceFloorIncreaseRate, // Set the redemption rate.
+                reservedRate: _revnetData.boosts.length == 0 ? 0 : _revnetData.boosts[0].rate, // Set the reserved rate
+                    // that'll model the boost periods.
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _revnetData.priceFloorIncreaseRate, // Set the redemption
+                    // rate.
                 ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
                 pausePay: false,
                 pauseDistributions: false, // There will never be distributions accessible anyways.
@@ -186,10 +200,10 @@ contract BasicRevnetDeployer is IERC721Receiver {
                 useTotalOverflowForRedemptions: false,
                 useDataSourceForPay: true, // Use the buyback delegate data source.
                 useDataSourceForRedeem: false,
-                dataSource: address(_buybackSetup.contract),
+                dataSource: address(_buybackSetup.buybackContract),
                 metadata: 0
             }),
-            mustStartAtOrAfter: _data.boosts.length == 0 ? 0 : _data.boosts[0].startsAtOrAfter,
+            mustStartAtOrAfter: _revnetData.boosts.length == 0 ? 0 : _revnetData.boosts[0].startsAtOrAfter,
             groupedSplits: _groupedSplits,
             fundAccessConstraints: new JBFundAccessConstraints[](0), // Funds can't be accessed by the network owner.
             terminals: _terminals,
@@ -199,7 +213,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
         // Premint tokens to the Boost Operator.
         controller.mintTokensOf({
             projectId: revnetId,
-            tokenCount: _data.premintTokenAmount * 10 ** 18,
+            tokenCount: _revnetData.premintTokenAmount * 10 ** 18,
             beneficiary: _boostOperator,
             memo: string.concat("$", _symbol, " preminted"),
             preferClaimedTokens: false,
@@ -208,11 +222,15 @@ contract BasicRevnetDeployer is IERC721Receiver {
 
         // Give the operator permission to change the boost recipients.
         IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
-            JBOperatorData({ operator: _boostOperator, domain: revnetId, permissionIndexes: boostOperatorPermissionIndexes })
+            JBOperatorData({
+                operator: _boostOperator,
+                domain: revnetId,
+                permissionIndexes: boostOperatorPermissionIndexes
+            })
         );
 
         // Store the boost periods so they can be queued via calls to `scheduleNextBoostPeriodOf(...)`.
-        _storeBoostPeriodsOf(networkId, _revnetData.boosts, _revnetData.generationDuration);
+        _storeBoostsOf(revnetId, _revnetData.boosts, _revnetData.generationDuration);
     }
 
     /// @notice Schedules the next boost specified when the revnet was deployed.
@@ -223,10 +241,10 @@ contract BasicRevnetDeployer is IERC721Receiver {
             controller.latestConfiguredFundingCycleOf(_revnetId);
 
         // Get a reference to the next boost number, while incrementing the stored value. Zero indexed.
-        uint256 _nexBoostNumber = ++currentBoostNumberOf[_revnetId];
+        uint256 _nextBoostNumber = ++currentBoostNumberOf[_revnetId];
 
         // Get a reference to the number of boosts there are. 1 indexed.
-        uint256 _numberOfBoosts = _boostOf[_revnetId].length;
+        uint256 _numberOfBoosts = _boostsOf[_revnetId].length;
 
         // Make sure the latest cycle configured started in the past, and that there are more boosts to schedule.
         if (
@@ -271,7 +289,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
                 metadata: _metadata.metadata
             }),
             mustStartAtOrAfter: _boost.startsAtOrAfter,
-            groupedSplits: _copyDevTaxSplitGroupFrom(_revnetId, _latestFundingCycleConfiguration.configuration),
+            groupedSplits: _copyBoostSplitGroupFrom(_revnetId, _latestFundingCycleConfiguration.configuration),
             fundAccessConstraints: new JBFundAccessConstraints[](0),
             memo: "revnet boost scheduled"
         });
@@ -330,7 +348,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
     }
 
     /// @notice Copies a group of splits from  the one stored in the provided configuration.
-    /// @param _networkId The network to which the splits apply.
+    /// @param _revnetId The ID of the revnet to which the splits apply.
     /// @param _baseConfiguration The configuration to copy configurations from.
     /// @return _groupedSplits The grouped splits to be used in a configuration.
     function _copyBoostSplitGroupFrom(
@@ -353,9 +371,9 @@ contract BasicRevnetDeployer is IERC721Receiver {
 
     /// @notice Sets up buyback pools.
     /// @param _revnetId The ID of the revnet to which the buybacks should apply.
-    /// @param _buybackSetup Info to setup pools that'll be used to buyback tokens from if an optimal price is presented.
+    /// @param _buybackSetup Info to setup pools that'll be used to buyback tokens from if an optimal price is
+    /// presented.
     function _setupBuybackOf(uint256 _revnetId, BuybackSetup memory _buybackSetup) internal {
-
         // Get a reference to the number of pools that need setting up.
         uint256 _numberOfPoolsToSetup = _buybackSetup.pools.length;
 
@@ -367,7 +385,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
             _pool = _buybackSetup.pools[_i];
 
             // Set the pool for the buyback contract.
-            _buybackSetup.contract.setPoolFor({
+            _buybackSetup.buybackContract.setPoolFor({
                 _projectId: _revnetId,
                 _fee: _pool.fee,
                 _secondsAgo: _pool.twapWindow,
@@ -385,32 +403,25 @@ contract BasicRevnetDeployer is IERC721Receiver {
     /// @param _revnetId The ID of the revnet to which the boosts apply.
     /// @param _boosts The boosts to store.
     /// @param _generationDuration The generation duration to expect each boost to be at least as long.
-    function _storeBoostsOf(
-        uint256 _revnetId,
-        Boost[] memory _boosts,
-        uint256 _generationDuration
-    )
-        internal
-    {
+    function _storeBoostsOf(uint256 _revnetId, Boost[] memory _boosts, uint256 _generationDuration) internal {
         // Keep a reference to the number of boosts.
         uint256 _numberOfBoosts = _boosts.length;
 
         // Keep a reference to the boost being iterated on.
         Boost memory _boost;
 
-        // Store the boost. Separate transactions to `scheduleNextBoostPeriodOf` must be called to schedule each of them.
+        // Store the boost. Separate transactions to `scheduleNextBoostPeriodOf` must be called to schedule each of
+        // them.
         if (_numberOfBoosts != 0) {
             for (uint256 _i; _i < _numberOfBoosts;) {
-
                 // Set the boost being iterated on.
                 _boost = _boosts[_i];
 
-                // Make sure the boosts have incrementally positive start times, and are each at least one generation long.
-                if (
-                    _i != 0
-                        && _boost.startsAtOrAfter
-                            <= _boosts[_i - 1].startsAtOrAfter + _generationDuration
-                ) revert BAD_BOOST_SEQUENCE();
+                // Make sure the boosts have incrementally positive start times, and are each at least one generation
+                // long.
+                if (_i != 0 && _boost.startsAtOrAfter <= _boosts[_i - 1].startsAtOrAfter + _generationDuration) {
+                    revert BAD_BOOST_SEQUENCE();
+                }
 
                 // Store the boost.
                 _boostsOf[_revnetId][_i] = _boost;
@@ -423,24 +434,30 @@ contract BasicRevnetDeployer is IERC721Receiver {
 
     /// @notice A revnet's boost operator can replace itself.
     /// @param _revnetId The ID of the revnet having its boost operator replaces.
-    function replaceBoostOperatorOf(uint256 _revnetId) external {
+    /// @param _newBoostOperator The address of the new boost operator.
+    function replaceBoostOperatorOf(uint256 _revnetId, address _newBoostOperator) external {
         /// Make sure the message sender is the current operator.
-        if (!IJBOperatable(address(controller.splitsStore())).operatorStore().hasPermissions({
-            operator: msg.sender,
-            account: address(this),
-            domain: _revnetId,
-            permissionIndexes: boostOperatorPermissionIndexes
-        }) revert UNAUTHORIZED();
+        if (
+            !IJBOperatable(address(controller.splitsStore())).operatorStore().hasPermissions({
+                operator: msg.sender,
+                account: address(this),
+                domain: _revnetId,
+                permissionIndexes: boostOperatorPermissionIndexes
+            })
+        ) revert UNAUTHORIZED();
 
         // Remove operator permission from the old operator.
         IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
-            JBOperatorData({ operator: msg.sender, domain: revnetId, permissionIndexes: [] })
+            JBOperatorData({ operator: msg.sender, domain: _revnetId, permissionIndexes: new uint256[](0) })
         );
 
         // Give the new operator permission to change the boost recipients.
         IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
-            JBOperatorData({ operator: _boostOperator, domain: revnetId, permissionIndexes: boostOperatorPermissionIndexes })
+            JBOperatorData({
+                operator: _newBoostOperator,
+                domain: _revnetId,
+                permissionIndexes: boostOperatorPermissionIndexes
+            })
         );
-        
     }
 }

@@ -17,7 +17,11 @@ import { JBPayDelegateAllocation3_1_1 } from
 import { JBProjectMetadata } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBProjectMetadata.sol";
 import { IJBGenericBuybackDelegate } from
     "@jbx-protocol/juice-buyback-delegate/contracts/interfaces/IJBGenericBuybackDelegate.sol";
-import { BuybackDelegateSetup, BasicRetailistJBParams, PayAllocatorRetailistJBDeployer } from "./PayAllocatorRetailistJBDeployer.sol";
+import {
+    BuybackDelegateSetup,
+    BasicRetailistJBParams,
+    PayAllocatorRetailistJBDeployer
+} from "./PayAllocatorRetailistJBDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic Retailist treasury that also can mint tiered 721s.
 contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDeployer {
@@ -50,7 +54,8 @@ contract Tiered721PayAllocatorRetailistJBDeployer is PayAllocatorRetailistJBDepl
     /// @param _symbol The symbol of the ERC-20 token being created for the network.
     /// @param _data The data needed to deploy a basic retailist network.
     /// @param _terminals The terminals that the network uses to accept payments through.
-    /// @param _buybackDelegateSetup Info for setting up the buyback delegate to use when determining the best price for new participants.
+    /// @param _buybackDelegateSetup Info for setting up the buyback delegate to use when determining the best price for
+    /// new participants.
     /// @param _deployTiered721DelegateData Structure containing data necessary for delegate deployment.
     /// @param _otherDelegateAllocations Any pay delegate allocations that should run when the network is paid.
     /// @param _extraFundingCycleMetadata Extra metadata to attach to the funding cycle for the delegates to use.
