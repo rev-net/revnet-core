@@ -50,10 +50,10 @@ struct BuybackPool {
     uint32 twapSlippageTolerance;
 }
 
-/// @custom:member contract The buyback contract contract to use.
+/// @custom:member hook The buyback hook to use.
 /// @custom:member pools The pools to setup on the given buyback contract.
-struct BuybackSetup {
-    IJBGenericBuybackDelegate buybackContract;
+struct BuybackHookSetupData {
+    IJBGenericBuybackDelegate hook;
     BuybackPool[] pools;
 }
 
@@ -123,7 +123,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
         return _interfaceId == type(IERC721Receiver).interfaceId;
     }
 
-    /// @param _controller The controller that networks are made from.
+    /// @param _controller The controller that revnets are made from.
     constructor(IJBController3_1 _controller) {
         controller = _controller;
         boostOperatorPermissionIndexes.push(JBOperations.SET_SPLITS);
@@ -138,8 +138,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
     /// @param _symbol The symbol of the ERC-20 token being created for the revnet.
     /// @param _revnetData The data needed to deploy a basic revnet.
     /// @param _terminals The terminals that the network uses to accept payments through.
-    /// @param _buybackSetup Info for setting up the buyback contract to use when determining the best price for new
-    /// participants.
+    /// @param _buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price for new participants.
     /// @return revnetId The ID of the newly created revnet.
     function deployRevnetFor(
         address _boostOperator,
@@ -148,7 +147,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
         string memory _symbol,
         RevnetParams memory _revnetData,
         IJBPaymentTerminal[] memory _terminals,
-        BuybackSetup memory _buybackSetup
+        BuybackHookSetupData memory _buybackHookSetupData
     )
         public
         returns (uint256 revnetId)
@@ -165,8 +164,8 @@ contract BasicRevnetDeployer is IERC721Receiver {
         // Issue the network's ERC-20 token.
         controller.tokenStore().issueFor({ projectId: revnetId, name: _name, symbol: _symbol });
 
-        // Setup the buyback delegate.
-        _setupBuybackOf(revnetId, _buybackSetup);
+        // Setup the buyback hook.
+        _setupBuybackHookOf(revnetId, _buybackHookSetupData);
 
         // Configure the revnet's cycles using BBD.
         controller.launchFundingCyclesFor({
@@ -200,7 +199,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
                 useTotalOverflowForRedemptions: false,
                 useDataSourceForPay: true, // Use the buyback delegate data source.
                 useDataSourceForRedeem: false,
-                dataSource: address(_buybackSetup.buybackContract),
+                dataSource: address(_buybackHookSetupData.hook),
                 metadata: 0
             }),
             mustStartAtOrAfter: _revnetData.boosts.length == 0 ? 0 : _revnetData.boosts[0].startsAtOrAfter,
@@ -210,7 +209,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
             memo: "revnet deployed"
         });
 
-        // Premint tokens to the Boost Operator.
+        // Premint tokens to the boost operator.
         controller.mintTokensOf({
             projectId: revnetId,
             tokenCount: _revnetData.premintTokenAmount * 10 ** 18,
@@ -220,7 +219,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
             useReservedRate: false
         });
 
-        // Give the operator permission to change the boost recipients.
+        // Give the boost operator permission to change the boost recipients.
         IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
             JBOperatorData({
                 operator: _boostOperator,
@@ -369,23 +368,22 @@ contract BasicRevnetDeployer is IERC721Receiver {
         _groupedSplits[0] = JBGroupedSplits({ group: JBSplitsGroups.RESERVED_TOKENS, splits: _splits });
     }
 
-    /// @notice Sets up buyback pools.
+    /// @notice Sets up a buyback hook.
     /// @param _revnetId The ID of the revnet to which the buybacks should apply.
-    /// @param _buybackSetup Info to setup pools that'll be used to buyback tokens from if an optimal price is
-    /// presented.
-    function _setupBuybackOf(uint256 _revnetId, BuybackSetup memory _buybackSetup) internal {
+    /// @param _buybackHookSetupData Data used to setup pools that'll be used to buyback tokens from if an optimal price is presented.
+    function _setupBuybackHookOf(uint256 _revnetId, BuybackHookSetupData memory _buybackHookSetupData) internal {
         // Get a reference to the number of pools that need setting up.
-        uint256 _numberOfPoolsToSetup = _buybackSetup.pools.length;
+        uint256 _numberOfPoolsToSetup = _buybackHookSetupData.pools.length;
 
         // Keep a reference to the pool being iterated on.
         BuybackPool memory _pool;
 
         for (uint256 _i; _i < _numberOfPoolsToSetup;) {
             // Get a reference to the pool being iterated on.
-            _pool = _buybackSetup.pools[_i];
+            _pool = _buybackHookSetupData.pools[_i];
 
             // Set the pool for the buyback contract.
-            _buybackSetup.buybackContract.setPoolFor({
+            _buybackHookSetupData.hook.setPoolFor({
                 _projectId: _revnetId,
                 _fee: _pool.fee,
                 _secondsAgo: _pool.twapWindow,
