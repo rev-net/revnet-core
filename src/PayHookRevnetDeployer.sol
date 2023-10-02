@@ -180,7 +180,7 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
             data: JBFundingCycleData({
                 duration: _revnetData.priceCeilingIncreaseFrequency,
                 weight: _revnetData.initialIssuanceRate ** 18,
-                discountRate: _revnetData.priceCeilingIncreaseRate,
+                discountRate: _revnetData.priceCeilingIncreasePercentage,
                 ballot: IJBFundingCycleBallot(address(0))
             }),
             metadata: JBFundingCycleMetadata({

@@ -65,7 +65,7 @@ struct BuybackHookSetupData {
 /// be specified as a fixed point number with 18 decimals, this will be applied internally.
 /// @custom:member priceCeilingIncreaseFrequency The number of seconds between applied price ceiling increases. This should be at least
 /// 24 hours.
-/// @custom:member priceCeilingIncreaseRate The rate at which the price ceiling should increase over time, thus
+/// @custom:member priceCeilingIncreasePercentage The rate at which the price ceiling should increase over time, thus
 /// decreasing the rate of issuance. This percentage is out
 /// of 1_000_000_000 (JBConstants.MAX_DISCOUNT_RATE). 0% corresponds to no price ceiling increase, everyone is treated
 /// equally over time.
@@ -77,7 +77,7 @@ struct RevnetParams {
     uint256 initialIssuanceRate;
     uint256 premintTokenAmount;
     uint256 priceCeilingIncreaseFrequency;
-    uint256 priceCeilingIncreaseRate;
+    uint256 priceCeilingIncreasePercentage;
     uint256 priceFloorTaxIntensity;
     Boost[] boosts;
 }
@@ -173,7 +173,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
             data: JBFundingCycleData({
                 duration: _revnetData.priceCeilingIncreaseFrequency,
                 weight: _revnetData.initialIssuanceRate * 10 ** 18,
-                discountRate: _revnetData.priceCeilingIncreaseRate,
+                discountRate: _revnetData.priceCeilingIncreasePercentage,
                 ballot: IJBFundingCycleBallot(address(0))
             }),
             metadata: JBFundingCycleMetadata({
