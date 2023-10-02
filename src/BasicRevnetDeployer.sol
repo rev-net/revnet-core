@@ -63,7 +63,7 @@ struct BuybackHookSetupData {
 /// @custom:member premintTokenAmount The number of tokens that should be preminted to the _boostOperator. This should
 /// _not_
 /// be specified as a fixed point number with 18 decimals, this will be applied internally.
-/// @custom:member priceCeilingGenerationDuration The number of seconds between applied price ceiling increases. This should be at least
+/// @custom:member priceCeilingIncreaseFrequency The number of seconds between applied price ceiling increases. This should be at least
 /// 24 hours.
 /// @custom:member priceCeilingIncreaseRate The rate at which the price ceiling should increase over time, thus
 /// decreasing the rate of issuance. This percentage is out
@@ -76,7 +76,7 @@ struct BuybackHookSetupData {
 struct RevnetParams {
     uint256 initialIssuanceRate;
     uint256 premintTokenAmount;
-    uint256 priceCeilingGenerationDuration;
+    uint256 priceCeilingIncreaseFrequency;
     uint256 priceCeilingIncreaseRate;
     uint256 priceFloorTaxIntensity;
     Boost[] boosts;
@@ -171,7 +171,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
         controller.launchFundingCyclesFor({
             projectId: revnetId,
             data: JBFundingCycleData({
-                duration: _revnetData.priceCeilingGenerationDuration,
+                duration: _revnetData.priceCeilingIncreaseFrequency,
                 weight: _revnetData.initialIssuanceRate * 10 ** 18,
                 discountRate: _revnetData.priceCeilingIncreaseRate,
                 ballot: IJBFundingCycleBallot(address(0))
@@ -229,7 +229,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
         );
 
         // Store the boost periods so they can be queued via calls to `scheduleNextBoostPeriodOf(...)`.
-        _storeBoostsOf(revnetId, _revnetData.boosts, _revnetData.priceCeilingGenerationDuration);
+        _storeBoostsOf(revnetId, _revnetData.boosts, _revnetData.priceCeilingIncreaseFrequency);
     }
 
     /// @notice Schedules the next boost specified when the revnet was deployed.
@@ -401,8 +401,8 @@ contract BasicRevnetDeployer is IERC721Receiver {
     /// @notice Stores boosts after checking if they were provided in an acceptable order.
     /// @param _revnetId The ID of the revnet to which the boosts apply.
     /// @param _boosts The boosts to store.
-    /// @param _generationDuration The generation duration to expect each boost to be at least as long.
-    function _storeBoostsOf(uint256 _revnetId, Boost[] memory _boosts, uint256 _generationDuration) internal {
+    /// @param _priceCeilingIncreaseFrequency The duration to expect each boost to be at least as long.
+    function _storeBoostsOf(uint256 _revnetId, Boost[] memory _boosts, uint256 _priceCeilingIncreaseFrequency) internal {
         // Keep a reference to the number of boosts.
         uint256 _numberOfBoosts = _boosts.length;
 
@@ -416,9 +416,9 @@ contract BasicRevnetDeployer is IERC721Receiver {
                 // Set the boost being iterated on.
                 _boost = _boosts[_i];
 
-                // Make sure the boosts have incrementally positive start times, and are each at least one generation
+                // Make sure the boosts have incrementally positive start times, and are each at least one price ceiling change frequency 
                 // long.
-                if (_i != 0 && _boost.startsAtOrAfter <= _boosts[_i - 1].startsAtOrAfter + _generationDuration) {
+                if (_i != 0 && _boost.startsAtOrAfter <= _boosts[_i - 1].startsAtOrAfter + _priceCeilingIncreaseFrequency) {
                     revert BAD_BOOST_SEQUENCE();
                 }
 

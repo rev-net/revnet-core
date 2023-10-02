@@ -178,7 +178,7 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
         controller.launchFundingCyclesFor({
             projectId: revnetId,
             data: JBFundingCycleData({
-                duration: _revnetData.priceCeilingGenerationDuration,
+                duration: _revnetData.priceCeilingIncreaseFrequency,
                 weight: _revnetData.initialIssuanceRate ** 18,
                 discountRate: _revnetData.priceCeilingIncreaseRate,
                 ballot: IJBFundingCycleBallot(address(0))
@@ -254,7 +254,7 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
         }
 
         // Store the boost periods so they can be queued via calls to `scheduleNextBoostPeriodOf(...)`.
-        _storeBoostsOf(revnetId, _revnetData.boosts, _revnetData.priceCeilingGenerationDuration);
+        _storeBoostsOf(revnetId, _revnetData.boosts, _revnetData.priceCeilingIncreaseFrequency);
 
         // Store the pay hooks.
         _storeHooksOf(revnetId, _payHooks);
