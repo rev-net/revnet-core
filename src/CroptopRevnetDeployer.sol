@@ -19,19 +19,15 @@ import { JBPayDelegateAllocation3_1_1 } from
 import { JBProjectMetadata } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBProjectMetadata.sol";
 import { IJBGenericBuybackDelegate } from
     "@jbx-protocol/juice-buyback-delegate/contracts/interfaces/IJBGenericBuybackDelegate.sol";
-import {
-    BuybackHookSetupData,
-    RevnetParams,
-    Tiered721RevnetDeployer
-} from "./Tiered721RevnetDeployer.sol";
+import { BuybackHookSetupData, RevnetParams, Tiered721RevnetDeployer } from "./Tiered721RevnetDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s via a croptop proxy.
 contract CroptopRevnetDeployer is Tiered721RevnetDeployer {
-
     /// @notice The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     CroptopPublisher public publisher;
 
-    /// @notice The permissions that the croptop publisher should be granted. This is set once in the constructor to contain only the ADJUST_TIERS operation.
+    /// @notice The permissions that the croptop publisher should be granted. This is set once in the constructor to
+    /// contain only the ADJUST_TIERS operation.
     uint256[] public croptopPermissionIndexes;
 
     /// @param _directory The directory of terminals and controllers for revnets.
@@ -59,12 +55,13 @@ contract CroptopRevnetDeployer is Tiered721RevnetDeployer {
     /// @param _symbol The symbol of the ERC-20 token being created for the revnet.
     /// @param _revnetData The data needed to deploy a basic revnet.
     /// @param _terminals The terminals that the network uses to accept payments through.
-    /// @param _buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price for new participants.
+    /// @param _buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price
+    /// for new participants.
     /// @param _tiered721SetupData Structure containing data necessary for delegate deployment.
     /// @param _otherPayHooks Any other hooks that should run when the revnet is paid.
     /// @param _extraCycleMetadata Extra metadata to attach to the cycle for the delegates to use.
     /// @param _allowedPosts The type of posts that the network should allow.
-    /// @return revnetId The ID of the newly created revnet.    
+    /// @return revnetId The ID of the newly created revnet.
     function deployCroptopRevnetFor(
         address _boostOperator,
         JBProjectMetadata memory _revnetMetadata,

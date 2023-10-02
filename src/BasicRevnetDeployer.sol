@@ -63,23 +63,22 @@ struct BuybackHookSetupData {
 /// @custom:member premintTokenAmount The number of tokens that should be preminted to the _boostOperator. This should
 /// _not_
 /// be specified as a fixed point number with 18 decimals, this will be applied internally.
-/// @custom:member generationDuration The number of seconds between applied issuance reductions. This should be at least
+/// @custom:member priceCeilingGenerationDuration The number of seconds between applied price ceiling increases. This should be at least
 /// 24 hours.
-/// @custom:member priceCeilingIncreaseRate The rate at which the issuance rate should decrease over time, which in turn
-/// increases the price ceiling. This percentage is out
-/// of 1_000_000_000 (JBConstants.MAX_DISCOUNT_RATE). 0% corresponds to no issuance reduction, everyone is treated
+/// @custom:member priceCeilingIncreaseRate The rate at which the price ceiling should increase over time, thus
+/// decreasing the rate of issuance. This percentage is out
+/// of 1_000_000_000 (JBConstants.MAX_DISCOUNT_RATE). 0% corresponds to no price ceiling increase, everyone is treated
 /// equally over time.
-/// @custom:member priceFloorIncreaseRate The rate determining how much each token can access from the revnet any
-/// current total supply by burning tokens.
-/// This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no floor increases when
+/// @custom:member priceFloorTaxRate The rate determining how much each token can reclaim from the revnet once redeemed.
+/// This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no floor tax when
 /// redemptions are made (100% redemption rate), everyone's redemptions are treated equally.
 /// @custom:member boosts The periods of distinguished boosting that should be applied over time.
 struct RevnetParams {
     uint256 initialIssuanceRate;
     uint256 premintTokenAmount;
-    uint256 generationDuration;
+    uint256 priceCeilingGenerationDuration;
     uint256 priceCeilingIncreaseRate;
-    uint256 priceFloorIncreaseRate;
+    uint256 priceFloorTaxRate;
     Boost[] boosts;
 }
 
@@ -138,7 +137,8 @@ contract BasicRevnetDeployer is IERC721Receiver {
     /// @param _symbol The symbol of the ERC-20 token being created for the revnet.
     /// @param _revnetData The data needed to deploy a basic revnet.
     /// @param _terminals The terminals that the network uses to accept payments through.
-    /// @param _buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price for new participants.
+    /// @param _buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price
+    /// for new participants.
     /// @return revnetId The ID of the newly created revnet.
     function deployRevnetFor(
         address _boostOperator,
@@ -171,7 +171,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
         controller.launchFundingCyclesFor({
             projectId: revnetId,
             data: JBFundingCycleData({
-                duration: _revnetData.generationDuration,
+                duration: _revnetData.priceCeilingGenerationDuration,
                 weight: _revnetData.initialIssuanceRate * 10 ** 18,
                 discountRate: _revnetData.priceCeilingIncreaseRate,
                 ballot: IJBFundingCycleBallot(address(0))
@@ -184,7 +184,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
                 }),
                 reservedRate: _revnetData.boosts.length == 0 ? 0 : _revnetData.boosts[0].rate, // Set the reserved rate
                     // that'll model the boost periods.
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _revnetData.priceFloorIncreaseRate, // Set the redemption
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _revnetData.priceFloorTaxRate, // Set the redemption
                     // rate.
                 ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
                 pausePay: false,
@@ -229,7 +229,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
         );
 
         // Store the boost periods so they can be queued via calls to `scheduleNextBoostPeriodOf(...)`.
-        _storeBoostsOf(revnetId, _revnetData.boosts, _revnetData.generationDuration);
+        _storeBoostsOf(revnetId, _revnetData.boosts, _revnetData.priceCeilingGenerationDuration);
     }
 
     /// @notice Schedules the next boost specified when the revnet was deployed.
@@ -370,7 +370,8 @@ contract BasicRevnetDeployer is IERC721Receiver {
 
     /// @notice Sets up a buyback hook.
     /// @param _revnetId The ID of the revnet to which the buybacks should apply.
-    /// @param _buybackHookSetupData Data used to setup pools that'll be used to buyback tokens from if an optimal price is presented.
+    /// @param _buybackHookSetupData Data used to setup pools that'll be used to buyback tokens from if an optimal price
+    /// is presented.
     function _setupBuybackHookOf(uint256 _revnetId, BuybackHookSetupData memory _buybackHookSetupData) internal {
         // Get a reference to the number of pools that need setting up.
         uint256 _numberOfPoolsToSetup = _buybackHookSetupData.pools.length;

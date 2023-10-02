@@ -17,11 +17,7 @@ import { JBPayDelegateAllocation3_1_1 } from
 import { JBProjectMetadata } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBProjectMetadata.sol";
 import { IJBGenericBuybackDelegate } from
     "@jbx-protocol/juice-buyback-delegate/contracts/interfaces/IJBGenericBuybackDelegate.sol";
-import {
-    BuybackHookSetupData,
-    RevnetParams,
-    PayHookRevnetDeployer
-} from "./PayHookRevnetDeployer.sol";
+import { BuybackHookSetupData, RevnetParams, PayHookRevnetDeployer } from "./PayHookRevnetDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s.
 contract Tiered721RevnetDeployer is PayHookRevnetDeployer {
@@ -53,11 +49,12 @@ contract Tiered721RevnetDeployer is PayHookRevnetDeployer {
     /// @param _symbol The symbol of the ERC-20 token being created for the revnet.
     /// @param _revnetData The data needed to deploy a basic revnet.
     /// @param _terminals The terminals that the network uses to accept payments through.
-    /// @param _buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price for new participants.
+    /// @param _buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price
+    /// for new participants.
     /// @param _tiered721SetupData Structure containing data necessary for delegate deployment.
     /// @param _otherPayHooks Any other hooks that should run when the revnet is paid.
     /// @param _extraCycleMetadata Extra metadata to attach to the cycle for the delegates to use.
-    /// @return revnetId The ID of the newly created revnet.    
+    /// @return revnetId The ID of the newly created revnet.
     function deployTiered721RevnetFor(
         address _boostOperator,
         JBProjectMetadata memory _revnetMetadata,
@@ -80,8 +77,7 @@ contract Tiered721RevnetDeployer is PayHookRevnetDeployer {
         uint256 _numberOfOtherPayHooks = _otherPayHooks.length;
 
         // Track an updated list of pay hooks that'll also fit the tiered 721 hook.
-        JBPayDelegateAllocation3_1_1[] memory _payHooks =
-            new JBPayDelegateAllocation3_1_1[](_numberOfOtherPayHooks + 1);
+        JBPayDelegateAllocation3_1_1[] memory _payHooks = new JBPayDelegateAllocation3_1_1[](_numberOfOtherPayHooks + 1);
 
         // Repopulate the updated list with the params passed in.
         for (uint256 _i; _i < _numberOfOtherPayHooks;) {

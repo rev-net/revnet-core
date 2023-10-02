@@ -46,7 +46,8 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
     /// @custom:param revnetId The ID of the revnet to which the extensions apply.
     mapping(uint256 => JBPayDelegateAllocation3_1_1[]) public payHooksOf;
 
-    /// @notice The permissions that the provided buyback hook should be granted since it wont be used as the data source. 
+    /// @notice The permissions that the provided buyback hook should be granted since it wont be used as the data
+    /// source.
     /// This is set once in the constructor to contain only the MINT operation.
     uint256[] public buybackHookPermissionIndexes;
 
@@ -72,7 +73,7 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
 
         // Set the values to be those returned by the buyback hook's data source.
         (weight,, _buybackHooks) = buybackHookOf[_data.projectId].payParams(_data);
-        
+
         // Check if a buyback hook is used.
         bool _usesBuybackHook = _buybackHooks.length != 0;
 
@@ -83,8 +84,7 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
         uint256 _numberOfPayHooks = _payHooks.length;
 
         // Each delegate allocation must run, plus the buyback hook if provided.
-        payHooks =
-            new JBPayDelegateAllocation3_1_1[](_numberOfPayHooks + (_usesBuybackHook ? 1 : 0));
+        payHooks = new JBPayDelegateAllocation3_1_1[](_numberOfPayHooks + (_usesBuybackHook ? 1 : 0));
 
         // Add the other expected pay hooks.
         for (uint256 _i; _i < _numberOfPayHooks;) {
@@ -140,7 +140,8 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
     /// @param _symbol The symbol of the ERC-20 token being created for the revnet.
     /// @param _revnetData The data needed to deploy a basic revnet.
     /// @param _terminals The terminals that the network uses to accept payments through.
-    /// @param _buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price for new participants.
+    /// @param _buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price
+    /// for new participants.
     /// @param _payHooks Any hooks that should run when the revnet is paid.
     /// @param _extraCycleMetadata Extra metadata to attach to the cycle for the delegates to use.
     /// @return revnetId The ID of the newly created revnet.
@@ -161,7 +162,7 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
         // Package the reserved token splits.
         JBGroupedSplits[] memory _groupedSplits = _makeBoostSplitGroupWith(_boostOperator);
 
-       // Deploy a juicebox for the revnet.
+        // Deploy a juicebox for the revnet.
         revnetId = controller.projects().createFor({
             owner: address(this), // This contract should remain the owner, forever.
             metadata: _revnetMetadata
@@ -177,7 +178,7 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
         controller.launchFundingCyclesFor({
             projectId: revnetId,
             data: JBFundingCycleData({
-                duration: _revnetData.generationDuration,
+                duration: _revnetData.priceCeilingGenerationDuration,
                 weight: _revnetData.initialIssuanceRate ** 18,
                 discountRate: _revnetData.priceCeilingIncreaseRate,
                 ballot: IJBFundingCycleBallot(address(0))
@@ -190,7 +191,7 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
                 }),
                 reservedRate: _revnetData.boosts.length == 0 ? 0 : _revnetData.boosts[0].rate, // Set the reserved
                     // rate.
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _revnetData.priceFloorIncreaseRate, // Set the redemption rate.
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _revnetData.priceFloorTaxRate, // Set the redemption rate.
                 ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
                 pausePay: false,
                 pauseDistributions: false, // There will never be distributions accessible anyways.
@@ -212,7 +213,7 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
             groupedSplits: _groupedSplits,
             fundAccessConstraints: new JBFundAccessConstraints[](0), // Funds can't be accessed by the revnet owner.
             terminals: _terminals,
-            memo: "revnet deployed"       
+            memo: "revnet deployed"
         });
 
         // Keep a reference to the buyback hook.
@@ -230,7 +231,11 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
 
         // Give the boost operator permission to change the boost recipients.
         IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
-            JBOperatorData({ operator: _boostOperator, domain: revnetId, permissionIndexes: boostOperatorPermissionIndexes })
+            JBOperatorData({
+                operator: _boostOperator,
+                domain: revnetId,
+                permissionIndexes: boostOperatorPermissionIndexes
+            })
         );
 
         // Give the buyback hook permission to mint on this contract's behald if it doesn't yet have it.
@@ -249,7 +254,7 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
         }
 
         // Store the boost periods so they can be queued via calls to `scheduleNextBoostPeriodOf(...)`.
-        _storeBoostsOf(revnetId, _revnetData.boosts, _revnetData.generationDuration);
+        _storeBoostsOf(revnetId, _revnetData.boosts, _revnetData.priceCeilingGenerationDuration);
 
         // Store the pay hooks.
         _storeHooksOf(revnetId, _payHooks);
@@ -258,12 +263,7 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
     /// @notice Stores pay hooks for the provided revnet.
     /// @param _revnetId The ID of the revnet to which the pay hooks apply.
     /// @param _payHooks The pay hooks to store.
-    function _storeHooksOf(
-        uint256 _revnetId,
-        JBPayDelegateAllocation3_1_1[] memory _payHooks
-    )
-        internal
-    {
+    function _storeHooksOf(uint256 _revnetId, JBPayDelegateAllocation3_1_1[] memory _payHooks) internal {
         // Keep a reference to the number of pay hooks are being stored.
         uint256 _numberOfPayHooks = _payHooks.length;
 
