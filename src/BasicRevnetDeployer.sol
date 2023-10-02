@@ -69,16 +69,16 @@ struct BuybackHookSetupData {
 /// decreasing the rate of issuance. This percentage is out
 /// of 1_000_000_000 (JBConstants.MAX_DISCOUNT_RATE). 0% corresponds to no price ceiling increase, everyone is treated
 /// equally over time.
-/// @custom:member priceFloorTaxRate The rate determining how much each token can reclaim from the revnet once redeemed.
+/// @custom:member priceFloorTaxIntensity The factor determining how much each token can reclaim from the revnet once redeemed.
 /// This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no floor tax when
-/// redemptions are made (100% redemption rate), everyone's redemptions are treated equally.
+/// redemptions are made, everyone's redemptions are treated equally. The higher the intensity, the higher the tax rate.
 /// @custom:member boosts The periods of distinguished boosting that should be applied over time.
 struct RevnetParams {
     uint256 initialIssuanceRate;
     uint256 premintTokenAmount;
     uint256 priceCeilingGenerationDuration;
     uint256 priceCeilingIncreaseRate;
-    uint256 priceFloorTaxRate;
+    uint256 priceFloorTaxIntensity;
     Boost[] boosts;
 }
 
@@ -184,7 +184,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
                 }),
                 reservedRate: _revnetData.boosts.length == 0 ? 0 : _revnetData.boosts[0].rate, // Set the reserved rate
                     // that'll model the boost periods.
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _revnetData.priceFloorTaxRate, // Set the redemption
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _revnetData.priceFloorTaxIntensity, // Set the redemption
                     // rate.
                 ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
                 pausePay: false,

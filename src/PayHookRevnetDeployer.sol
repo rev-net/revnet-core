@@ -191,7 +191,7 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
                 }),
                 reservedRate: _revnetData.boosts.length == 0 ? 0 : _revnetData.boosts[0].rate, // Set the reserved
                     // rate.
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _revnetData.priceFloorTaxRate, // Set the redemption rate.
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _revnetData.priceFloorTaxIntensity, // Set the redemption rate.
                 ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
                 pausePay: false,
                 pauseDistributions: false, // There will never be distributions accessible anyways.
