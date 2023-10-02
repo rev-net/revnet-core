@@ -9,7 +9,7 @@
     "@croptop/publisher": "^0.0.3"
   },
   "scripts": {
-    "preinstall": "forge install",
+    "preinstall": "if [ \"$CI\" != \"true\" ]; then forge install; fi",
     "test": "forge test",
     "test:fork": "FOUNDRY_PROFILE=CI forge test",
     "size": "forge build --sizes",
