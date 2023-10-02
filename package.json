@@ -6,7 +6,7 @@
     "@jbx-protocol/juice-721-delegate": "^8.0.0",
     "@jbx-protocol/juice-buyback-delegate": "^1.0.1",
     "@openzeppelin/contracts": "^4.8.1",
-    "@croptop/publisher": "^0.0.3"
+    "@croptop/publisher": "^0.0.4"
   },
   "scripts": {
     "preinstall": "if [ \"$CI\" != \"true\" ]; then forge install; fi",

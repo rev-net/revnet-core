@@ -17,10 +17,10 @@
     "@truffle/contract" "^4.3.8"
     ethers "^4.0.45"
 
-"@croptop/publisher@^0.0.3":
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/@croptop/publisher/-/publisher-0.0.3.tgz#ba7d867d5178be5afe6392ca11f428b5ba282b71"
-  integrity sha512-9by0wbAwakxstm8GGYjUKLVYaRUqgkkydyBF7fsGthR2KIE8x/4duQ4COR7hpQB2qQ02ZmVSlxRJ1gVxmJNrMw==
+"@croptop/publisher@^0.0.4":
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/@croptop/publisher/-/publisher-0.0.4.tgz#155ede8fa4dedc2be7f4ed913e120b0c30431e73"
+  integrity sha512-JdKV/w0lGYR0L3yGccXvZKm+OSVOQP6+mglSGMkIjpzmaddKYFpZ//kaW4m/QLujH4y7H7gTY4zI9qDcopW+4w==
   dependencies:
     "@jbx-protocol/juice-721-delegate" "^8.0.0"
     "@jbx-protocol/juice-contracts-v3" "^5.0.0"
@@ -497,6 +497,13 @@
     ds-test "https://github.com/dapphub/ds-test.git#e282159d5170298eb2455a6c05280ab5a73a4ef0"
     forge-std "https://github.com/foundry-rs/forge-std.git#e8a047e3f40f13fa37af6fe14e6e06283d9a060e"
 
+"@jbx-protocol/juice-delegate-metadata-lib@https://github.com/jbx-protocol/juice-delegate-metadata-lib.git":
+  version "1.0.1"
+  resolved "https://github.com/jbx-protocol/juice-delegate-metadata-lib.git#da5a4b405dd77812ee819145a5c71885119339d3"
+  dependencies:
+    ds-test "https://github.com/dapphub/ds-test.git#e282159d5170298eb2455a6c05280ab5a73a4ef0"
+    forge-std "https://github.com/foundry-rs/forge-std.git#e8a047e3f40f13fa37af6fe14e6e06283d9a060e"
+
 "@jbx-protocol/juice-delegates-registry@^1.0.3":
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/@jbx-protocol/juice-delegates-registry/-/juice-delegates-registry-1.0.3.tgz#9b8ff159b74ffc7f8c0272da690f0ca0ef46902a"
@@ -506,9 +513,9 @@
     "@openzeppelin/contracts" "^4.8.0"
     "@paulrberg/contracts" "^3.7.0"
 
-"@jbx-protocol/juice-ownable@git+https://github.com/jbx-protocol/juice-ownable.git":
+"@jbx-protocol/juice-ownable@https://github.com/jbx-protocol/juice-ownable":
   version "0.0.2"
-  resolved "git+https://github.com/jbx-protocol/juice-ownable.git#b2f98133c7bea013db967e8a204ce0d9cc06d21f"
+  resolved "https://github.com/jbx-protocol/juice-ownable#b2f98133c7bea013db967e8a204ce0d9cc06d21f"
   dependencies:
     "@jbx-protocol/juice-contracts-v3" "^2.0.2"
     "@openzeppelin/contracts" "^4.8.0"
@@ -769,9 +776,9 @@
   resolved "https://registry.yarnpkg.com/@uniswap/v3-core/-/v3-core-1.0.2-solc-0.8-simulate.tgz#77fb42f2b502b4fec81844736d039fc059e8688c"
   integrity sha512-ALAZbsb3wvUrRzeAjrTKjv1fH7UrueJ/+D8uX4yintXHxxzbnnp78Kis2pa4D26cFQ72rwM3DrZpUES9rhsEuQ==
 
-"@uniswap/v3-periphery@git+https://github.com/uniswap/v3-periphery.git#b325bb0905d922ae61fcc7df85ee802e8df5e96c":
+"@uniswap/v3-periphery@https://github.com/uniswap/v3-periphery.git#b325bb0905d922ae61fcc7df85ee802e8df5e96c":
   version "1.4.2-solc-0.8"
-  resolved "git+https://github.com/uniswap/v3-periphery.git#b325bb0905d922ae61fcc7df85ee802e8df5e96c"
+  resolved "https://github.com/uniswap/v3-periphery.git#b325bb0905d922ae61fcc7df85ee802e8df5e96c"
   dependencies:
     "@openzeppelin/contracts" "4.6.0"
     "@uniswap/v2-core" "1.0.1"
@@ -1545,11 +1552,6 @@ dot-case@^2.1.0:
   dependencies:
     no-case "^2.2.0"
 
-"ds-test@git+https://github.com/dapphub/ds-test.git#e282159d5170298eb2455a6c05280ab5a73a4ef0":
-  version "1.0.0"
-  uid e282159d5170298eb2455a6c05280ab5a73a4ef0
-  resolved "git+https://github.com/dapphub/ds-test.git#e282159d5170298eb2455a6c05280ab5a73a4ef0"
-
 "ds-test@https://github.com/dapphub/ds-test.git#e282159d5170298eb2455a6c05280ab5a73a4ef0":
   version "1.0.0"
   resolved "https://github.com/dapphub/ds-test.git#e282159d5170298eb2455a6c05280ab5a73a4ef0"
@@ -1929,9 +1931,9 @@ forever-agent@~0.6.1:
   resolved "https://registry.yarnpkg.com/forever-agent/-/forever-agent-0.6.1.tgz#fbc71f0c41adeb37f96c577ad1ed42d8fdacca91"
   integrity sha512-j0KLYPhm6zeac4lz3oJ3o65qvgQCcPubiyotZrXqEaG4hNagNYO8qdlUrX5vwqv9ohqeT/Z3j6+yW067yWWdUw==
 
-"forge-std@git+https://github.com/foundry-rs/forge-std.git#06c5a8f760f7d2392697cb092eda80c864e4fc06":
+"forge-std@https://github.com/foundry-rs/forge-std.git#06c5a8f760f7d2392697cb092eda80c864e4fc06":
   version "1.5.3"
-  resolved "git+https://github.com/foundry-rs/forge-std.git#06c5a8f760f7d2392697cb092eda80c864e4fc06"
+  resolved "https://github.com/foundry-rs/forge-std.git#06c5a8f760f7d2392697cb092eda80c864e4fc06"
 
 "forge-std@https://github.com/foundry-rs/forge-std.git#e8a047e3f40f13fa37af6fe14e6e06283d9a060e":
   version "1.5.6"
