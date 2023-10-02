@@ -71,7 +71,7 @@ struct BuybackHookSetupData {
 /// equally over time.
 /// @custom:member priceFloorTaxIntensity The factor determining how much each token can reclaim from the revnet once redeemed.
 /// This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no floor tax when
-/// redemptions are made, everyone's redemptions are treated equally. The higher the intensity, the higher the tax rate.
+/// redemptions are made, everyone's redemptions are treated equally. The higher the intensity, the higher the tax.
 /// @custom:member boosts The periods of distinguished boosting that should be applied over time.
 struct RevnetParams {
     uint256 initialIssuanceRate;
