@@ -209,15 +209,16 @@ contract BasicRevnetDeployer is IERC721Receiver {
             memo: "revnet deployed"
         });
 
-        // Premint tokens to the boost operator.
-        controller.mintTokensOf({
-            projectId: revnetId,
-            tokenCount: _revnetData.premintTokenAmount * 10 ** 18,
-            beneficiary: _boostOperator,
-            memo: string.concat("$", _symbol, " preminted"),
-            preferClaimedTokens: false,
-            useReservedRate: false
-        });
+        // Premint tokens to the boost operator if needed.
+        if (_revnetData.premintTokenAmount > 0)
+            controller.mintTokensOf({
+                projectId: revnetId,
+                tokenCount: _revnetData.premintTokenAmount * 10 ** 18,
+                beneficiary: _boostOperator,
+                memo: string.concat("$", _symbol, " preminted"),
+                preferClaimedTokens: false,
+                useReservedRate: false
+            });
 
         // Give the boost operator permission to change the boost recipients.
         IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
@@ -333,7 +334,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
         JBSplit[] memory _splits = new JBSplit[](1);
 
         // Send the _boostOperator all of the reserved tokens. They'll be able to change this later whenever they wish.
-        _splits[1] = JBSplit({
+        _splits[0] = JBSplit({
             preferClaimed: false,
             preferAddToBalance: false,
             percent: JBConstants.SPLITS_TOTAL_PERCENT,
