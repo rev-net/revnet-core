@@ -424,7 +424,8 @@ contract BasicRevnetDeployer is IERC721Receiver {
                 }
 
                 // Store the boost.
-                _boostsOf[_revnetId][_i] = _boost;
+                _boostsOf[_revnetId].push(_boost);
+
                 unchecked {
                     ++_i;
                 }

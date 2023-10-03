@@ -1,6 +1,6 @@
 {
   "name": "@rev-net/deployers",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "dependencies": {
     "@jbx-protocol/juice-contracts-v3": "^5.0.0",
     "@jbx-protocol/juice-721-delegate": "^8.0.0",
