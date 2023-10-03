@@ -254,7 +254,7 @@ contract PayHookRevnetDeployer is BasicRevnetDeployer, IJBFundingCycleDataSource
         }
 
         // Store the boost periods so they can be queued via calls to `scheduleNextBoostPeriodOf(...)`.
-        _storeBoostsOf(revnetId, _revnetData.boosts, _revnetData.priceCeilingIncreaseFrequency);
+        _storeBoostsOf(revnetId, _revnetData.boosts);
 
         // Store the pay hooks.
         _storeHooksOf(revnetId, _payHooks);

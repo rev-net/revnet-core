@@ -230,7 +230,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
         );
 
         // Store the boost periods so they can be queued via calls to `scheduleNextBoostPeriodOf(...)`.
-        _storeBoostsOf(revnetId, _revnetData.boosts, _revnetData.priceCeilingIncreaseFrequency);
+        _storeBoostsOf(revnetId, _revnetData.boosts);
     }
 
     /// @notice Schedules the next boost specified when the revnet was deployed.
@@ -241,7 +241,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
             controller.latestConfiguredFundingCycleOf(_revnetId);
 
         // Get a reference to the next boost number, while incrementing the stored value. Zero indexed.
-        uint256 _nextBoostNumber = ++currentBoostNumberOf[_revnetId];
+        uint256 _nextBoostNumber = currentBoostNumberOf[_revnetId]++;
 
         // Get a reference to the number of boosts there are. 1 indexed.
         uint256 _numberOfBoosts = _boostsOf[_revnetId].length;
@@ -402,29 +402,16 @@ contract BasicRevnetDeployer is IERC721Receiver {
     /// @notice Stores boosts after checking if they were provided in an acceptable order.
     /// @param _revnetId The ID of the revnet to which the boosts apply.
     /// @param _boosts The boosts to store.
-    /// @param _priceCeilingIncreaseFrequency The duration to expect each boost to be at least as long.
-    function _storeBoostsOf(uint256 _revnetId, Boost[] memory _boosts, uint256 _priceCeilingIncreaseFrequency) internal {
+    function _storeBoostsOf(uint256 _revnetId, Boost[] memory _boosts) internal {
         // Keep a reference to the number of boosts.
         uint256 _numberOfBoosts = _boosts.length;
 
-        // Keep a reference to the boost being iterated on.
-        Boost memory _boost;
-
-        // Store the boost. Separate transactions to `scheduleNextBoostPeriodOf` must be called to schedule each of
+        // Store the boost that aren't initially scheduled. Separate transactions to `scheduleNextBoostPeriodOf` must be called to schedule each of
         // them.
-        if (_numberOfBoosts != 0) {
-            for (uint256 _i; _i < _numberOfBoosts;) {
-                // Set the boost being iterated on.
-                _boost = _boosts[_i];
-
-                // Make sure the boosts have incrementally positive start times, and are each at least one price ceiling change frequency 
-                // long.
-                if (_i != 0 && _boost.startsAtOrAfter <= _boosts[_i - 1].startsAtOrAfter + _priceCeilingIncreaseFrequency) {
-                    revert BAD_BOOST_SEQUENCE();
-                }
-
+        if (_numberOfBoosts > 1) {
+            for (uint256 _i = 1; _i < _numberOfBoosts;) {
                 // Store the boost.
-                _boostsOf[_revnetId].push(_boost);
+                _boostsOf[_revnetId].push(_boosts[_i]);
 
                 unchecked {
                     ++_i;
