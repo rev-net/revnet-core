@@ -22,3 +22,6 @@
 [submodule "lib/croptop-contract"]
 	path = lib/croptop-contract
 	url = https://github.com/mejango/croptop-contract
+[submodule "lib/juice-delegate-metadata-lib"]
+	path = lib/juice-delegate-metadata-lib
+	url = https://github.com/jbx-protocol/juice-delegate-metadata-lib
