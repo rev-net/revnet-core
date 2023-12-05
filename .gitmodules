@@ -13,3 +13,6 @@
 [submodule "lib/juice-buyback"]
 	path = lib/juice-buyback
 	url = https://github.com/jbx-protocol/juice-buyback
+[submodule "lib/juice-721-delegate"]
+	path = lib/juice-721-delegate
+	url = https://github.com/jbx-protocol/juice-721-delegate
