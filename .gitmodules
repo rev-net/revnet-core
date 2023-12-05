@@ -16,3 +16,6 @@
 [submodule "lib/juice-721-delegate"]
 	path = lib/juice-721-delegate
 	url = https://github.com/jbx-protocol/juice-721-delegate
+[submodule "lib/v3-core"]
+	path = lib/v3-core
+	url = https://github.com/uniswap/v3-core
