@@ -1,9 +1,10 @@
 @jbx-protocol/juice-contracts-v3/contracts/=lib/juice-contracts-v3/contracts/
+@jbx-protocol/juice-contracts-v3/deployments/=lib/juice-contracts-v3/deployments/
 @jbx-protocol/juice-buyback-delegate/contracts/=lib/juice-buyback/contracts/
 @jbx-protocol/juice-721-delegate/contracts/=lib/juice-721-delegate/contracts/
 @jbx-protocol/juice-delegate-metadata-lib/src/=lib/juice-delegate-metadata-lib/src/
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
 @uniswap/v3-core/contracts/=lib/v3-core/contracts
 @croptop/publisher/src/=lib/croptop-contract/src
-forge-std/=node_modules/forge-std/src
-ds-test/=node_modules/ds-test/src
+@forge-std/=lib/forge-std/src
+@ds-test/=lib/ds-test/src

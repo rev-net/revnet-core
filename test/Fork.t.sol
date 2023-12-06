@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import "forge-std/Test.sol";
+import "@forge-std/Test.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleStore.sol";
@@ -23,7 +23,7 @@ contract EmptyTest_Fork is Test {
         // Collect the mainnet deployment addresses
         JBController = IJBController(
             stdJson.readAddress(
-                vm.readFile("./node_modules/@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBController.json"),
+                vm.readFile("@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBController.json"),
                 "address"
             )
         );
@@ -31,7 +31,7 @@ contract EmptyTest_Fork is Test {
         JBEthTerminal = IJBPayoutRedemptionPaymentTerminal(
             stdJson.readAddress(
                 vm.readFile(
-                    "./node_modules/@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBETHPaymentTerminal.json"
+                    "@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBETHPaymentTerminal.json"
                 ),
                 "address"
             )

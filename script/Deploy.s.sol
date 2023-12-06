@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "forge-std/Script.sol";
+import "@forge-std/Script.sol";
 
 import {
     IJBController3_1,
     IJBPayoutRedemptionPaymentTerminal3_1_1,
     BasicRevnetDeployer,
     IJBGenericBuybackDelegate
-} from "./../src/BasicRevnetDeployer.sol";
+} from "../src/BasicRevnetDeployer.sol";
 
 contract Deploy is Script {
     function _run(IJBController3_1 _controller) internal {
