@@ -5,3 +5,5 @@
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
 @uniswap/v3-core/contracts/=lib/v3-core/contracts
 @croptop/publisher/src/=lib/croptop-contract/src
+forge-std/=node_modules/forge-std/src
+ds-test/=node_modules/ds-test/src
