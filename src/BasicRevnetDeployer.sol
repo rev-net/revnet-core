@@ -63,13 +63,15 @@ struct BuybackHookSetupData {
 /// @custom:member premintTokenAmount The number of tokens that should be preminted to the _boostOperator. This should
 /// _not_
 /// be specified as a fixed point number with 18 decimals, this will be applied internally.
-/// @custom:member priceCeilingIncreaseFrequency The number of seconds between applied price ceiling increases. This should be at least
+/// @custom:member priceCeilingIncreaseFrequency The number of seconds between applied price ceiling increases. This
+/// should be at least
 /// 24 hours.
 /// @custom:member priceCeilingIncreasePercentage The rate at which the price ceiling should increase over time, thus
 /// decreasing the rate of issuance. This percentage is out
 /// of 1_000_000_000 (JBConstants.MAX_DISCOUNT_RATE). 0% corresponds to no price ceiling increase, everyone is treated
 /// equally over time.
-/// @custom:member priceFloorTaxIntensity The factor determining how much each token can reclaim from the revnet once redeemed.
+/// @custom:member priceFloorTaxIntensity The factor determining how much each token can reclaim from the revnet once
+/// redeemed.
 /// This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no floor tax when
 /// redemptions are made, everyone's redemptions are treated equally. The higher the intensity, the higher the tax.
 /// @custom:member boosts The periods of distinguished boosting that should be applied over time.
@@ -210,7 +212,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
         });
 
         // Premint tokens to the boost operator if needed.
-        if (_revnetData.premintTokenAmount > 0)
+        if (_revnetData.premintTokenAmount > 0) {
             controller.mintTokensOf({
                 projectId: revnetId,
                 tokenCount: _revnetData.premintTokenAmount * 10 ** 18,
@@ -219,6 +221,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
                 preferClaimedTokens: false,
                 useReservedRate: false
             });
+        }
 
         // Give the boost operator permission to change the boost recipients.
         IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
@@ -406,7 +409,8 @@ contract BasicRevnetDeployer is IERC721Receiver {
         // Keep a reference to the number of boosts.
         uint256 _numberOfBoosts = _boosts.length;
 
-        // Store the boost that aren't initially scheduled. Separate transactions to `scheduleNextBoostPeriodOf` must be called to schedule each of
+        // Store the boost that aren't initially scheduled. Separate transactions to `scheduleNextBoostPeriodOf` must be
+        // called to schedule each of
         // them.
         if (_numberOfBoosts > 1) {
             for (uint256 _i = 1; _i < _numberOfBoosts;) {

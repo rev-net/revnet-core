@@ -23,17 +23,13 @@ contract EmptyTest_Fork is Test {
         // Collect the mainnet deployment addresses
         JBController = IJBController(
             stdJson.readAddress(
-                vm.readFile("@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBController.json"),
-                "address"
+                vm.readFile("@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBController.json"), "address"
             )
         );
 
         JBEthTerminal = IJBPayoutRedemptionPaymentTerminal(
             stdJson.readAddress(
-                vm.readFile(
-                    "@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBETHPaymentTerminal.json"
-                ),
-                "address"
+                vm.readFile("@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBETHPaymentTerminal.json"), "address"
             )
         );
 
