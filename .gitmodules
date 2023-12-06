@@ -12,7 +12,7 @@
 	url = https://github.com/jbx-protocol/juice-contracts-v3
 [submodule "lib/juice-buyback"]
 	path = lib/juice-buyback
-	url = https://github.com/jbx-protocol/juice-buyback
+	url = https://github.com/jbx-protocol/juice-buyback # currently at commit 57746195890db5b18c571c4b938ed22bb90e6582
 [submodule "lib/juice-721-delegate"]
 	path = lib/juice-721-delegate
 	url = https://github.com/jbx-protocol/juice-721-delegate
