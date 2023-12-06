@@ -1,7 +1,7 @@
 [profile.default]
 src = 'src'
 out = 'out'
-libs = ['lib', 'node_modules']
+libs = ['lib']
 optimizer_runs = 1000000
 verbosity = 3 # display errors
 match_contract = "Unit" # only runs unit tests by default
