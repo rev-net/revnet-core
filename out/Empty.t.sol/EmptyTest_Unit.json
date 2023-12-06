@@ -1303,13 +1303,13 @@
   },
   "ast": {
     "absolutePath": "test/Empty.t.sol",
-    "id": 51328,
+    "id": 51329,
     "exportedSymbols": {
       "DSTest": [
         3370
       ],
       "EmptyTest_Unit": [
-        51327
+        51328
       ],
       "StdAssertions": [
         4902
@@ -1367,7 +1367,7 @@
     "src": "32:203:114",
     "nodes": [
       {
-        "id": 51315,
+        "id": 51316,
         "nodeType": "PragmaDirective",
         "src": "32:24:114",
         "nodes": [],
@@ -1379,30 +1379,30 @@
         ]
       },
       {
-        "id": 51316,
+        "id": 51317,
         "nodeType": "ImportDirective",
         "src": "58:29:114",
         "nodes": [],
         "absolutePath": "lib/forge-std/src/Test.sol",
         "file": "@forge-std/Test.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 51328,
+        "scope": 51329,
         "sourceUnit": 13075,
         "symbolAliases": [],
         "unitAlias": ""
       },
       {
-        "id": 51327,
+        "id": 51328,
         "nodeType": "ContractDefinition",
         "src": "89:145:114",
         "nodes": [
           {
-            "id": 51322,
+            "id": 51323,
             "nodeType": "FunctionDefinition",
             "src": "127:27:114",
             "nodes": [],
             "body": {
-              "id": 51321,
+              "id": 51322,
               "nodeType": "Block",
               "src": "151:3:114",
               "nodes": [],
@@ -1415,29 +1415,29 @@
             "name": "setUp",
             "nameLocation": "136:5:114",
             "parameters": {
-              "id": 51319,
+              "id": 51320,
               "nodeType": "ParameterList",
               "parameters": [],
               "src": "141:2:114"
             },
             "returnParameters": {
-              "id": 51320,
+              "id": 51321,
               "nodeType": "ParameterList",
               "parameters": [],
               "src": "151:0:114"
             },
-            "scope": 51327,
+            "scope": 51328,
             "stateMutability": "nonpayable",
             "virtual": false,
             "visibility": "public"
           },
           {
-            "id": 51326,
+            "id": 51327,
             "nodeType": "FunctionDefinition",
             "src": "160:72:114",
             "nodes": [],
             "body": {
-              "id": 51325,
+              "id": 51326,
               "nodeType": "Block",
               "src": "187:45:114",
               "nodes": [],
@@ -1450,18 +1450,18 @@
             "name": "testTest",
             "nameLocation": "169:8:114",
             "parameters": {
-              "id": 51323,
+              "id": 51324,
               "nodeType": "ParameterList",
               "parameters": [],
               "src": "177:2:114"
             },
             "returnParameters": {
-              "id": 51324,
+              "id": 51325,
               "nodeType": "ParameterList",
               "parameters": [],
               "src": "187:0:114"
             },
-            "scope": 51327,
+            "scope": 51328,
             "stateMutability": "nonpayable",
             "virtual": false,
             "visibility": "public"
@@ -1471,7 +1471,7 @@
         "baseContracts": [
           {
             "baseName": {
-              "id": 51317,
+              "id": 51318,
               "name": "Test",
               "nameLocations": [
                 "116:4:114"
@@ -1480,7 +1480,7 @@
               "referencedDeclaration": 13074,
               "src": "116:4:114"
             },
-            "id": 51318,
+            "id": 51319,
             "nodeType": "InheritanceSpecifier",
             "src": "116:4:114"
           }
@@ -1490,7 +1490,7 @@
         "contractKind": "contract",
         "fullyImplemented": true,
         "linearizedBaseContracts": [
-          51327,
+          51328,
           13074,
           13023,
           8761,
@@ -1504,7 +1504,7 @@
         ],
         "name": "EmptyTest_Unit",
         "nameLocation": "98:14:114",
-        "scope": 51328,
+        "scope": 51329,
         "usedErrors": [],
         "usedEvents": [
           1084,
