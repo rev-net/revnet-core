@@ -1,0 +1,284 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "name": "CHANGE_POOL",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "SET_POOL_PARAMS",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x6098610038600b82828239805160001a607314602b57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c8063116e9c0914604257806328b09e9e14605b575b600080fd5b6049601981565b60405190815260200160405180910390f35b604960188156fea26469706673582212206db8390d99b223dc1ea6f82ddf1de669b0cc464bad575a6125228748f15b302e64736f6c63430008140033",
+    "sourceMap": "164:283:36:-:0;;;;;;;;;;;;;;;-1:-1:-1;;;164:283:36;;;;;;;;;;;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c8063116e9c0914604257806328b09e9e14605b575b600080fd5b6049601981565b60405190815260200160405180910390f35b604960188156fea26469706673582212206db8390d99b223dc1ea6f82ddf1de669b0cc464bad575a6125228748f15b302e64736f6c63430008140033",
+    "sourceMap": "164:283:36:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;404:40;;442:2;404:40;;;;;168:25:116;;;156:2;141:18;404:40:36;;;;;;;354:44;;396:2;354:44;",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "CHANGE_POOL()": "116e9c09",
+    "SET_POOL_PARAMS()": "28b09e9e"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.20+commit.a1b79de6\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"CHANGE_POOL\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SET_POOL_PARAMS\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"title\":\"JBBuybackDelegateOperations\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"JB specific operation indexes for the JBBuybackDelegate\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"lib/juice-buyback/contracts/libraries/JBBuybackDelegateOperations.sol\":\"JBBuybackDelegateOperations\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":1000000},\"remappings\":[\":@croptop/publisher/src/=lib/croptop-contract/src/\",\":@ds-test/=lib/ds-test/src/\",\":@forge-std/=lib/forge-std/src/\",\":@jbx-protocol/juice-721-delegate/contracts/=lib/juice-721-delegate/contracts/\",\":@jbx-protocol/juice-buyback-delegate/contracts/=lib/juice-buyback/contracts/\",\":@jbx-protocol/juice-contracts-v3/contracts/=lib/juice-contracts-v3/contracts/\",\":@jbx-protocol/juice-contracts-v3/deployments/=lib/juice-contracts-v3/deployments/\",\":@jbx-protocol/juice-delegate-metadata-lib/src/=lib/juice-delegate-metadata-lib/src/\",\":@juicebox/=lib/juice-contracts-v3/contracts/\",\":@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/\",\":@uniswap/v3-core/contracts/=lib/v3-core/contracts/\",\":chainlink/=lib/juice-contracts-v3/lib/chainlink/contracts/src/v0.8/dev/vendor/@arbitrum/nitro-contracts/src/\",\":croptop-contract/=lib/croptop-contract/\",\":ds-test/=lib/ds-test/src/\",\":erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/\",\":forge-std/=lib/forge-std/src/\",\":juice-721-delegate/=lib/juice-721-delegate/contracts/\",\":juice-buyback/=lib/juice-buyback/contracts/\",\":juice-contracts-v3/=lib/juice-contracts-v3/\",\":juice-delegate-metadata-lib/=lib/juice-delegate-metadata-lib/src/\",\":openzeppelin-contracts/=lib/openzeppelin-contracts/\",\":prb-math/=lib/juice-contracts-v3/lib/prb-math/contracts/\",\":v3-core/=lib/v3-core/\"]},\"sources\":{\"lib/juice-buyback/contracts/libraries/JBBuybackDelegateOperations.sol\":{\"keccak256\":\"0xc3b8dae9fb0efeddef70d12834ccd34373d904c5ea5590a7e457e743b2bf1325\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://9772412f05cf9c8ff8bffb8c72e3ae2f0343d81de3afea9be5b4412179df3104\",\"dweb:/ipfs/QmRsuFXRnfjD5otVBgxjhng5LR2ALxdpcGMB3oz6HMv98F\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.20+commit.a1b79de6"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "CHANGE_POOL",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "SET_POOL_PARAMS",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        "@croptop/publisher/src/=lib/croptop-contract/src/",
+        "@ds-test/=lib/ds-test/src/",
+        "@forge-std/=lib/forge-std/src/",
+        "@jbx-protocol/juice-721-delegate/contracts/=lib/juice-721-delegate/contracts/",
+        "@jbx-protocol/juice-buyback-delegate/contracts/=lib/juice-buyback/contracts/",
+        "@jbx-protocol/juice-contracts-v3/contracts/=lib/juice-contracts-v3/contracts/",
+        "@jbx-protocol/juice-contracts-v3/deployments/=lib/juice-contracts-v3/deployments/",
+        "@jbx-protocol/juice-delegate-metadata-lib/src/=lib/juice-delegate-metadata-lib/src/",
+        "@juicebox/=lib/juice-contracts-v3/contracts/",
+        "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+        "@uniswap/v3-core/contracts/=lib/v3-core/contracts/",
+        "chainlink/=lib/juice-contracts-v3/lib/chainlink/contracts/src/v0.8/dev/vendor/@arbitrum/nitro-contracts/src/",
+        "croptop-contract/=lib/croptop-contract/",
+        "ds-test/=lib/ds-test/src/",
+        "erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/",
+        "forge-std/=lib/forge-std/src/",
+        "juice-721-delegate/=lib/juice-721-delegate/contracts/",
+        "juice-buyback/=lib/juice-buyback/contracts/",
+        "juice-contracts-v3/=lib/juice-contracts-v3/",
+        "juice-delegate-metadata-lib/=lib/juice-delegate-metadata-lib/src/",
+        "openzeppelin-contracts/=lib/openzeppelin-contracts/",
+        "prb-math/=lib/juice-contracts-v3/lib/prb-math/contracts/",
+        "v3-core/=lib/v3-core/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 1000000
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "lib/juice-buyback/contracts/libraries/JBBuybackDelegateOperations.sol": "JBBuybackDelegateOperations"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "lib/juice-buyback/contracts/libraries/JBBuybackDelegateOperations.sol": {
+        "keccak256": "0xc3b8dae9fb0efeddef70d12834ccd34373d904c5ea5590a7e457e743b2bf1325",
+        "urls": [
+          "bzz-raw://9772412f05cf9c8ff8bffb8c72e3ae2f0343d81de3afea9be5b4412179df3104",
+          "dweb:/ipfs/QmRsuFXRnfjD5otVBgxjhng5LR2ALxdpcGMB3oz6HMv98F"
+        ],
+        "license": "MIT"
+      }
+    },
+    "version": 1
+  },
+  "ast": {
+    "absolutePath": "lib/juice-buyback/contracts/libraries/JBBuybackDelegateOperations.sol",
+    "id": 45081,
+    "exportedSymbols": {
+      "JBBuybackDelegateOperations": [
+        45080
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:416:36",
+    "nodes": [
+      {
+        "id": 45072,
+        "nodeType": "PragmaDirective",
+        "src": "32:23:36",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".0"
+        ]
+      },
+      {
+        "id": 45080,
+        "nodeType": "ContractDefinition",
+        "src": "164:283:36",
+        "nodes": [
+          {
+            "id": 45076,
+            "nodeType": "VariableDeclaration",
+            "src": "354:44:36",
+            "nodes": [],
+            "constant": true,
+            "functionSelector": "28b09e9e",
+            "mutability": "constant",
+            "name": "SET_POOL_PARAMS",
+            "nameLocation": "378:15:36",
+            "scope": 45080,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 45074,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "354:7:36",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "value": {
+              "hexValue": "3234",
+              "id": 45075,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "396:2:36",
+              "typeDescriptions": {
+                "typeIdentifier": "t_rational_24_by_1",
+                "typeString": "int_const 24"
+              },
+              "value": "24"
+            },
+            "visibility": "public"
+          },
+          {
+            "id": 45079,
+            "nodeType": "VariableDeclaration",
+            "src": "404:40:36",
+            "nodes": [],
+            "constant": true,
+            "functionSelector": "116e9c09",
+            "mutability": "constant",
+            "name": "CHANGE_POOL",
+            "nameLocation": "428:11:36",
+            "scope": 45080,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 45077,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "404:7:36",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "value": {
+              "hexValue": "3235",
+              "id": 45078,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "kind": "number",
+              "lValueRequested": false,
+              "nodeType": "Literal",
+              "src": "442:2:36",
+              "typeDescriptions": {
+                "typeIdentifier": "t_rational_25_by_1",
+                "typeString": "int_const 25"
+              },
+              "value": "25"
+            },
+            "visibility": "public"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "JBBuybackDelegateOperations",
+        "contractDependencies": [],
+        "contractKind": "library",
+        "documentation": {
+          "id": 45073,
+          "nodeType": "StructuredDocumentation",
+          "src": "57:107:36",
+          "text": "@title JBBuybackDelegateOperations\n @notice JB specific operation indexes for the JBBuybackDelegate"
+        },
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          45080
+        ],
+        "name": "JBBuybackDelegateOperations",
+        "nameLocation": "172:27:36",
+        "scope": 45081,
+        "usedErrors": [],
+        "usedEvents": []
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 36
+}
