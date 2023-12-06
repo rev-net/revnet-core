@@ -2,7 +2,6 @@
 .vscode
 cache/
 node_modules/
-*.txt
 .DS_Store
 lib/forge-std/
 yarn-error.log
