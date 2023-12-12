@@ -1,0 +1,3 @@
+@jbx-protocol/=node_modules/@jbx-protocol/
+@openzeppelin/=node_modules/@openzeppelin/
+forge-std/=lib/forge-std/src/

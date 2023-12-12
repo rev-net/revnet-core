@@ -1,8 +1,27 @@
+node_modules
 .env
-.vscode
-cache/
-node_modules/
 *.txt
+!remappings.txt
+
+# Foundry
+out
+
+# Hardhat files
+cache
+artifacts
+deployments/localhost/**
+
+# Mac OSX
 .DS_Store
-lib/forge-std/
-yarn-error.log
+
+# Code coverage reports
+coverage/
+coverage.json
+lcov.info
+
+# VSCode
+workspace.code-workspace
+.vscode/
+
+backup/
+.secret

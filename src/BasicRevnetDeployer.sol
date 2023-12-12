@@ -2,28 +2,25 @@
 pragma solidity ^0.8.20;
 
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import { IJBPaymentTerminal } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPaymentTerminal.sol";
-import { IJBController3_1 } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController3_1.sol";
-import { IJBPayoutRedemptionPaymentTerminal3_1_1 } from
-    "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayoutRedemptionPaymentTerminal3_1_1.sol";
-import { IJBFundingCycleBallot } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleBallot.sol";
-import { IJBOperatable } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBOperatable.sol";
-import { IJBSplitAllocator } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBSplitAllocator.sol";
-import { IJBToken } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBToken.sol";
-import { JBOperations } from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBOperations.sol";
-import { JBConstants } from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBConstants.sol";
-import { JBTokens } from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBTokens.sol";
-import { JBSplitsGroups } from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBSplitsGroups.sol";
-import { JBFundingCycleData } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycleData.sol";
-import { JBFundingCycleMetadata } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycleMetadata.sol";
-import { JBFundingCycle } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycle.sol";
-import { JBGlobalFundingCycleMetadata } from
-    "@jbx-protocol/juice-contracts-v3/contracts/structs/JBGlobalFundingCycleMetadata.sol";
-import { JBGroupedSplits } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBGroupedSplits.sol";
-import { JBSplit } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBSplit.sol";
-import { JBOperatorData } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBOperatorData.sol";
-import { JBFundAccessConstraints } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundAccessConstraints.sol";
-import { JBProjectMetadata } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBProjectMetadata.sol";
+import { IJBTerminal } from "@jbx-protocol/juice-contracts-v4/contracts/interfaces/IJBTerminal.sol";
+import { IJBController } from "@jbx-protocol/juice-contracts-v4/contracts/interfaces/IJBController.sol";
+import { IJBMultiTerminal } from
+    "@jbx-protocol/juice-contracts-v4/contracts/interfaces/IJBMultiTerminal.sol";
+import { IJBRulesetApprovalHook } from "@jbx-protocol/juice-contracts-v4/contracts/interfaces/IJBRulesetApprovalHook.sol";
+import { IJBPermissioned } from "@jbx-protocol/juice-contracts-v4/contracts/interfaces/IJBPermissioned.sol";
+import { IJBSplitHook } from "@jbx-protocol/juice-contracts-v4/contracts/interfaces/IJBSplitHook.sol";
+import { IJBToken } from "@jbx-protocol/juice-contracts-v4/contracts/interfaces/IJBToken.sol";
+import { JBPermissions } from "@jbx-protocol/juice-contracts-v4/contracts/libraries/JBPermissions.sol";
+import { JBConstants } from "@jbx-protocol/juice-contracts-v4/contracts/libraries/JBConstants.sol";
+import { JBSplitGroupIds } from "@jbx-protocol/juice-contracts-v4/contracts/libraries/JBSplitGroupIds.sol";
+import { JBRulesetData } from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBRulesetData.sol";
+import { JBRulesetMetadata } from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBRulesetMetadata.sol";
+import { JBRuleset } from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBRuleset.sol";
+import {JBTerminalConfig} from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBTerminalConfig.sol";
+import { JBGroupedSplits } from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBGroupedSplits.sol";
+import { JBSplit } from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBSplit.sol";
+import { JBPermissionsData } from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBPermissionsData.sol";
+import { JBFundAccessLimitGroup } from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBFundAccessLimitGroup.sol";
 import { IJBGenericBuybackDelegate } from
     "@jbx-protocol/juice-buyback-delegate/contracts/interfaces/IJBGenericBuybackDelegate.sol";
 import { JBBuybackDelegateOperations } from
@@ -96,7 +93,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
     mapping(uint256 _revnetId => Boost[]) internal _boostsOf;
 
     /// @notice The controller that networks are made from.
-    IJBController3_1 public immutable controller;
+    IJBController public immutable controller;
 
     /// @notice The permissions that the provided _boostOperator should be granted. This is set once in the constructor
     /// to contain only the SET_SPLITS operation.
@@ -123,9 +120,9 @@ contract BasicRevnetDeployer is IERC721Receiver {
     }
 
     /// @param _controller The controller that revnets are made from.
-    constructor(IJBController3_1 _controller) {
+    constructor(IJBController _controller) {
         controller = _controller;
-        boostOperatorPermissionIndexes.push(JBOperations.SET_SPLITS);
+        boostOperatorPermissionIndexes.push(JBPermissions.SET_SPLITS);
         boostOperatorPermissionIndexes.push(JBBuybackDelegateOperations.SET_POOL_PARAMS);
     }
 
@@ -142,11 +139,11 @@ contract BasicRevnetDeployer is IERC721Receiver {
     /// @return revnetId The ID of the newly created revnet.
     function deployRevnetFor(
         address _boostOperator,
-        JBProjectMetadata memory _revnetMetadata,
+        string memory _revnetMetadata,
         string memory _name,
         string memory _symbol,
         RevnetParams memory _revnetData,
-        IJBPaymentTerminal[] memory _terminals,
+        JBTerminalConfig[] memory terminalConfigurations,
         BuybackHookSetupData memory _buybackHookSetupData
     )
         public
@@ -162,50 +159,49 @@ contract BasicRevnetDeployer is IERC721Receiver {
         });
 
         // Issue the network's ERC-20 token.
-        controller.tokenStore().issueFor({ projectId: revnetId, name: _name, symbol: _symbol });
+        controller.deployERC20For({ projectId: revnetId, name: _name, symbol: _symbol });
 
         // Setup the buyback hook.
         _setupBuybackHookOf(revnetId, _buybackHookSetupData);
 
-        // Configure the revnet's cycles using BBD.
-        controller.launchFundingCyclesFor({
-            projectId: revnetId,
-            data: JBFundingCycleData({
+        // Package up the ruleset configuration.
+        JBRulesetConfig[] memory rulesetConfigurations = new JBRulesetConfig[](1);
+        rulesetConfigurations[0].mustStartAtOrAfter = _revnetData.boosts.length == 0 ? 0 : _revnetData.boosts[0].startsAtOrAfter;
+        rulesetConfigurations[0].data = JBRulesetData({
                 duration: _revnetData.priceCeilingIncreaseFrequency,
                 weight: _revnetData.initialIssuanceRate * 10 ** 18,
-                discountRate: _revnetData.priceCeilingIncreasePercentage,
-                ballot: IJBFundingCycleBallot(address(0))
-            }),
-            metadata: JBFundingCycleMetadata({
-                global: JBGlobalFundingCycleMetadata({
-                    allowSetTerminals: false,
-                    allowSetController: false,
-                    pauseTransfers: false
-                }),
+                decayRate: _revnetData.priceCeilingIncreasePercentage,
+                hook: IJBRulesetApprovalHook(address(0))
+            });
+        rulesetConfigurations[0].metadata = JBRulesetMetadata({
                 reservedRate: _revnetData.boosts.length == 0 ? 0 : _revnetData.boosts[0].rate, // Set the reserved rate
                     // that'll model the boost periods.
                 redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _revnetData.priceFloorTaxIntensity, // Set the redemption
                     // rate.
-                ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
+                baseCurrency: 0,
                 pausePay: false,
-                pauseDistributions: false, // There will never be distributions accessible anyways.
-                pauseRedeem: false, // Redemptions must be left open.
-                pauseBurn: false,
-                allowMinting: true, // Allow this contract to premint tokens as the network owner.
+                pauseCreditTransfers: false,
+                allowOwnerMinting: true, // Allow this contract to premint tokens as the network owner.
                 allowTerminalMigration: false,
+                allowSetTerminals: false,
                 allowControllerMigration: false,
+                allowSetController: false,
                 holdFees: false,
-                preferClaimedTokenOverride: false,
-                useTotalOverflowForRedemptions: false,
-                useDataSourceForPay: true, // Use the buyback delegate data source.
-                useDataSourceForRedeem: false,
+                useTotalSurplusForRedemptions: false,
+                useDataHookForPay: true, // Use the buyback delegate data source.
+                useDataHookForRedeem: false,
                 dataSource: address(_buybackHookSetupData.hook),
                 metadata: 0
-            }),
-            mustStartAtOrAfter: _revnetData.boosts.length == 0 ? 0 : _revnetData.boosts[0].startsAtOrAfter,
-            groupedSplits: _groupedSplits,
-            fundAccessConstraints: new JBFundAccessConstraints[](0), // Funds can't be accessed by the network owner.
-            terminals: _terminals,
+            });
+
+        rulesetConfigurations[0].splitGroups = _groupedSplits;
+        rulesetConfigurations[0].fundAccessLimitGroups =  new JBFundAccessLimitGroup[](0);
+
+        // Configure the revnet's cycles using BBD.
+        controller.launchRulesetsFor({
+            projectId: revnetId,
+            rulesetConfigurations: rulesetConfigurations,
+            terminalConfigurations: terminalConfigurations,
             memo: "revnet deployed"
         });
 
@@ -216,13 +212,12 @@ contract BasicRevnetDeployer is IERC721Receiver {
                 tokenCount: _revnetData.premintTokenAmount * 10 ** 18,
                 beneficiary: _boostOperator,
                 memo: string.concat("$", _symbol, " preminted"),
-                preferClaimedTokens: false,
                 useReservedRate: false
             });
 
         // Give the boost operator permission to change the boost recipients.
-        IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
-            JBOperatorData({
+        IJBPermissioned(address(controller.SPLITS())).PERMISSIONS().setPermissions(
+            JBPermissionsData({
                 operator: _boostOperator,
                 domain: revnetId,
                 permissionIndexes: boostOperatorPermissionIndexes
@@ -233,67 +228,67 @@ contract BasicRevnetDeployer is IERC721Receiver {
         _storeBoostsOf(revnetId, _revnetData.boosts);
     }
 
-    /// @notice Schedules the next boost specified when the revnet was deployed.
-    /// @param _revnetId The ID of the revnet having its next boost scheduled.
-    function scheduleNextBoostOf(uint256 _revnetId) external {
-        // Get a reference to the latest configured cycle and its metadata.
-        (JBFundingCycle memory _latestFundingCycleConfiguration, JBFundingCycleMetadata memory _metadata,) =
-            controller.latestConfiguredFundingCycleOf(_revnetId);
+    // /// @notice Schedules the next boost specified when the revnet was deployed.
+    // /// @param _revnetId The ID of the revnet having its next boost scheduled.
+    // function scheduleNextBoostOf(uint256 _revnetId) external {
+    //     // Get a reference to the latest configured cycle and its metadata.
+    //     (JBRuleset memory _latestFundingCycleConfiguration, JBRulesetMetadata memory _metadata,) =
+    //         controller.latestConfiguredFundingCycleOf(_revnetId);
 
-        // Get a reference to the next boost number, while incrementing the stored value. Zero indexed.
-        uint256 _nextBoostNumber = currentBoostNumberOf[_revnetId]++;
+    //     // Get a reference to the next boost number, while incrementing the stored value. Zero indexed.
+    //     uint256 _nextBoostNumber = currentBoostNumberOf[_revnetId]++;
 
-        // Get a reference to the number of boosts there are. 1 indexed.
-        uint256 _numberOfBoosts = _boostsOf[_revnetId].length;
+    //     // Get a reference to the number of boosts there are. 1 indexed.
+    //     uint256 _numberOfBoosts = _boostsOf[_revnetId].length;
 
-        // Make sure the latest cycle configured started in the past, and that there are more boosts to schedule.
-        if (
-            _numberOfBoosts == 0 || _nextBoostNumber == _numberOfBoosts
-                || _latestFundingCycleConfiguration.start >= block.timestamp
-        ) revert RECONFIGURATION_ALREADY_SCHEDULED();
+    //     // Make sure the latest cycle configured started in the past, and that there are more boosts to schedule.
+    //     if (
+    //         _numberOfBoosts == 0 || _nextBoostNumber == _numberOfBoosts
+    //             || _latestFundingCycleConfiguration.start >= block.timestamp
+    //     ) revert RECONFIGURATION_ALREADY_SCHEDULED();
 
-        // Get a reference to the next boost.
-        Boost memory _boost = _boostsOf[_revnetId][_nextBoostNumber];
+    //     // Get a reference to the next boost.
+    //     Boost memory _boost = _boostsOf[_revnetId][_nextBoostNumber];
 
-        // Schedule a cycle reconfiguration.
-        controller.reconfigureFundingCyclesOf({
-            projectId: _revnetId,
-            data: JBFundingCycleData({
-                duration: _latestFundingCycleConfiguration.duration,
-                weight: 0, // Inherit the weight of the current funding cycle.
-                discountRate: _latestFundingCycleConfiguration.discountRate,
-                ballot: IJBFundingCycleBallot(address(0))
-            }),
-            metadata: JBFundingCycleMetadata({
-                global: JBGlobalFundingCycleMetadata({
-                    allowSetTerminals: false,
-                    allowSetController: false,
-                    pauseTransfers: false
-                }),
-                reservedRate: _boost.rate, // Set the reserved rate to model the boost.
-                redemptionRate: _metadata.redemptionRate, // Set the same redemption rate.
-                ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
-                pausePay: false,
-                pauseDistributions: false,
-                pauseRedeem: false,
-                pauseBurn: false,
-                allowMinting: false,
-                allowTerminalMigration: false,
-                allowControllerMigration: false,
-                holdFees: false,
-                preferClaimedTokenOverride: false,
-                useTotalOverflowForRedemptions: false,
-                useDataSourceForPay: false,
-                useDataSourceForRedeem: false,
-                dataSource: _metadata.dataSource,
-                metadata: _metadata.metadata
-            }),
-            mustStartAtOrAfter: _boost.startsAtOrAfter,
-            groupedSplits: _copyBoostSplitGroupFrom(_revnetId, _latestFundingCycleConfiguration.configuration),
-            fundAccessConstraints: new JBFundAccessConstraints[](0),
-            memo: "revnet boost scheduled"
-        });
-    }
+    //     // Schedule a cycle reconfiguration.
+    //     controller.reconfigureFundingCyclesOf({
+    //         projectId: _revnetId,
+    //         data: JBRulesetData({
+    //             duration: _latestFundingCycleConfiguration.duration,
+    //             weight: 0, // Inherit the weight of the current funding cycle.
+    //             discountRate: _latestFundingCycleConfiguration.discountRate,
+    //             ballot: IJBRulesetApprovalHook(address(0))
+    //         }),
+    //         metadata: JBRulesetMetadata({
+    //             global: JBGlobalFundingCycleMetadata({
+    //                 allowSetTerminals: false,
+    //                 allowSetController: false,
+    //                 pauseTransfers: false
+    //             }),
+    //             reservedRate: _boost.rate, // Set the reserved rate to model the boost.
+    //             redemptionRate: _metadata.redemptionRate, // Set the same redemption rate.
+    //             ballotRedemptionRate: 0, // There will never be an active ballot, so this can be left off.
+    //             pausePay: false,
+    //             pauseDistributions: false,
+    //             pauseRedeem: false,
+    //             pauseBurn: false,
+    //             allowMinting: false,
+    //             allowTerminalMigration: false,
+    //             allowControllerMigration: false,
+    //             holdFees: false,
+    //             preferClaimedTokenOverride: false,
+    //             useTotalOverflowForRedemptions: false,
+    //             useDataSourceForPay: false,
+    //             useDataSourceForRedeem: false,
+    //             dataSource: _metadata.dataSource,
+    //             metadata: _metadata.metadata
+    //         }),
+    //         mustStartAtOrAfter: _boost.startsAtOrAfter,
+    //         groupedSplits: _copyBoostSplitGroupFrom(_revnetId, _latestFundingCycleConfiguration.configuration),
+    //         fundAccessConstraints: new JBFundAccessLimitGroup[](0),
+    //         memo: "revnet boost scheduled"
+    //     });
+    // }
 
     /// @dev Make sure only mints can be received.
     function onERC721Received(
@@ -319,14 +314,14 @@ contract BasicRevnetDeployer is IERC721Receiver {
 
     /// @notice Creates a group of splits that goes entirely to the provided _boostOperator.
     /// @param _boostOperator The address to send the entire split amount to.
-    /// @return _groupedSplits The grouped splits to be used in a configuration.
+    /// @return splitGroups The grouped splits to be used in a configuration.
     function _makeBoostSplitGroupWith(address _boostOperator)
         internal
         pure
-        returns (JBGroupedSplits[] memory _groupedSplits)
+        returns (JBSplitGroup[] memory splitGroups)
     {
         // Package the reserved token splits.
-        _groupedSplits = new JBGroupedSplits[](1);
+        splitGroups = new JBSplitGroup[](1);
 
         // Make the splits.
 
@@ -335,38 +330,37 @@ contract BasicRevnetDeployer is IERC721Receiver {
 
         // Send the _boostOperator all of the reserved tokens. They'll be able to change this later whenever they wish.
         _splits[0] = JBSplit({
-            preferClaimed: false,
             preferAddToBalance: false,
             percent: JBConstants.SPLITS_TOTAL_PERCENT,
             projectId: 0,
             beneficiary: payable(_boostOperator),
             lockedUntil: 0,
-            allocator: IJBSplitAllocator(address(0))
+            hook: IJBSplitHook(address(0))
         });
 
-        _groupedSplits[0] = JBGroupedSplits({ group: JBSplitsGroups.RESERVED_TOKENS, splits: _splits });
+        splitGroups[0] = JBSplitGroup({ groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: _splits });
     }
 
     /// @notice Copies a group of splits from  the one stored in the provided configuration.
     /// @param _revnetId The ID of the revnet to which the splits apply.
     /// @param _baseConfiguration The configuration to copy configurations from.
-    /// @return _groupedSplits The grouped splits to be used in a configuration.
+    /// @return splitGroups The grouped splits to be used in a configuration.
     function _copyBoostSplitGroupFrom(
         uint256 _revnetId,
         uint256 _baseConfiguration
     )
         internal
         view
-        returns (JBGroupedSplits[] memory _groupedSplits)
+        returns (JBSplitGroup[] memory splitGroups)
     {
         // Package the reserved token splits.
-        _groupedSplits = new JBGroupedSplits[](1);
+        splitGroups = new JBSplitGroup[](1);
 
         // Make new splits specifying where the reserved tokens will be sent.
         JBSplit[] memory _splits =
-            controller.splitsStore().splitsOf(_revnetId, _baseConfiguration, JBSplitsGroups.RESERVED_TOKENS);
+            controller.SPLITS().splitsOf(_revnetId, _baseConfiguration, JBSplitGroupIds.RESERVED_TOKENS);
 
-        _groupedSplits[0] = JBGroupedSplits({ group: JBSplitsGroups.RESERVED_TOKENS, splits: _splits });
+        splitGroups[0] = JBSplitGroup({ groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: _splits });
     }
 
     /// @notice Sets up a buyback hook.
@@ -426,24 +420,24 @@ contract BasicRevnetDeployer is IERC721Receiver {
     function replaceBoostOperatorOf(uint256 _revnetId, address _newBoostOperator) external {
         /// Make sure the message sender is the current operator.
         if (
-            !IJBOperatable(address(controller.splitsStore())).operatorStore().hasPermissions({
+            !IJBPermissioned(address(controller.SPLITS())).OPERATOR().hasPermissions({
                 operator: msg.sender,
                 account: address(this),
-                domain: _revnetId,
+                projectId: _revnetId,
                 permissionIndexes: boostOperatorPermissionIndexes
             })
         ) revert UNAUTHORIZED();
 
         // Remove operator permission from the old operator.
-        IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
-            JBOperatorData({ operator: msg.sender, domain: _revnetId, permissionIndexes: new uint256[](0) })
+        IJBPermissioned(address(controller.SPLITS())).PERMISSIONS().setPermissionsForOperator(
+            JBPermissionsData({ operator: msg.sender, projectId: _revnetId, permissionIndexes: new uint256[](0) })
         );
 
         // Give the new operator permission to change the boost recipients.
-        IJBOperatable(address(controller.splitsStore())).operatorStore().setOperator(
-            JBOperatorData({
+        IJBPermissioned(address(controller.SPLITS())).PERMISSIONS().setPermissionsForOperator(
+            JBPermissionsData({
                 operator: _newBoostOperator,
-                domain: _revnetId,
+                projectId: _revnetId,
                 permissionIndexes: boostOperatorPermissionIndexes
             })
         );
