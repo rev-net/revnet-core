@@ -102,10 +102,10 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
             memo: string.concat("$", symbol, "  deployed")
         });
 
-        // Set the boost allocations at the default split domain of 0.
+        // Set the boost allocations at the default ruleset of 0.
         CONTROLLER.SPLITS().setSplitGroupsOf({
             projectId: revnetId,
-            domainId: 0,
+            rulesetId: 0,
             splitGroups: _makeBoostSplitGroupWith(boostOperator)
         });
 
