@@ -1,30 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import { IJBTerminal } from "@juicebox/src/interfaces/terminal/IJBTerminal.sol";
-import { IJBController } from "@juicebox/src/interfaces/IJBController.sol";
+import { IERC721Receiver } from "lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import { IJBTerminal } from "@juicebox/interfaces/terminal/IJBTerminal.sol";
+import { IJBController } from "@juicebox/interfaces/IJBController.sol";
 import { IJBMultiTerminal } from
-    "@juicebox/src/interfaces/terminal/IJBMultiTerminal.sol";
-import { IJBRulesetApprovalHook } from "@juicebox/src/interfaces/IJBRulesetApprovalHook.sol";
-import { IJBPermissioned } from "@juicebox/src/interfaces/IJBPermissioned.sol";
-import { IJBSplitHook } from "@juicebox/src/interfaces/IJBSplitHook.sol";
-import { IJBToken } from "@juicebox/src/interfaces/IJBToken.sol";
-import { JBPermissionIds } from "@juicebox/src/libraries/JBPermissionIds.sol";
-import { JBConstants } from "@juicebox/src/libraries/JBConstants.sol";
-import { JBSplitGroupIds } from "@juicebox/src/libraries/JBSplitGroupIds.sol";
-import { JBRulesetData } from "@juicebox/src/structs/JBRulesetData.sol";
-import { JBRulesetMetadata } from "@juicebox/src/structs/JBRulesetMetadata.sol";
-import { JBRuleset } from "@juicebox/src/structs/JBRuleset.sol";
-import {JBTerminalConfig} from "@juicebox/src/structs/JBTerminalConfig.sol";
-import { JBSplitGroup } from "@juicebox/src/structs/JBSplitGroup.sol";
-import { JBSplit } from "@juicebox/src/structs/JBSplit.sol";
-import { JBPermissionsData } from "@juicebox/src/structs/JBPermissionsData.sol";
-import { JBFundAccessLimitGroup } from "@juicebox/src/structs/JBFundAccessLimitGroup.sol";
-import { IJBGenericBuybackHook } from
-    "@juice-buyback-hook/contracts/interfaces/IJBGenericBuybackHook.sol";
-import { JBBuybackHookOperations } from
-    "@juice-buyback-hook/contracts/libraries/JBBuybackHookOperations.sol";
+    "@juicebox/interfaces/terminal/IJBMultiTerminal.sol";
+import { IJBRulesetApprovalHook } from "@juicebox/interfaces/IJBRulesetApprovalHook.sol";
+import { IJBPermissioned } from "@juicebox/interfaces/IJBPermissioned.sol";
+import { IJBSplitHook } from "@juicebox/interfaces/IJBSplitHook.sol";
+import { IJBToken } from "@juicebox/interfaces/IJBToken.sol";
+import { JBPermissionIds } from "@juicebox/libraries/JBPermissionIds.sol";
+import { JBConstants } from "@juicebox/libraries/JBConstants.sol";
+import { JBSplitGroupIds } from "@juicebox/libraries/JBSplitGroupIds.sol";
+import { JBRulesetData } from "@juicebox/structs/JBRulesetData.sol";
+import { JBRulesetMetadata } from "@juicebox/structs/JBRulesetMetadata.sol";
+import { JBRuleset } from "@juicebox/structs/JBRuleset.sol";
+import {JBTerminalConfig} from "@juicebox/structs/JBTerminalConfig.sol";
+import { JBSplitGroup } from "@juicebox/structs/JBSplitGroup.sol";
+import { JBSplit } from "@juicebox/structs/JBSplit.sol";
+import { JBPermissionsData } from "@juicebox/structs/JBPermissionsData.sol";
+import { JBFundAccessLimitGroup } from "@juicebox/structs/JBFundAccessLimitGroup.sol";
+import { IJBBuybackHook } from
+    "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
+import { JBBuybackHookPermissionIds } from
+    "lib/juice-buyback/src/libraries/JBBuybackHookPermissionIds.sol";
 
 /// @custom:member rate The percentage of newly issued tokens that should be reserved for the _boostOperator, out of
 /// 10_000 (JBConstants.MAX_RESERVED_RATE).
