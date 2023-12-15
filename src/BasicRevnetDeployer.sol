@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import { IERC721Receiver } from "lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
 import { IJBTerminal } from "@juicebox/interfaces/terminal/IJBTerminal.sol";
-import { IJBController } from "@juicebox/interfaces/IJBController.sol";
+import { IJBController } from "lib/juicebox/interfaces/IJBController.sol";
 import { IJBMultiTerminal } from
     "@juicebox/interfaces/terminal/IJBMultiTerminal.sol";
 import { IJBRulesetApprovalHook } from "@juicebox/interfaces/IJBRulesetApprovalHook.sol";
