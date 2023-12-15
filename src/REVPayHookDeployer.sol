@@ -26,7 +26,7 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
 
     /// @notice The pay hooks to include during payments to networks.
     /// @custom:param revnetId The ID of the revnet to which the extensions apply.
-    mapping(uint256 revnetId => JBPayHookPayload[] payHooks) public _payHooksOf;
+    mapping(uint256 revnetId => JBPayHookPayload[] payHooks) public _payHookPayloadsOf;
 
     /// @notice The permissions that the provided buyback hook should be granted since it wont be used as the data
     /// source.
@@ -35,9 +35,9 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
 
     /// @notice The pay hooks to include during payments to networks.
     /// @param revnetId The ID of the revnet to which the extensions apply.
-    /// @return payHook The pay hooks.
-    function payHooksOf(uint256 revnetId) external view returns (JBPayHookPayload[] memory) {
-        return _payHooksOf[revnetId];
+    /// @return payHookPayloads The pay hooks.
+    function payHookPayloadsOf(uint256 revnetId) external view returns (JBPayHookPayload[] memory) {
+        return _payHookPayloadsOf[revnetId];
     }
 
     /// @notice This function gets called when the revnet receives a payment.
@@ -47,40 +47,40 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
     /// https://docs.juicebox.money/dev/api/data-structures/jbpayparamsdata/.
     /// @return weight The weight that network tokens should get minted relative to. This is useful for optionally
     /// customizing how many tokens are issued per payment.
-    /// @return payHooks Amount to be sent to pay hooks instead of adding to local balance. Useful for
+    /// @return hookPayloads Amount to be sent to pay hooks instead of adding to local balance. Useful for
     /// auto-routing funds from a treasury as payment come in.
+
     function payParams(JBPayParamsData calldata data)
         external
         view
         virtual
-        override
-        returns (uint256 weight, JBPayHookPayload[] memory payHooks)
+        returns (uint256 weight, JBPayHookPayload[] memory hookPayloads)
     {
         // Keep a reference to the hooks that the buyback hook data source provides.
-        JBPayHookPayload[] memory buybackHooks;
+        JBPayHookPayload[] memory buybackHookPayloads;
 
         // // Set the values to be those returned by the buyback hook's data source.
-        (weight, buybackHooks) = buybackHookOf[data.projectId].payParams(data);
+        (weight, buybackHookPayloads) = buybackHookOf[data.projectId].payParams(data);
 
         // Check if a buyback hook is used.
-        bool usesBuybackHook = buybackHooks.length != 0;
+        bool usesBuybackHook = buybackHookPayloads.length != 0;
 
         // Cache any other pay hooks to use.
-        JBPayHookPayload[] memory storedPayHooks = _payHooksOf[data.projectId];
+        JBPayHookPayload[] memory storedPayHookPayloads = _payHookPayloadsOf[data.projectId];
 
         // Keep a reference to the number of pay hooks;
-        uint256 numberOfStoredPayHooks = storedPayHooks.length;
+        uint256 numberOfStoredPayHookPayloads = storedPayHookPayloads.length;
 
         // Each delegate allocation must run, plus the buyback hook if provided.
-        payHooks = new JBPayHookPayload[](numberOfStoredPayHooks + (usesBuybackHook ? 1 : 0));
+        hookPayloads = new JBPayHookPayload[](numberOfStoredPayHookPayloads + (usesBuybackHook ? 1 : 0));
 
         // Add the other expected pay hooks.
-        for (uint256 i; i < numberOfStoredPayHooks; i++) {
-            payHooks[i] = storedPayHooks[i];
+        for (uint256 i; i < numberOfStoredPayHookPayloads; i++) {
+            hookPayloads[i] = storedPayHookPayloads[i];
         }
 
         // Add the buyback hook as the last element.
-        if (usesBuybackHook) payHooks[numberOfStoredPayHooks] = buybackHooks[0];
+        if (usesBuybackHook) hookPayloads[numberOfStoredPayHookPayloads] = buybackHookPayloads[0];
     }
 
     /// @notice This function is never called, it needs to be included to adhere to the interface.
@@ -175,19 +175,19 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
         }
 
         // Store the pay hooks.
-        _storeHooksOf(revnetId, payHooks);
+        _storeHookPayloadsOf(revnetId, payHooks);
     }
 
     /// @notice Stores pay hooks for the provided revnet.
     /// @param revnetId The ID of the revnet to which the pay hooks apply.
-    /// @param payHooks The pay hooks to store.
-    function _storeHooksOf(uint256 revnetId, JBPayHookPayload[] memory payHooks) internal {
+    /// @param payHookPayloads The pay hooks to store.
+    function _storeHookPayloadsOf(uint256 revnetId, JBPayHookPayload[] memory payHookPayloads) internal {
         // Keep a reference to the number of pay hooks are being stored.
-        uint256 numberOfPayHooks = payHooks.length;
+        uint256 numberOfPayHookPaylods = payHookPayloads.length;
 
         // Store the pay hooks.
-        for (uint256 i; i < numberOfPayHooks; i++) {
-            _payHooksOf[revnetId][i] = payHooks[i];
+        for (uint256 i; i < numberOfPayHookPaylods; i++) {
+            _payHookPayloadsOf[revnetId][i] = payHookPayloads[i];
         }
     }
 }
