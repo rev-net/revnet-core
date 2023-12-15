@@ -2,29 +2,29 @@
 pragma solidity ^0.8.20;
 
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import { IJBTerminal } from "@jbx-protocol/juice-contracts-v4/contracts/interfaces/IJBTerminal.sol";
-import { IJBController } from "@jbx-protocol/juice-contracts-v4/contracts/interfaces/IJBController.sol";
+import { IJBTerminal } from "@juicebox/src/interfaces/terminal/IJBTerminal.sol";
+import { IJBController } from "@juicebox/src/interfaces/IJBController.sol";
 import { IJBMultiTerminal } from
-    "@jbx-protocol/juice-contracts-v4/contracts/interfaces/IJBMultiTerminal.sol";
-import { IJBRulesetApprovalHook } from "@jbx-protocol/juice-contracts-v4/contracts/interfaces/IJBRulesetApprovalHook.sol";
-import { IJBPermissioned } from "@jbx-protocol/juice-contracts-v4/contracts/interfaces/IJBPermissioned.sol";
-import { IJBSplitHook } from "@jbx-protocol/juice-contracts-v4/contracts/interfaces/IJBSplitHook.sol";
-import { IJBToken } from "@jbx-protocol/juice-contracts-v4/contracts/interfaces/IJBToken.sol";
-import { JBPermissions } from "@jbx-protocol/juice-contracts-v4/contracts/libraries/JBPermissions.sol";
-import { JBConstants } from "@jbx-protocol/juice-contracts-v4/contracts/libraries/JBConstants.sol";
-import { JBSplitGroupIds } from "@jbx-protocol/juice-contracts-v4/contracts/libraries/JBSplitGroupIds.sol";
-import { JBRulesetData } from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBRulesetData.sol";
-import { JBRulesetMetadata } from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBRulesetMetadata.sol";
-import { JBRuleset } from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBRuleset.sol";
-import {JBTerminalConfig} from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBTerminalConfig.sol";
-import { JBGroupedSplits } from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBGroupedSplits.sol";
-import { JBSplit } from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBSplit.sol";
-import { JBPermissionsData } from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBPermissionsData.sol";
-import { JBFundAccessLimitGroup } from "@jbx-protocol/juice-contracts-v4/contracts/structs/JBFundAccessLimitGroup.sol";
-import { IJBGenericBuybackDelegate } from
-    "@jbx-protocol/juice-buyback-delegate/contracts/interfaces/IJBGenericBuybackDelegate.sol";
-import { JBBuybackDelegateOperations } from
-    "@jbx-protocol/juice-buyback-delegate/contracts/libraries/JBBuybackDelegateOperations.sol";
+    "@juicebox/src/interfaces/terminal/IJBMultiTerminal.sol";
+import { IJBRulesetApprovalHook } from "@juicebox/src/interfaces/IJBRulesetApprovalHook.sol";
+import { IJBPermissioned } from "@juicebox/src/interfaces/IJBPermissioned.sol";
+import { IJBSplitHook } from "@juicebox/src/interfaces/IJBSplitHook.sol";
+import { IJBToken } from "@juicebox/src/interfaces/IJBToken.sol";
+import { JBPermissionIds } from "@juicebox/src/libraries/JBPermissionIds.sol";
+import { JBConstants } from "@juicebox/src/libraries/JBConstants.sol";
+import { JBSplitGroupIds } from "@juicebox/src/libraries/JBSplitGroupIds.sol";
+import { JBRulesetData } from "@juicebox/src/structs/JBRulesetData.sol";
+import { JBRulesetMetadata } from "@juicebox/src/structs/JBRulesetMetadata.sol";
+import { JBRuleset } from "@juicebox/src/structs/JBRuleset.sol";
+import {JBTerminalConfig} from "@juicebox/src/structs/JBTerminalConfig.sol";
+import { JBSplitGroup } from "@juicebox/src/structs/JBSplitGroup.sol";
+import { JBSplit } from "@juicebox/src/structs/JBSplit.sol";
+import { JBPermissionsData } from "@juicebox/src/structs/JBPermissionsData.sol";
+import { JBFundAccessLimitGroup } from "@juicebox/src/structs/JBFundAccessLimitGroup.sol";
+import { IJBGenericBuybackHook } from
+    "@juice-buyback-hook/contracts/interfaces/IJBGenericBuybackHook.sol";
+import { JBBuybackHookOperations } from
+    "@juice-buyback-hook/contracts/libraries/JBBuybackHookOperations.sol";
 
 /// @custom:member rate The percentage of newly issued tokens that should be reserved for the _boostOperator, out of
 /// 10_000 (JBConstants.MAX_RESERVED_RATE).

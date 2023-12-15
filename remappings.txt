@@ -1,3 +1,4 @@
-@jbx-protocol/=node_modules/@jbx-protocol/
-@openzeppelin/=node_modules/@openzeppelin/
+@juicebox/=lib/juice-contracts-v4/
+@juice-buyback-hook/=lib/juice-buyback/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
 forge-std/=lib/forge-std/src/
