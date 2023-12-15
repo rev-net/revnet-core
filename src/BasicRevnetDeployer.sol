@@ -2,25 +2,26 @@
 pragma solidity ^0.8.20;
 
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import { IJBTerminal } from "lib/juice-contracts-v4/src/interfaces/terminal/IJBTerminal.sol";
-import { IJBController } from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
+import { IJBTerminal } from "@juice/interfaces/terminal/IJBTerminal.sol";
+import { IJBController } from "@juice/interfaces/IJBController.sol";
 import { IJBMultiTerminal } from
-    "lib/juice-contracts-v4/src/interfaces/terminal/IJBMultiTerminal.sol";
-import { IJBRulesetApprovalHook } from "lib/juice-contracts-v4/src/interfaces/IJBRulesetApprovalHook.sol";
-import { IJBPermissioned } from "lib/juice-contracts-v4/src/interfaces/IJBPermissioned.sol";
-import { IJBSplitHook } from "lib/juice-contracts-v4/src/interfaces/IJBSplitHook.sol";
-import { IJBToken } from "lib/juice-contracts-v4/src/interfaces/IJBToken.sol";
-import { JBPermissionIds } from "lib/juice-contracts-v4/src/libraries/JBPermissionIds.sol";
-import { JBConstants } from "lib/juice-contracts-v4/src/libraries/JBConstants.sol";
-import { JBSplitGroupIds } from "lib/juice-contracts-v4/src/libraries/JBSplitGroupIds.sol";
-import { JBRulesetData } from "lib/juice-contracts-v4/src/structs/JBRulesetData.sol";
-import { JBRulesetMetadata } from "lib/juice-contracts-v4/src/structs/JBRulesetMetadata.sol";
-import { JBRuleset } from "lib/juice-contracts-v4/src/structs/JBRuleset.sol";
-import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalConfig.sol";
-import { JBSplitGroup } from "lib/juice-contracts-v4/src/structs/JBSplitGroup.sol";
-import { JBSplit } from "lib/juice-contracts-v4/src/structs/JBSplit.sol";
-import { JBPermissionsData } from "lib/juice-contracts-v4/src/structs/JBPermissionsData.sol";
-import { JBFundAccessLimitGroup } from "lib/juice-contracts-v4/src/structs/JBFundAccessLimitGroup.sol";
+    "@juice/interfaces/terminal/IJBMultiTerminal.sol";
+import { IJBRulesetApprovalHook } from "@juice/interfaces/IJBRulesetApprovalHook.sol";
+import { IJBPermissioned } from "@juice/interfaces/IJBPermissioned.sol";
+import { IJBSplitHook } from "@juice/interfaces/IJBSplitHook.sol";
+import { IJBToken } from "@juice/interfaces/IJBToken.sol";
+import { JBPermissionIds } from "@juice/libraries/JBPermissionIds.sol";
+import { JBConstants } from "@juice/libraries/JBConstants.sol";
+import { JBSplitGroupIds } from "@juice/libraries/JBSplitGroupIds.sol";
+import { JBRulesetData } from "@juice/structs/JBRulesetData.sol";
+import { JBRulesetMetadata } from "@juice/structs/JBRulesetMetadata.sol";
+import { JBRuleset } from "@juice/structs/JBRuleset.sol";
+import {JBRulesetConfig} from "@juice/structs/JBRulesetConfig.sol";
+import {JBTerminalConfig} from "@juice/structs/JBTerminalConfig.sol";
+import { JBSplitGroup } from "@juice/structs/JBSplitGroup.sol";
+import { JBSplit } from "@juice/structs/JBSplit.sol";
+import { JBPermissionsData } from "@juice/structs/JBPermissionsData.sol";
+import { JBFundAccessLimitGroup } from "@juice/structs/JBFundAccessLimitGroup.sol";
 import { IJBBuybackHook } from
     "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
 import { JBBuybackHookPermissionIds } from
@@ -50,7 +51,7 @@ struct BuybackPool {
 /// @custom:member hook The buyback hook to use.
 /// @custom:member pools The pools to setup on the given buyback contract.
 struct BuybackHookSetupData {
-    IJBGenericBuybackDelegate hook;
+    IJBBuybackHook hook;
     BuybackPool[] pools;
 }
 
@@ -122,61 +123,65 @@ contract BasicRevnetDeployer is IERC721Receiver {
     /// @param _controller The controller that revnets are made from.
     constructor(IJBController _controller) {
         controller = _controller;
-        boostOperatorPermissionIndexes.push(JBPermissions.SET_SPLITS);
-        boostOperatorPermissionIndexes.push(JBBuybackDelegateOperations.SET_POOL_PARAMS);
+        boostOperatorPermissionIndexes.push(JBPermissionIds.SET_SPLITS);
+        boostOperatorPermissionIndexes.push(JBBuybackHookPermissionIds.SET_POOL_PARAMS);
     }
 
     /// @notice Deploy a basic revnet.
-    /// @param _boostOperator The address that will receive the token premint and initial boost, and who is
+    /// @param boostOperator The address that will receive the token premint and initial boost, and who is
     /// allowed to change the boost recipients. Only the boost operator can replace itself after deployment.
-    /// @param _revnetMetadata The metadata containing revnet's info.
-    /// @param _name The name of the ERC-20 token being create for the revnet.
-    /// @param _symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param _revnetData The data needed to deploy a basic revnet.
-    /// @param _terminals The terminals that the network uses to accept payments through.
-    /// @param _buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price
+    /// @param revnetMetadata The metadata containing revnet's info.
+    /// @param name The name of the ERC-20 token being create for the revnet.
+    /// @param symbol The symbol of the ERC-20 token being created for the revnet.
+    /// @param revnetData The data needed to deploy a basic revnet.
+    /// @param terminalConfigurations The terminals that the network uses to accept payments through.
+    /// @param buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price
     /// for new participants.
     /// @return revnetId The ID of the newly created revnet.
     function deployRevnetFor(
-        address _boostOperator,
-        string memory _revnetMetadata,
-        string memory _name,
-        string memory _symbol,
-        RevnetParams memory _revnetData,
+        address boostOperator,
+        string memory revnetMetadata,
+        string memory name,
+        string memory symbol,
+        RevnetParams memory revnetData,
         JBTerminalConfig[] memory terminalConfigurations,
-        BuybackHookSetupData memory _buybackHookSetupData
+        BuybackHookSetupData memory buybackHookSetupData
     )
         public
         returns (uint256 revnetId)
     {
         // Make the boost allocation.
-        JBGroupedSplits[] memory _groupedSplits = _makeBoostSplitGroupWith(_boostOperator);
+        JBSplitGroup[] memory groupedSplits = _makeBoostSplitGroupWith(boostOperator);
 
         // Deploy a juicebox for the revnet.
-        revnetId = controller.projects().createFor({
-            owner: address(this), // This contract should remain the owner, forever.
-            metadata: _revnetMetadata
+        revnetId = controller.PROJECTS().createFor({
+            owner: address(this)
+        });
+
+        controller.setMetadataOf({
+            projectId: revnetId,
+            metadata: revnetMetadata
         });
 
         // Issue the network's ERC-20 token.
-        controller.deployERC20For({ projectId: revnetId, name: _name, symbol: _symbol });
+        controller.deployERC20For({ projectId: revnetId, name: name, symbol: symbol });
 
         // Setup the buyback hook.
-        _setupBuybackHookOf(revnetId, _buybackHookSetupData);
+        _setupBuybackHookOf(revnetId, buybackHookSetupData);
 
         // Package up the ruleset configuration.
         JBRulesetConfig[] memory rulesetConfigurations = new JBRulesetConfig[](1);
-        rulesetConfigurations[0].mustStartAtOrAfter = _revnetData.boosts.length == 0 ? 0 : _revnetData.boosts[0].startsAtOrAfter;
+        rulesetConfigurations[0].mustStartAtOrAfter = revnetData.boosts.length == 0 ? 0 : revnetData.boosts[0].startsAtOrAfter;
         rulesetConfigurations[0].data = JBRulesetData({
-                duration: _revnetData.priceCeilingIncreaseFrequency,
-                weight: _revnetData.initialIssuanceRate * 10 ** 18,
-                decayRate: _revnetData.priceCeilingIncreasePercentage,
+                duration: revnetData.priceCeilingIncreaseFrequency,
+                weight: revnetData.initialIssuanceRate * 10 ** 18,
+                decayRate: revnetData.priceCeilingIncreasePercentage,
                 hook: IJBRulesetApprovalHook(address(0))
             });
         rulesetConfigurations[0].metadata = JBRulesetMetadata({
-                reservedRate: _revnetData.boosts.length == 0 ? 0 : _revnetData.boosts[0].rate, // Set the reserved rate
+                reservedRate: revnetData.boosts.length == 0 ? 0 : revnetData.boosts[0].rate, // Set the reserved rate
                     // that'll model the boost periods.
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - _revnetData.priceFloorTaxIntensity, // Set the redemption
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - revnetData.priceFloorTaxIntensity, // Set the redemption
                     // rate.
                 baseCurrency: 0,
                 pausePay: false,
@@ -190,11 +195,11 @@ contract BasicRevnetDeployer is IERC721Receiver {
                 useTotalSurplusForRedemptions: false,
                 useDataHookForPay: true, // Use the buyback delegate data source.
                 useDataHookForRedeem: false,
-                dataSource: address(_buybackHookSetupData.hook),
+                dataHook: address(buybackHookSetupData.hook),
                 metadata: 0
             });
 
-        rulesetConfigurations[0].splitGroups = _groupedSplits;
+        rulesetConfigurations[0].splitGroups = groupedSplits;
         rulesetConfigurations[0].fundAccessLimitGroups =  new JBFundAccessLimitGroup[](0);
 
         // Configure the revnet's cycles using BBD.
@@ -206,26 +211,27 @@ contract BasicRevnetDeployer is IERC721Receiver {
         });
 
         // Premint tokens to the boost operator if needed.
-        if (_revnetData.premintTokenAmount > 0)
+        if (revnetData.premintTokenAmount > 0)
             controller.mintTokensOf({
                 projectId: revnetId,
-                tokenCount: _revnetData.premintTokenAmount * 10 ** 18,
-                beneficiary: _boostOperator,
-                memo: string.concat("$", _symbol, " preminted"),
+                tokenCount: revnetData.premintTokenAmount * 10 ** 18,
+                beneficiary: boostOperator,
+                memo: string.concat("$", symbol, " preminted"),
                 useReservedRate: false
             });
 
         // Give the boost operator permission to change the boost recipients.
-        IJBPermissioned(address(controller.SPLITS())).PERMISSIONS().setPermissions(
-            JBPermissionsData({
-                operator: _boostOperator,
-                domain: revnetId,
-                permissionIndexes: boostOperatorPermissionIndexes
+        IJBPermissioned(address(controller.SPLITS())).PERMISSIONS().setPermissionsFor({
+            account: address(this),
+            permissionsData: JBPermissionsData({
+                operator: boostOperator,
+                projectId: revnetId,
+                permissionIds: boostOperatorPermissionIndexes
             })
-        );
+        });
 
         // Store the boost periods so they can be queued via calls to `scheduleNextBoostPeriodOf(...)`.
-        _storeBoostsOf(revnetId, _revnetData.boosts);
+        _storeBoostsOf(revnetId, revnetData.boosts);
     }
 
     // /// @notice Schedules the next boost specified when the revnet was deployed.
@@ -306,7 +312,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
         _operator;
 
         // Make sure the 721 received is the JBProjects contract.
-        if (msg.sender != address(controller.projects())) revert();
+        if (msg.sender != address(controller.PROJECTS())) revert();
         // Make sure the 721 is being received as a mint.
         if (_from != address(0)) revert();
         return IERC721Receiver.onERC721Received.selector;
