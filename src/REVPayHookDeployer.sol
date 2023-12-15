@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol"; 
+import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import {ERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {IJBController} from "@juice/interfaces/IJBController.sol";
 import {IJBRulesetApprovalHook} from "@juice/interfaces/IJBRulesetApprovalHook.sol";
 import {IJBPermissioned} from "@juice/interfaces/IJBPermissioned.sol";
-import {IJBRulesetDataHook} from '@juice/interfaces/IJBRulesetDataHook.sol';
+import {IJBRulesetDataHook} from "@juice/interfaces/IJBRulesetDataHook.sol";
 import {IJBSplitHook} from "@juice/interfaces/IJBSplitHook.sol";
 import {IJBToken} from "@juice/interfaces/IJBToken.sol";
 import {JBPermissionIds} from "@juice/libraries/JBPermissionIds.sol";
 import {JBConstants} from "@juice/libraries/JBConstants.sol";
 import {JBSplitGroupIds} from "@juice/libraries/JBSplitGroupIds.sol";
 import {JBRulesetData} from "@juice/structs/JBRulesetData.sol";
-import {JBRedeemParamsData} from '@juice/structs/JBRedeemParamsData.sol';
-import {JBPayParamsData} from '@juice/structs/JBPayParamsData.sol';
+import {JBRedeemParamsData} from "@juice/structs/JBRedeemParamsData.sol";
+import {JBPayParamsData} from "@juice/structs/JBPayParamsData.sol";
 import {JBRulesetMetadata} from "@juice/structs/JBRulesetMetadata.sol";
-import {JBRedeemHookPayload} from '@juice/structs/JBRedeemHookPayload.sol';
-import {JBPayHookPayload} from '@juice/structs/JBPayHookPayload.sol';
+import {JBRedeemHookPayload} from "@juice/structs/JBRedeemHookPayload.sol";
+import {JBPayHookPayload} from "@juice/structs/JBPayHookPayload.sol";
 import {JBRuleset} from "@juice/structs/JBRuleset.sol";
 import {JBRulesetConfig} from "@juice/structs/JBRulesetConfig.sol";
 import {JBTerminalConfig} from "@juice/structs/JBTerminalConfig.sol";
@@ -28,27 +28,26 @@ import {JBPermissionsData} from "@juice/structs/JBPermissionsData.sol";
 import {JBFundAccessLimitGroup} from "@juice/structs/JBFundAccessLimitGroup.sol";
 import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
 import {JBBuybackHookPermissionIds} from "lib/juice-buyback/src/libraries/JBBuybackHookPermissionIds.sol";
-import {IREVBasicDeployer} from './interfaces/IREVBasicDeployer.sol';
-import {REVDeployParams} from './structs/REVDeployParams.sol';
-import {REVBuybackHookSetupData} from './structs/REVBuybackHookSetupData.sol';
-import {REVBuybackPoolData} from './structs/REVBuybackPoolData.sol';
-import {REVBasicDeployer} from './REVBasicDeployer.sol';
+import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
+import {REVDeployParams} from "./structs/REVDeployParams.sol";
+import {REVBuybackHookSetupData} from "./structs/REVBuybackHookSetupData.sol";
+import {REVBuybackPoolData} from "./structs/REVBuybackPoolData.sol";
+import {REVBasicDeployer} from "./REVBasicDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also calls other hooks when paid.
 contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
     /// @notice The data hook that returns the correct values for the buyback hook of each network.
     /// @custom:param revnetId The ID of the revnet to which the buyback contract applies.
-    mapping(uint256 => IJBBuybackHook) public buybackHookOf;
+    mapping(uint256 revnetId => IJBBuybackHook buybackHook) public buybackHookOf;
 
     /// @notice The pay hooks to include during payments to networks.
     /// @custom:param revnetId The ID of the revnet to which the extensions apply.
-    mapping(uint256 => JBPayHookPayload[]) public _payHooksOf;
+    mapping(uint256 revnetId => JBPayHookPayload[] payHooks) public _payHooksOf;
 
     /// @notice The permissions that the provided buyback hook should be granted since it wont be used as the data
     /// source.
     /// This is set once in the constructor to contain only the MINT operation.
     uint256[] private _BUYBACK_HOOK_PERMISSION_IDS;
-
 
     /// @notice The pay hooks to include during payments to networks.
     /// @param revnetId The ID of the revnet to which the extensions apply.
@@ -158,16 +157,17 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
         public
         returns (uint256 revnetId)
     {
-        revnetId = super.deployRevnetFor(boostOperator, revnetMetadata, name, symbol, deployData, terminalConfigurations, buybackHookSetupData);
+        revnetId = super.deployRevnetFor(
+            boostOperator, revnetMetadata, name, symbol, deployData, terminalConfigurations, buybackHookSetupData
+        );
 
         // Give the buyback hook permission to mint on this contract's behald if it doesn't yet have it.
         if (
             !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
-            
-               operator: address(buybackHookSetupData.hook), 
-               account: address(this), 
-               projectId: 0, 
-               permissionIds: _BUYBACK_HOOK_PERMISSION_IDS
+                operator: address(buybackHookSetupData.hook),
+                account: address(this),
+                projectId: 0,
+                permissionIds: _BUYBACK_HOOK_PERMISSION_IDS
             })
         ) {
             IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
@@ -177,29 +177,28 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
                     projectId: 0,
                     permissionIds: _BUYBACK_HOOK_PERMISSION_IDS
                 })
-            }
-            );
+            });
         }
 
         // Store the pay hooks.
         _storeHooksOf(revnetId, payHooks);
     }
 
-   /// @notice The address that will receive each boost allocation.
+    /// @notice The address that will receive each boost allocation.
     /// @notice Schedules the initial ruleset for the revnet, and queues all subsequent rulesets that define the boost
     /// periods.
     /// @notice deployData The data that defines the revnet's characteristics.
-    /// @notice dataHook The address of the data hook.
     function _makeRulesetConfigurations(
         REVDeployParams memory deployData,
-        address dataHook
+        address 
     )
-        internal 
-        override
+        internal
         pure
+        override
         returns (JBRulesetConfig[] memory rulesetConfigurations)
     {
-        super._makeRulesetConfigurations(deployData, address(this));
+        // Use this contract as the data hook.
+        super._makeRulesetConfigurations({ deployData: deployData, dataHook: address(this) });
     }
 
     /// @notice Stores pay hooks for the provided revnet.

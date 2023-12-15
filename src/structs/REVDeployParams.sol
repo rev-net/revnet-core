@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {REVBoost} from './REVBoost.sol';
+import {REVBoost} from "./REVBoost.sol";
 
 /// @custom:member baseCurrency The currency that the issuance is based on.
 /// @custom:member initialIssuanceRate The number of tokens that should be minted initially per 1 unit of the base

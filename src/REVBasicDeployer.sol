@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol"; 
+import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import {ERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {IJBController} from "@juice/interfaces/IJBController.sol";
@@ -23,10 +23,10 @@ import {JBPermissionsData} from "@juice/structs/JBPermissionsData.sol";
 import {JBFundAccessLimitGroup} from "@juice/structs/JBFundAccessLimitGroup.sol";
 import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
 import {JBBuybackHookPermissionIds} from "lib/juice-buyback/src/libraries/JBBuybackHookPermissionIds.sol";
-import {IREVBasicDeployer} from './interfaces/IREVBasicDeployer.sol';
-import {REVDeployParams} from './structs/REVDeployParams.sol';
-import {REVBuybackHookSetupData} from './structs/REVBuybackHookSetupData.sol';
-import {REVBuybackPoolData} from './structs/REVBuybackPoolData.sol';
+import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
+import {REVDeployParams} from "./structs/REVDeployParams.sol";
+import {REVBuybackHookSetupData} from "./structs/REVBuybackHookSetupData.sol";
+import {REVBuybackPoolData} from "./structs/REVBuybackPoolData.sol";
 
 /// @notice A contract that facilitates deploying a basic Revnet.
 contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
@@ -37,14 +37,15 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
 
     /// @notice The permissions that the provided _boostOperator should be granted. This is set once in the constructor
     /// to contain only the SET_SPLITS operation.
-    uint256[] internal  _BOOST_OPERATOR_PERMISSIONS_INDEXES;
+    uint256[] internal _BOOST_OPERATOR_PERMISSIONS_INDEXES;
 
     /// @notice Indicates if this contract adheres to the specified interface.
     /// @dev See {IERC165-supportsInterface}.
     /// @param _interfaceId The ID of the interface to check for adherence to.
     /// @return A flag indicating if the provided interface ID is supported.
-    function supportsInterface(bytes4 _interfaceId) override public view virtual returns (bool) {
-        return _interfaceId == type(IREVBasicDeployer).interfaceId || _interfaceId == type(IERC721Receiver).interfaceId || super.supportsInterface(_interfaceId);
+    function supportsInterface(bytes4 _interfaceId) public view virtual override returns (bool) {
+        return _interfaceId == type(IREVBasicDeployer).interfaceId || _interfaceId == type(IERC721Receiver).interfaceId
+            || super.supportsInterface(_interfaceId);
     }
 
     /// @param controller The controller that revnets are made from.
@@ -139,9 +140,9 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         REVDeployParams memory deployData,
         address dataHook
     )
-        internal 
-        virtual
+        internal
         pure
+        virtual
         returns (JBRulesetConfig[] memory rulesetConfigurations)
     {
         // Keep a reference to the number of boost periods to schedule.
