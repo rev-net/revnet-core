@@ -78,6 +78,47 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         public
         returns (uint256 revnetId)
     {
+        return _deployRevnetFor({
+            boostOperator: boostOperator,
+            revnetMetadata: revnetMetadata,
+            name: name,
+            symbol: symbol,
+            deployData: deployData,
+            terminalConfigurations: terminalConfigurations,
+            buybackHookSetupData: buybackHookSetupData,
+            dataHook: buybackHookSetupData.hook,
+            extraHookMetadata: 0
+        });
+    }
+
+    /// @notice Deploys a revnet with the specified hook information.
+    /// @param boostOperator The address that will receive the token premint and initial boost, and who is
+    /// allowed to change the boost recipients. Only the boost operator can replace itself after deployment.
+    /// @param revnetMetadata The metadata containing revnet's info.
+    /// @param name The name of the ERC-20 token being create for the revnet.
+    /// @param symbol The symbol of the ERC-20 token being created for the revnet.
+    /// @param deployData The data needed to deploy a basic revnet.
+    /// @param terminalConfigurations The terminals that the network uses to accept payments through.
+    /// @param buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price
+    /// for new participants.
+    /// @param dataHook The address of the data hook.
+    /// @param extraHookMetadata Extra info to send to the hook.
+    /// @return revnetId The ID of the newly created revnet.
+    function _deployRevnetFor(
+        address boostOperator,
+        string memory revnetMetadata,
+        string memory name,
+        string memory symbol,
+        REVDeployParams memory deployData,
+        JBTerminalConfig[] memory terminalConfigurations,
+        REVBuybackHookSetupData memory buybackHookSetupData,
+        IJBBuybackHook dataHook,
+        uint256 extraHookMetadata
+    )
+        internal
+        virtual
+        returns (uint256 revnetId)
+    {
         // Deploy a juicebox for the revnet.
         revnetId = CONTROLLER.PROJECTS().createFor({owner: address(this)});
 
@@ -90,14 +131,10 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         // Setup the buyback hook.
         _setupBuybackHookOf(revnetId, buybackHookSetupData);
 
-        // Package up the ruleset configuration.
-        JBRulesetConfig[] memory rulesetConfigurations =
-            _makeRulesetConfigurations({deployData: deployData, dataHook: address(buybackHookSetupData.hook)});
-
         // Configure the revnet's rulesets using BBD.
         CONTROLLER.launchRulesetsFor({
             projectId: revnetId,
-            rulesetConfigurations: rulesetConfigurations,
+            rulesetConfigurations: _makeRulesetConfigurations(deployData, address(dataHook), extraHookMetadata),
             terminalConfigurations: terminalConfigurations,
             memo: string.concat("$", symbol, "  deployed")
         });
@@ -106,7 +143,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         CONTROLLER.SPLITS().setSplitGroupsOf({
             projectId: revnetId,
             rulesetId: 0,
-            splitGroups: _makeBoostSplitGroupWith(boostOperator)
+            groups: _makeBoostSplitGroupWith(boostOperator)
         });
 
         // Premint tokens to the boost operator if needed.
@@ -136,9 +173,11 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     /// periods.
     /// @notice deployData The data that defines the revnet's characteristics.
     /// @notice dataHook The address of the data hook.
+    /// @notice extraMetadata Extra info to send to the hook.
     function _makeRulesetConfigurations(
         REVDeployParams memory deployData,
-        address dataHook
+        address dataHook,
+        uint256 extraMetadataData
     )
         internal
         pure
@@ -178,7 +217,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
                 useDataHookForPay: true, // Use the buyback hook data source.
                 useDataHookForRedeem: false,
                 dataHook: dataHook,
-                metadata: 0
+                metadata: extraMetadataData
             });
 
             rulesetConfigurations[0].fundAccessLimitGroups = new JBFundAccessLimitGroup[](0);
