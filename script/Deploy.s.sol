@@ -3,12 +3,12 @@ pragma solidity ^0.8.20;
 
 import "lib/forge-std/src/Script.sol";
 
-import {IJBController, BasicRevnetDeployer, IJBBuybackHook} from "./../src/BasicRevnetDeployer.sol";
+import {IJBController, REVBasicDeployer, IJBBuybackHook} from "./../src/REVBasicDeployer.sol";
 
 contract Deploy is Script {
     function _run(IJBController controller) internal {
         vm.broadcast();
-        new BasicRevnetDeployer(controller);
+        new REVBasicDeployer(controller);
     }
 }
 

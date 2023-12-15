@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol"; 
+import {ERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {IJBController} from "@juice/interfaces/IJBController.sol";
 import {IJBRulesetApprovalHook} from "@juice/interfaces/IJBRulesetApprovalHook.sol";
@@ -21,69 +23,13 @@ import {JBPermissionsData} from "@juice/structs/JBPermissionsData.sol";
 import {JBFundAccessLimitGroup} from "@juice/structs/JBFundAccessLimitGroup.sol";
 import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
 import {JBBuybackHookPermissionIds} from "lib/juice-buyback/src/libraries/JBBuybackHookPermissionIds.sol";
-
-/// @custom:member rate The percentage of newly issued tokens that should be reserved for the _boostOperator, out of
-/// 10_000 (JBConstants.MAX_RESERVED_RATE).
-/// @custom:member startsAtOrAfter The timestamp to start a boost at the given rate at or after.
-struct Boost {
-    uint128 rate;
-    uint128 startsAtOrAfter;
-}
-
-/// @custom:member token The token to setup a pool for.
-/// @custom:member poolFee The fee of the pool in which swaps occur when seeking the best price for a new participant.
-/// This incentivizes liquidity providers. Out of 1_000_000. A common value is 1%, or 10_000. Other passible values are
-/// 0.3% and 0.1%.
-/// @custom:member twapWindow The time window to take into account when quoting a price based on TWAP.
-/// @custom:member twapSlippageTolerance The pricetolerance to accept when quoting a price based on TWAP.
-struct BuybackPool {
-    address token;
-    uint24 fee;
-    uint32 twapWindow;
-    uint32 twapSlippageTolerance;
-}
-
-/// @custom:member hook The buyback hook to use.
-/// @custom:member pools The pools to setup on the given buyback contract.
-struct BuybackHookSetupData {
-    IJBBuybackHook hook;
-    BuybackPool[] pools;
-}
-
-/// @custom:member baseCurrency The currency that the issuance is based on.
-/// @custom:member initialIssuanceRate The number of tokens that should be minted initially per 1 unit of the base
-/// currency contributed to the revnet. This should _not_ be specified as a fixed point number with 18 decimals, this
-/// will be applied internally.
-/// @custom:member premintTokenAmount The number of tokens that should be preminted to the _boostOperator. This should
-/// _not_
-/// be specified as a fixed point number with 18 decimals, this will be applied internally.
-/// @custom:member priceCeilingIncreaseFrequency The number of seconds between applied price ceiling increases. This
-/// should be at least
-/// 24 hours.
-/// @custom:member priceCeilingIncreasePercentage The rate at which the price ceiling should increase over time, thus
-/// decreasing the rate of issuance. This percentage is out
-/// of 1_000_000_000 (JBConstants.MAX_DISCOUNT_RATE). 0% corresponds to no price ceiling increase, everyone is treated
-/// equally over time.
-/// @custom:member priceFloorTaxIntensity The factor determining how much each token can reclaim from the revnet once
-/// redeemed.
-/// This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no floor tax when
-/// redemptions are made, everyone's redemptions are treated equally. The higher the intensity, the higher the tax.
-/// @custom:member boosts The periods of distinguished boosting that should be applied over time.
-struct RevnetParams {
-    uint256 baseCurrency;
-    uint256 initialIssuanceRate;
-    uint256 premintTokenAmount;
-    uint256 priceCeilingIncreaseFrequency;
-    uint256 priceCeilingIncreasePercentage;
-    uint256 priceFloorTaxIntensity;
-    Boost[] boosts;
-}
+import {IREVBasicDeployer} from './interfaces/IREVBasicDeployer.sol';
+import {REVDeployParams} from './structs/REVDeployParams.sol';
+import {REVBuybackHookSetupData} from './structs/REVBuybackHookSetupData.sol';
+import {REVBuybackPoolData} from './structs/REVBuybackPoolData.sol';
 
 /// @notice A contract that facilitates deploying a basic Revnet.
-contract BasicRevnetDeployer is IERC721Receiver {
-    error RECONFIGURATION_ALREADY_SCHEDULED();
-    error RECONFIGURATION_NOT_POSSIBLE();
-    error BAD_BOOST_SEQUENCE();
+contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     error UNAUTHORIZED();
 
     /// @notice The controller that networks are made from.
@@ -91,21 +37,21 @@ contract BasicRevnetDeployer is IERC721Receiver {
 
     /// @notice The permissions that the provided _boostOperator should be granted. This is set once in the constructor
     /// to contain only the SET_SPLITS operation.
-    uint256[] public boostOperatorPermissionIndexes;
+    uint256[] internal  _BOOST_OPERATOR_PERMISSIONS_INDEXES;
 
     /// @notice Indicates if this contract adheres to the specified interface.
     /// @dev See {IERC165-supportsInterface}.
     /// @param _interfaceId The ID of the interface to check for adherence to.
     /// @return A flag indicating if the provided interface ID is supported.
-    function supportsInterface(bytes4 _interfaceId) public view virtual returns (bool) {
-        return _interfaceId == type(IERC721Receiver).interfaceId;
+    function supportsInterface(bytes4 _interfaceId) override public view virtual returns (bool) {
+        return _interfaceId == type(IREVBasicDeployer).interfaceId || _interfaceId == type(IERC721Receiver).interfaceId || super.supportsInterface(_interfaceId);
     }
 
     /// @param controller The controller that revnets are made from.
     constructor(IJBController controller) {
         CONTROLLER = controller;
-        boostOperatorPermissionIndexes.push(JBPermissionIds.SET_SPLITS);
-        boostOperatorPermissionIndexes.push(JBBuybackHookPermissionIds.SET_POOL_PARAMS);
+        _BOOST_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
+        _BOOST_OPERATOR_PERMISSIONS_INDEXES.push(JBBuybackHookPermissionIds.SET_POOL_PARAMS);
     }
 
     /// @notice Deploy a basic revnet.
@@ -114,7 +60,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
     /// @param revnetMetadata The metadata containing revnet's info.
     /// @param name The name of the ERC-20 token being create for the revnet.
     /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param revnetData The data needed to deploy a basic revnet.
+    /// @param deployData The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price
     /// for new participants.
@@ -124,9 +70,9 @@ contract BasicRevnetDeployer is IERC721Receiver {
         string memory revnetMetadata,
         string memory name,
         string memory symbol,
-        RevnetParams memory revnetData,
+        REVDeployParams memory deployData,
         JBTerminalConfig[] memory terminalConfigurations,
-        BuybackHookSetupData memory buybackHookSetupData
+        REVBuybackHookSetupData memory buybackHookSetupData
     )
         public
         returns (uint256 revnetId)
@@ -145,7 +91,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
 
         // Package up the ruleset configuration.
         JBRulesetConfig[] memory rulesetConfigurations =
-            _makeRulesetConfigurations({revnetData: revnetData, dataHook: address(buybackHookSetupData.hook)});
+            _makeRulesetConfigurations({deployData: deployData, dataHook: address(buybackHookSetupData.hook)});
 
         // Configure the revnet's rulesets using BBD.
         CONTROLLER.launchRulesetsFor({
@@ -163,10 +109,10 @@ contract BasicRevnetDeployer is IERC721Receiver {
         });
 
         // Premint tokens to the boost operator if needed.
-        if (revnetData.premintTokenAmount > 0) {
+        if (deployData.premintTokenAmount > 0) {
             CONTROLLER.mintTokensOf({
                 projectId: revnetId,
-                tokenCount: revnetData.premintTokenAmount * 10 ** token.decimals(),
+                tokenCount: deployData.premintTokenAmount * 10 ** token.decimals(),
                 beneficiary: boostOperator,
                 memo: string.concat("$", symbol, " preminted"),
                 useReservedRate: false
@@ -179,7 +125,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
             permissionsData: JBPermissionsData({
                 operator: boostOperator,
                 projectId: revnetId,
-                permissionIds: boostOperatorPermissionIndexes
+                permissionIds: _BOOST_OPERATOR_PERMISSIONS_INDEXES
             })
         });
     }
@@ -187,37 +133,38 @@ contract BasicRevnetDeployer is IERC721Receiver {
     /// @notice The address that will receive each boost allocation.
     /// @notice Schedules the initial ruleset for the revnet, and queues all subsequent rulesets that define the boost
     /// periods.
-    /// @notice revnetData The data that defines the revnet's characteristics.
+    /// @notice deployData The data that defines the revnet's characteristics.
     /// @notice dataHook The address of the data hook.
     function _makeRulesetConfigurations(
-        RevnetParams memory revnetData,
+        REVDeployParams memory deployData,
         address dataHook
     )
-        private
+        internal 
+        virtual
         pure
         returns (JBRulesetConfig[] memory rulesetConfigurations)
     {
         // Keep a reference to the number of boost periods to schedule.
-        uint256 numberOfBoosts = revnetData.boosts.length;
+        uint256 numberOfBoosts = deployData.boosts.length;
 
         // Each boost is modeled as a ruleset reconfiguration.
         rulesetConfigurations = new JBRulesetConfig[](numberOfBoosts);
 
         // Loop through each boost to set up its ruleset configuration.
         for (uint256 i; i > numberOfBoosts; i++) {
-            rulesetConfigurations[i].mustStartAtOrAfter = revnetData.boosts[i].startsAtOrAfter;
+            rulesetConfigurations[i].mustStartAtOrAfter = deployData.boosts[i].startsAtOrAfter;
             rulesetConfigurations[i].data = JBRulesetData({
-                duration: revnetData.priceCeilingIncreaseFrequency,
+                duration: deployData.priceCeilingIncreaseFrequency,
                 // Set the initial issuance for the first ruleset, otherwise pass 0 to inherit from the previous
                 // ruleset.
-                weight: i == 0 ? revnetData.initialIssuanceRate * 10 ** 18 : 0,
-                decayRate: revnetData.priceCeilingIncreasePercentage,
+                weight: i == 0 ? deployData.initialIssuanceRate * 10 ** 18 : 0,
+                decayRate: deployData.priceCeilingIncreasePercentage,
                 hook: IJBRulesetApprovalHook(address(0))
             });
             rulesetConfigurations[0].metadata = JBRulesetMetadata({
-                reservedRate: revnetData.boosts[i].rate,
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - revnetData.priceFloorTaxIntensity,
-                baseCurrency: revnetData.baseCurrency,
+                reservedRate: deployData.boosts[i].rate,
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - deployData.priceFloorTaxIntensity,
+                baseCurrency: deployData.baseCurrency,
                 pausePay: false,
                 pauseCreditTransfers: false,
                 allowOwnerMinting: i == 0, // Allow this contract to premint tokens as the network owner.
@@ -294,12 +241,12 @@ contract BasicRevnetDeployer is IERC721Receiver {
     /// @param revnetId The ID of the revnet to which the buybacks should apply.
     /// @param buybackHookSetupData Data used to setup pools that'll be used to buyback tokens from if an optimal price
     /// is presented.
-    function _setupBuybackHookOf(uint256 revnetId, BuybackHookSetupData memory buybackHookSetupData) internal {
+    function _setupBuybackHookOf(uint256 revnetId, REVBuybackHookSetupData memory buybackHookSetupData) internal {
         // Get a reference to the number of pools that need setting up.
         uint256 numberOfPoolsToSetup = buybackHookSetupData.pools.length;
 
         // Keep a reference to the pool being iterated on.
-        BuybackPool memory pool;
+        REVBuybackPoolData memory pool;
 
         for (uint256 i; i < numberOfPoolsToSetup; i++) {
             // Get a reference to the pool being iterated on.
@@ -326,7 +273,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
                 operator: msg.sender,
                 account: address(this),
                 projectId: revnetId,
-                permissionIds: boostOperatorPermissionIndexes
+                permissionIds: _BOOST_OPERATOR_PERMISSIONS_INDEXES
             })
         ) revert UNAUTHORIZED();
 
@@ -342,7 +289,7 @@ contract BasicRevnetDeployer is IERC721Receiver {
             permissionsData: JBPermissionsData({
                 operator: newBoostOperator,
                 projectId: revnetId,
-                permissionIds: boostOperatorPermissionIndexes
+                permissionIds: _BOOST_OPERATOR_PERMISSIONS_INDEXES
             })
         });
     }
