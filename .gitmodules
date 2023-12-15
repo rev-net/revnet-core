@@ -1,7 +1,6 @@
 [submodule "lib/juice-contracts-v4"]
 	path = lib/juice-contracts-v4
 	url = https://github.com/Bananapus/juice-contracts-v4
-	branch = touchup/overflow
 [submodule "lib/juice-buyback"]
 	path = lib/juice-buyback
 	url = https://github.com/Bananapus/juice-buyback

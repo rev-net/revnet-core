@@ -1,26 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { IERC721Receiver } from "lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
-import { IJBTerminal } from "@juicebox/interfaces/terminal/IJBTerminal.sol";
-import { IJBController } from "lib/juicebox/interfaces/IJBController.sol";
+import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import { IJBTerminal } from "lib/juice-contracts-v4/src/interfaces/terminal/IJBTerminal.sol";
+import { IJBController } from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
 import { IJBMultiTerminal } from
-    "@juicebox/interfaces/terminal/IJBMultiTerminal.sol";
-import { IJBRulesetApprovalHook } from "@juicebox/interfaces/IJBRulesetApprovalHook.sol";
-import { IJBPermissioned } from "@juicebox/interfaces/IJBPermissioned.sol";
-import { IJBSplitHook } from "@juicebox/interfaces/IJBSplitHook.sol";
-import { IJBToken } from "@juicebox/interfaces/IJBToken.sol";
-import { JBPermissionIds } from "@juicebox/libraries/JBPermissionIds.sol";
-import { JBConstants } from "@juicebox/libraries/JBConstants.sol";
-import { JBSplitGroupIds } from "@juicebox/libraries/JBSplitGroupIds.sol";
-import { JBRulesetData } from "@juicebox/structs/JBRulesetData.sol";
-import { JBRulesetMetadata } from "@juicebox/structs/JBRulesetMetadata.sol";
-import { JBRuleset } from "@juicebox/structs/JBRuleset.sol";
-import {JBTerminalConfig} from "@juicebox/structs/JBTerminalConfig.sol";
-import { JBSplitGroup } from "@juicebox/structs/JBSplitGroup.sol";
-import { JBSplit } from "@juicebox/structs/JBSplit.sol";
-import { JBPermissionsData } from "@juicebox/structs/JBPermissionsData.sol";
-import { JBFundAccessLimitGroup } from "@juicebox/structs/JBFundAccessLimitGroup.sol";
+    "lib/juice-contracts-v4/src/interfaces/terminal/IJBMultiTerminal.sol";
+import { IJBRulesetApprovalHook } from "lib/juice-contracts-v4/src/interfaces/IJBRulesetApprovalHook.sol";
+import { IJBPermissioned } from "lib/juice-contracts-v4/src/interfaces/IJBPermissioned.sol";
+import { IJBSplitHook } from "lib/juice-contracts-v4/src/interfaces/IJBSplitHook.sol";
+import { IJBToken } from "lib/juice-contracts-v4/src/interfaces/IJBToken.sol";
+import { JBPermissionIds } from "lib/juice-contracts-v4/src/libraries/JBPermissionIds.sol";
+import { JBConstants } from "lib/juice-contracts-v4/src/libraries/JBConstants.sol";
+import { JBSplitGroupIds } from "lib/juice-contracts-v4/src/libraries/JBSplitGroupIds.sol";
+import { JBRulesetData } from "lib/juice-contracts-v4/src/structs/JBRulesetData.sol";
+import { JBRulesetMetadata } from "lib/juice-contracts-v4/src/structs/JBRulesetMetadata.sol";
+import { JBRuleset } from "lib/juice-contracts-v4/src/structs/JBRuleset.sol";
+import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalConfig.sol";
+import { JBSplitGroup } from "lib/juice-contracts-v4/src/structs/JBSplitGroup.sol";
+import { JBSplit } from "lib/juice-contracts-v4/src/structs/JBSplit.sol";
+import { JBPermissionsData } from "lib/juice-contracts-v4/src/structs/JBPermissionsData.sol";
+import { JBFundAccessLimitGroup } from "lib/juice-contracts-v4/src/structs/JBFundAccessLimitGroup.sol";
 import { IJBBuybackHook } from
     "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
 import { JBBuybackHookPermissionIds } from
