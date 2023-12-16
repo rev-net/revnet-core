@@ -226,18 +226,18 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
 
     /// @dev Make sure only mints can be received.
     function onERC721Received(
-        address _operator,
-        address _from,
-        uint256 _tokenId,
-        bytes calldata _data
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes calldata data
     )
         external
         view
         returns (bytes4)
     {
-        _data;
-        _tokenId;
-        _operator;
+        data;
+        tokenId;
+        operator;
 
         // Make sure the 721 received is the JBProjects contract.
         if (msg.sender != address(CONTROLLER.PROJECTS())) revert();
