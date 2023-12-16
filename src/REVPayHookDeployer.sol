@@ -22,11 +22,11 @@ import {REVBasicDeployer} from "./REVBasicDeployer.sol";
 contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
     /// @notice The data hook that returns the correct values for the buyback hook of each network.
     /// @custom:param revnetId The ID of the revnet to which the buyback contract applies.
-    mapping(uint256 revnetId => IJBBuybackHook buybackHook) public buybackHookOf;
+    mapping(uint256 revnetId => IJBRulesetDataHook buybackHook) public buybackHookOf;
 
     /// @notice The pay hooks to include during payments to networks.
     /// @custom:param revnetId The ID of the revnet to which the extensions apply.
-    mapping(uint256 revnetId => JBPayHookPayload[] payHooks) public _payHookPayloadsOf;
+    mapping(uint256 revnetId => JBPayHookPayload[] payHooks) private _payHookPayloadsOf;
 
     /// @notice The permissions that the provided buyback hook should be granted since it wont be used as the data
     /// source.
