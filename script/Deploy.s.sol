@@ -4,14 +4,13 @@ pragma solidity ^0.8.20;
 import "lib/forge-std/src/Script.sol";
 import "forge-std/StdJson.sol";
 
-// import {IJBController} from "@juice/interfaces/IJBController.sol";
-// import {REVBasicDeployer} from "src/REVBasicDeployer.sol";
+import {IJBController} from "@juice/interfaces/IJBController.sol";
+import {REVBasicDeployer} from "src/REVBasicDeployer.sol";
 
-abstract contract Deploy is Script {
-    function _chainName() internal virtual returns (string memory);
+contract Deploy is Script {
     function _run() internal {
         uint256 chainId = block.chainid;
-        address network;
+        string memory network;
         // Ethereun Mainnet
         if (chainId == 1) {
             network = "Ethereum";
@@ -31,7 +30,7 @@ abstract contract Deploy is Script {
         } else {
             revert("Invalid RPC / no juice contracts deployed on this network");
         }
-        address controllerAddress = IJBController(
+        IJBController controllerAddress = IJBController(
             stdJson.readAddress(
                 vm.readFile(
                     string.concat(
@@ -44,34 +43,7 @@ abstract contract Deploy is Script {
 
         // address controllerAddress = address(123);
         // emit k(controllerAddress);
-        // vm.broadcast();
-        // new REVBasicDeployer(IJBController(controllerAddress));
-    }
-}
-
-// Ethereum
-
-contract DeployEthereumMainnet is Deploy {
-    function _chainName() internal virtual override returns (string memory) {
-        return "Ethereum";
-    }
-}
-
-contract DeployEthereumSepolia is Deploy {
-    function _chainName() internal virtual override returns (string memory) {
-        return "EthereumSepolia";
-    }
-}
-// Optimism
-
-contract DeployOptimismMainnet is Deploy {
-    function _chainName() internal virtual override returns (string memory) {
-        return "Op";
-    }
-}
-
-contract DeployOptimismSepolia is Deploy {
-    function _chainName() internal virtual override returns (string memory) {
-        return "OpSepolia";
+        vm.broadcast();
+        new REVBasicDeployer(controllerAddress);
     }
 }
