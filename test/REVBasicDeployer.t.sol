@@ -3,8 +3,8 @@ pragma solidity ^0.8.23;
 
 import "forge-std/Test.sol";
 
-// import {JBTerminalConfig} from "@juice/structs/JBTerminalConfig.sol";
-// import {JBConstants} from "@juice/libraries/JBConstants.sol";
+// import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalConfig.sol";
+// import {JBConstants} from "lib/juice-contracts-v4/src/libraries/JBConstants.sol";
 // import {REVBuybackHookConfig} from "../src/structs/REVBuybackHookConfig.sol";
 // import {REVConfig} from "../src/structs/REVConfig.sol";
 // import {REVBoostConfig} from "../src/structs/REVBoostConfig.sol";
