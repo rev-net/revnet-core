@@ -1,9 +1,10 @@
-[submodule "lib/forge-std"]
-	path = lib/forge-std
-	url = https://github.com/foundry-rs/forge-std
 [submodule "lib/juice-contracts-v4"]
 	path = lib/juice-contracts-v4
 	url = https://github.com/Bananapus/juice-contracts-v4
 [submodule "lib/juice-buyback"]
 	path = lib/juice-buyback
 	url = https://github.com/Bananapus/juice-buyback
+	branch = language-updates
+[submodule "lib/forge-std"]
+	path = lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
