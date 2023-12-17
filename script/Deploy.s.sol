@@ -10,15 +10,41 @@ import "forge-std/StdJson.sol";
 abstract contract Deploy is Script {
     function _chainName() internal virtual returns (string memory);
     function _run() internal {
-        vm.broadcast();
-        // address controllerAddress = stdJson.readAddress(
-        //         vm.readFile(
-        //             string.concat("lib/juice-buyback/lib/juice-contracts-v4/deployments/", _chainName() , "/run-latest.json")
-        //         ),
-        //         ".transactions[9].contractAddress"
-        //     );
+        uint256 chainId = block.chainid;
+        address network;
+        // Ethereun Mainnet
+        if (chainId == 1) {
+            network = "Ethereum";
+            // Ethereum Sepolia
+        } else if (chainId == 11_155_111) {
+            network = "EthereumSepolia";
+            // Optimism Mainnet
+        } else if (chainId == 420) {
+            network = "Op";
+            // Optimism Sepolia
+        } else if (chainId == 11_155_420) {
+            network = "OpSepolia";
+            // Polygon Mainnet
+        // } else if (chainId == 137) {
+        //     // Polygon Mumbai
+        // } else if (chainId == 80_001) {
+        } else {
+            revert("Invalid RPC / no juice contracts deployed on this network");
+        }
+        address controllerAddress = IJBController(
+            stdJson.readAddress(
+                vm.readFile(
+                    string.concat(
+                        "lib/juice-buyback/lib/juice-contracts-v4/deployments/", network, "/run-latest.json"
+                    )
+                ),
+                ".transactions[9].contractAddress"
+            )
+        );
+
         // address controllerAddress = address(123);
         // emit k(controllerAddress);
+        // vm.broadcast();
         // new REVBasicDeployer(IJBController(controllerAddress));
     }
 }
