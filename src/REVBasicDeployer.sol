@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import {ERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
-import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC721Receiver} from "lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
 import {IJBController} from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
 import {IJBRulesetApprovalHook} from "lib/juice-contracts-v4/src/interfaces/IJBRulesetApprovalHook.sol";
 import {IJBPermissioned} from "lib/juice-contracts-v4/src/interfaces/IJBPermissioned.sol";
