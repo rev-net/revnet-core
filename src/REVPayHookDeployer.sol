@@ -14,8 +14,8 @@ import {JBRulesetConfig} from "@juice/structs/JBRulesetConfig.sol";
 import {JBTerminalConfig} from "@juice/structs/JBTerminalConfig.sol";
 import {JBPermissionsData} from "@juice/structs/JBPermissionsData.sol";
 import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
-import {REVDeployParams} from "./structs/REVDeployParams.sol";
-import {REVBuybackHookSetupData} from "./structs/REVBuybackHookSetupData.sol";
+import {REVConfig} from "./structs/REVConfig.sol";
+import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVBasicDeployer} from "./REVBasicDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also calls other hooks when paid.
@@ -115,26 +115,26 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
     }
 
     /// @notice Deploy a basic revnet that also calls other specified pay hooks.
-    /// @param boostOperator The address that will receive the token premint and initial boost, and who is
-    /// allowed to change the boost recipients. Only the boost operator can replace itself after deployment.
-    /// @param revnetMetadata The metadata containing revnet's info.
     /// @param name The name of the ERC-20 token being create for the revnet.
     /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param deployData The data needed to deploy a basic revnet.
+    /// @param metadata The metadata containing revnet's info.
+    /// @param configuration The data needed to deploy a basic revnet.
+    /// @param boostOperator The address that will receive the token premint and initial boost, and who is
+    /// allowed to change the boost recipients. Only the boost operator can replace itself after deployment.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
-    /// @param buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price
+    /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
     /// for new participants.
     /// @param payHooks Any hooks that should run when the revnet is paid.
     /// @param extraHookMetadata Extra metadata to attach to the cycle for the delegates to use.
     /// @return revnetId The ID of the newly created revnet.
-    function deployPayHookNetworkFor(
-        address boostOperator,
-        string memory revnetMetadata,
+    function deployPayHookRevnetWith(
         string memory name,
         string memory symbol,
-        REVDeployParams memory deployData,
+        string memory metadata,
+        REVConfig memory configuration,
+        address boostOperator,
         JBTerminalConfig[] memory terminalConfigurations,
-        REVBuybackHookSetupData memory buybackHookSetupData,
+        REVBuybackHookConfig memory buybackHookConfiguration,
         JBPayHookPayload[] memory payHooks,
         uint8 extraHookMetadata
     )
@@ -143,14 +143,14 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
     {
         // Deploy the revnet
         revnetId =
-         _deployRevnetFor({
-            boostOperator: boostOperator,
-            revnetMetadata: revnetMetadata,
+         _deployRevnetWith({
             name: name,
             symbol: symbol,
-            deployData: deployData,
+            metadata: metadata,
+            configuration: configuration,
+            boostOperator: boostOperator,
             terminalConfigurations: terminalConfigurations,
-            buybackHookSetupData: buybackHookSetupData,
+            buybackHookConfiguration: buybackHookConfiguration,
             dataHook: IJBBuybackHook(address(this)),
             extraHookMetadata: extraHookMetadata
         });
@@ -158,7 +158,7 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
         // Give the buyback hook permission to mint on this contract's behald if it doesn't yet have it.
         if (
             !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
-                operator: address(buybackHookSetupData.hook),
+                operator: address(buybackHookConfiguration.hook),
                 account: address(this),
                 projectId: 0,
                 permissionIds: _BUYBACK_HOOK_PERMISSION_IDS
@@ -167,7 +167,7 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
             IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
                 account: address(this),
                 permissionsData: JBPermissionsData({
-                    operator: address(buybackHookSetupData.hook),
+                    operator: address(buybackHookConfiguration.hook),
                     projectId: 0,
                     permissionIds: _BUYBACK_HOOK_PERMISSION_IDS
                 })

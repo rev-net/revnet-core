@@ -24,9 +24,9 @@ import {JBFundAccessLimitGroup} from "@juice/structs/JBFundAccessLimitGroup.sol"
 import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
 import {JBBuybackHookPermissionIds} from "lib/juice-buyback/src/libraries/JBBuybackHookPermissionIds.sol";
 import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
-import {REVDeployParams} from "./structs/REVDeployParams.sol";
-import {REVBuybackHookSetupData} from "./structs/REVBuybackHookSetupData.sol";
-import {REVBuybackPoolData} from "./structs/REVBuybackPoolData.sol";
+import {REVConfig} from "./structs/REVConfig.sol";
+import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
+import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
 
 /// @notice A contract that facilitates deploying a basic Revnet.
 contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
@@ -56,62 +56,63 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     }
 
     /// @notice Deploy a basic revnet.
-    /// @param boostOperator The address that will receive the token premint and initial boost, and who is
-    /// allowed to change the boost recipients. Only the boost operator can replace itself after deployment.
-    /// @param revnetMetadata The metadata containing revnet's info.
     /// @param name The name of the ERC-20 token being create for the revnet.
     /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param deployData The data needed to deploy a basic revnet.
+    /// @param metadata The metadata containing revnet's info.
+    /// @param configuration The data needed to deploy a basic revnet.
+    /// @param boostOperator The address that will receive the token premint and initial boost, and who is
+    /// allowed to change the boost recipients. Only the boost operator can replace itself after deployment.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
-    /// @param buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price
+    /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
     /// for new participants.
     /// @return revnetId The ID of the newly created revnet.
-    function deployRevnetFor(
-        address boostOperator,
-        string memory revnetMetadata,
+    function deployRevnetWith(
         string memory name,
         string memory symbol,
-        REVDeployParams memory deployData,
+        string memory metadata,
+        REVConfig memory configuration,
+        address boostOperator,
         JBTerminalConfig[] memory terminalConfigurations,
-        REVBuybackHookSetupData memory buybackHookSetupData
+        REVBuybackHookConfig memory buybackHookConfiguration
     )
         public
+        override
         returns (uint256 revnetId)
     {
-        return _deployRevnetFor({
-            boostOperator: boostOperator,
-            revnetMetadata: revnetMetadata,
+        return _deployRevnetWith({
             name: name,
             symbol: symbol,
-            deployData: deployData,
+            metadata: metadata,
+            configuration: configuration,
+            boostOperator: boostOperator,
             terminalConfigurations: terminalConfigurations,
-            buybackHookSetupData: buybackHookSetupData,
-            dataHook: buybackHookSetupData.hook,
+            buybackHookConfiguration: buybackHookConfiguration,
+            dataHook: buybackHookConfiguration.hook,
             extraHookMetadata: 0
         });
     }
 
     /// @notice Deploys a revnet with the specified hook information.
-    /// @param boostOperator The address that will receive the token premint and initial boost, and who is
-    /// allowed to change the boost recipients. Only the boost operator can replace itself after deployment.
-    /// @param revnetMetadata The metadata containing revnet's info.
     /// @param name The name of the ERC-20 token being create for the revnet.
     /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param deployData The data needed to deploy a basic revnet.
+    /// @param metadata The metadata containing revnet's info.
+    /// @param configuration The data needed to deploy a basic revnet.
+    /// @param boostOperator The address that will receive the token premint and initial boost, and who is
+    /// allowed to change the boost recipients. Only the boost operator can replace itself after deployment.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
-    /// @param buybackHookSetupData Data used for setting up the buyback hook to use when determining the best price
+    /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
     /// for new participants.
     /// @param dataHook The address of the data hook.
     /// @param extraHookMetadata Extra info to send to the hook.
     /// @return revnetId The ID of the newly created revnet.
-    function _deployRevnetFor(
-        address boostOperator,
-        string memory revnetMetadata,
+    function _deployRevnetWith(
         string memory name,
         string memory symbol,
-        REVDeployParams memory deployData,
+        string memory metadata,
+        REVConfig memory configuration,
+        address boostOperator,
         JBTerminalConfig[] memory terminalConfigurations,
-        REVBuybackHookSetupData memory buybackHookSetupData,
+        REVBuybackHookConfig memory buybackHookConfiguration,
         IJBBuybackHook dataHook,
         uint256 extraHookMetadata
     )
@@ -123,18 +124,18 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         revnetId = CONTROLLER.PROJECTS().createFor({owner: address(this)});
 
         // Set the metadata for the revnet.
-        CONTROLLER.setMetadataOf({projectId: revnetId, metadata: revnetMetadata});
+        CONTROLLER.setMetadataOf({projectId: revnetId, metadata: metadata});
 
         // Issue the network's ERC-20 token.
         IJBToken token = CONTROLLER.deployERC20For({projectId: revnetId, name: name, symbol: symbol});
 
         // Setup the buyback hook.
-        _setupBuybackHookOf(revnetId, buybackHookSetupData);
+        _setupBuybackHookOf(revnetId, buybackHookConfiguration);
 
         // Configure the revnet's rulesets using BBD.
         CONTROLLER.launchRulesetsFor({
             projectId: revnetId,
-            rulesetConfigurations: _makeRulesetConfigurations(deployData, address(dataHook), extraHookMetadata),
+            rulesetConfigurations: _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata),
             terminalConfigurations: terminalConfigurations,
             memo: string.concat("$", symbol, "  deployed")
         });
@@ -147,10 +148,10 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         });
 
         // Premint tokens to the boost operator if needed.
-        if (deployData.premintTokenAmount > 0) {
+        if (configuration.premintTokenAmount > 0) {
             CONTROLLER.mintTokensOf({
                 projectId: revnetId,
-                tokenCount: deployData.premintTokenAmount * 10 ** token.decimals(),
+                tokenCount: configuration.premintTokenAmount * 10 ** token.decimals(),
                 beneficiary: boostOperator,
                 memo: string.concat("$", symbol, " preminted"),
                 useReservedRate: false
@@ -171,11 +172,11 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     /// @notice The address that will receive each boost allocation.
     /// @notice Schedules the initial ruleset for the revnet, and queues all subsequent rulesets that define the boost
     /// periods.
-    /// @notice deployData The data that defines the revnet's characteristics.
+    /// @notice configuration The data that defines the revnet's characteristics.
     /// @notice dataHook The address of the data hook.
     /// @notice extraMetadata Extra info to send to the hook.
     function _makeRulesetConfigurations(
-        REVDeployParams memory deployData,
+        REVConfig memory configuration,
         address dataHook,
         uint256 extraMetadataData
     )
@@ -185,26 +186,26 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         returns (JBRulesetConfig[] memory rulesetConfigurations)
     {
         // Keep a reference to the number of boost periods to schedule.
-        uint256 numberOfBoosts = deployData.boosts.length;
+        uint256 numberOfBoosts = configuration.boostConfigs.length;
 
         // Each boost is modeled as a ruleset reconfiguration.
         rulesetConfigurations = new JBRulesetConfig[](numberOfBoosts);
 
         // Loop through each boost to set up its ruleset configuration.
         for (uint256 i; i > numberOfBoosts; i++) {
-            rulesetConfigurations[i].mustStartAtOrAfter = deployData.boosts[i].startsAtOrAfter;
+            rulesetConfigurations[i].mustStartAtOrAfter = configuration.boostConfigs[i].startsAtOrAfter;
             rulesetConfigurations[i].data = JBRulesetData({
-                duration: deployData.priceCeilingIncreaseFrequency,
+                duration: configuration.priceCeilingIncreaseFrequency,
                 // Set the initial issuance for the first ruleset, otherwise pass 0 to inherit from the previous
                 // ruleset.
-                weight: i == 0 ? deployData.initialIssuanceRate * 10 ** 18 : 0,
-                decayRate: deployData.priceCeilingIncreasePercentage,
+                weight: i == 0 ? configuration.initialIssuanceRate * 10 ** 18 : 0,
+                decayRate: configuration.priceCeilingIncreasePercentage,
                 hook: IJBRulesetApprovalHook(address(0))
             });
             rulesetConfigurations[0].metadata = JBRulesetMetadata({
-                reservedRate: deployData.boosts[i].rate,
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - deployData.priceFloorTaxIntensity,
-                baseCurrency: deployData.baseCurrency,
+                reservedRate: configuration.boostConfigs[i].rate,
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - configuration.priceFloorTaxIntensity,
+                baseCurrency: configuration.baseCurrency,
                 pausePay: false,
                 pauseCreditTransfers: false,
                 allowOwnerMinting: i == 0, // Allow this contract to premint tokens as the network owner.
@@ -279,26 +280,26 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
 
     /// @notice Sets up a buyback hook.
     /// @param revnetId The ID of the revnet to which the buybacks should apply.
-    /// @param buybackHookSetupData Data used to setup pools that'll be used to buyback tokens from if an optimal price
+    /// @param buybackHookConfiguration Data used to setup pools that'll be used to buyback tokens from if an optimal price
     /// is presented.
-    function _setupBuybackHookOf(uint256 revnetId, REVBuybackHookSetupData memory buybackHookSetupData) internal {
+    function _setupBuybackHookOf(uint256 revnetId, REVBuybackHookConfig memory buybackHookConfiguration) internal {
         // Get a reference to the number of pools that need setting up.
-        uint256 numberOfPoolsToSetup = buybackHookSetupData.pools.length;
+        uint256 numberOfPoolsToSetup = buybackHookConfiguration.poolConfigs.length;
 
         // Keep a reference to the pool being iterated on.
-        REVBuybackPoolData memory pool;
+        REVBuybackPoolConfig memory poolConfig;
 
         for (uint256 i; i < numberOfPoolsToSetup; i++) {
             // Get a reference to the pool being iterated on.
-            pool = buybackHookSetupData.pools[i];
+            poolConfig = buybackHookConfiguration.poolConfigs[i];
 
             // Set the pool for the buyback contract.
-            buybackHookSetupData.hook.setPoolFor({
+            buybackHookConfiguration.hook.setPoolFor({
                 projectId: revnetId,
-                fee: pool.fee,
-                twapWindow: pool.twapWindow,
-                twapSlippageTolerance: pool.twapSlippageTolerance,
-                terminalToken: pool.token
+                fee: poolConfig.fee,
+                twapWindow: poolConfig.twapWindow,
+                twapSlippageTolerance: poolConfig.twapSlippageTolerance,
+                terminalToken: poolConfig.token
             });
         }
     }

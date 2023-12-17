@@ -9,7 +9,7 @@ import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.so
 /// 0.3% and 0.1%.
 /// @custom:member twapWindow The time window to take into account when quoting a price based on TWAP.
 /// @custom:member twapSlippageTolerance The pricetolerance to accept when quoting a price based on TWAP.
-struct REVBuybackPoolData {
+struct REVBuybackPoolConfig {
     address token;
     uint24 fee;
     uint32 twapWindow;

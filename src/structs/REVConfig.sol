@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {REVBoost} from "./REVBoost.sol";
+import {REVBoostConfig} from "./REVBoostConfig.sol";
 
 /// @custom:member baseCurrency The currency that the issuance is based on.
 /// @custom:member initialIssuanceRate The number of tokens that should be minted initially per 1 unit of the base
@@ -21,13 +21,13 @@ import {REVBoost} from "./REVBoost.sol";
 /// redeemed.
 /// This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no floor tax when
 /// redemptions are made, everyone's redemptions are treated equally. The higher the intensity, the higher the tax.
-/// @custom:member boosts The periods of distinguished boosting that should be applied over time.
-struct REVDeployParams {
+/// @custom:member boostConfigs The periods of distinguished boosting that should be applied over time.
+struct REVConfig {
     uint256 baseCurrency;
     uint256 initialIssuanceRate;
     uint256 premintTokenAmount;
     uint256 priceCeilingIncreaseFrequency;
     uint256 priceCeilingIncreasePercentage;
     uint256 priceFloorTaxIntensity;
-    REVBoost[] boosts;
+    REVBoostConfig[] boostConfigs;
 }
