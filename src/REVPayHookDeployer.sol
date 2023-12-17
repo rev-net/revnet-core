@@ -20,18 +20,35 @@ import {REVBasicDeployer} from "./REVBasicDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also calls other hooks when paid.
 contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
-    /// @notice The data hook that returns the correct values for the buyback hook of each network.
-    /// @custom:param revnetId The ID of the revnet to which the buyback contract applies.
-    mapping(uint256 revnetId => IJBRulesetDataHook buybackHook) public buybackHookOf;
 
-    /// @notice The pay hooks to include during payments to networks.
-    /// @custom:param revnetId The ID of the revnet to which the extensions apply.
-    mapping(uint256 revnetId => JBPayHookPayload[] payHooks) private _payHookPayloadsOf;
+    //*********************************************************************//
+    // ------------------------ private constants ------------------------ //
+    //*********************************************************************//
 
     /// @notice The permissions that the provided buyback hook should be granted since it wont be used as the data
     /// source.
     /// This is set once in the constructor to contain only the MINT operation.
     uint256[] private _BUYBACK_HOOK_PERMISSION_IDS;
+
+    //*********************************************************************//
+    // --------------------- public stored properties -------------------- //
+    //*********************************************************************//
+
+    /// @notice The data hook that returns the correct values for the buyback hook of each network.
+    /// @custom:param revnetId The ID of the revnet to which the buyback contract applies.
+    mapping(uint256 revnetId => IJBRulesetDataHook buybackHook) public buybackHookOf;
+
+    //*********************************************************************//
+    // -------------------- private stored properties -------------------- //
+    //*********************************************************************//
+
+    /// @notice The pay hooks to include during payments to networks.
+    /// @custom:param revnetId The ID of the revnet to which the extensions apply.
+    mapping(uint256 revnetId => JBPayHookPayload[] payHooks) private _payHookPayloadsOf;
+
+    //*********************************************************************//
+    // ------------------------- external views -------------------------- //
+    //*********************************************************************//
 
     /// @notice The pay hooks to include during payments to networks.
     /// @param revnetId The ID of the revnet to which the extensions apply.
@@ -109,10 +126,18 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
         return interfaceId == type(IJBRulesetDataHook).interfaceId || super.supportsInterface(interfaceId);
     }
 
+    //*********************************************************************//
+    // -------------------------- constructor ---------------------------- //
+    //*********************************************************************//
+
     /// @param controller The controller that revnets are made from.
     constructor(IJBController controller) REVBasicDeployer(controller) {
         _BOOST_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.MINT_TOKENS);
     }
+
+    //*********************************************************************//
+    // ---------------------- public transactions ------------------------ //
+    //*********************************************************************//
 
     /// @notice Deploy a basic revnet that also calls other specified pay hooks.
     /// @param name The name of the ERC-20 token being create for the revnet.
@@ -177,6 +202,10 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
         // Store the pay hooks.
         _storeHookPayloadsOf(revnetId, payHooks);
     }
+
+    //*********************************************************************//
+    // --------------------- itnernal transactions ----------------------- //
+    //*********************************************************************//
 
     /// @notice Stores pay hooks for the provided revnet.
     /// @param revnetId The ID of the revnet to which the pay hooks apply.

@@ -2,33 +2,50 @@
 pragma solidity ^0.8.20;
 
 import "lib/forge-std/src/Script.sol";
+import "forge-std/StdJson.sol";
 
-import {IJBController} from "@juice/interfaces/IJBController.sol";
-import {REVBasicDeployer} from "../src/REVBasicDeployer.sol";
+// import {IJBController} from "@juice/interfaces/IJBController.sol";
+// import {REVBasicDeployer} from "src/REVBasicDeployer.sol";
 
-contract Deploy is Script {
-    function _run(IJBController controller) internal {
+abstract contract Deploy is Script {
+    function _chainName() internal virtual returns (string memory);
+    function _run() internal {
         vm.broadcast();
-        new REVBasicDeployer(controller);
+        // address controllerAddress = stdJson.readAddress(
+        //         vm.readFile(
+        //             string.concat("lib/juice-buyback/lib/juice-contracts-v4/deployments/", _chainName() , "/run-latest.json")
+        //         ),
+        //         ".transactions[9].contractAddress"
+        //     );
+        // address controllerAddress = address(123);
+        // emit k(controllerAddress);
+        // new REVBasicDeployer(IJBController(controllerAddress));
     }
 }
 
-contract DeployMainnet is Deploy {
-    IJBController controller = IJBController(0x97a5b9D9F0F7cD676B69f584F29048D0Ef4BB59b);
+// Ethereum
 
-    function setUp() public {}
-
-    function run() public {
-        _run({controller: controller});
+contract DeployEthereumMainnet is Deploy {
+    function _chainName() internal virtual override returns (string memory) {
+        return "Ethereum";
     }
 }
 
-contract DeploySepolia is Deploy {
-    IJBController controller = IJBController(0xE34f21f141f6Bc4d1889C7b5067892A90384C4C3);
+contract DeployEthereumSepolia is Deploy {
+    function _chainName() internal virtual override returns (string memory) {
+        return "EthereumSepolia";
+    }
+}
+// Optimism
 
-    function setUp() public {}
+contract DeployOptimismMainnet is Deploy {
+    function _chainName() internal virtual override returns (string memory) {
+        return "Op";
+    }
+}
 
-    function run() public {
-        _run({controller: controller});
+contract DeployOptimismSepolia is Deploy {
+    function _chainName() internal virtual override returns (string memory) {
+        return "OpSepolia";
     }
 }

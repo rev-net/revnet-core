@@ -30,14 +30,57 @@ import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
 
 /// @notice A contract that facilitates deploying a basic Revnet.
 contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
-    error UNAUTHORIZED();
+    //*********************************************************************//
+    // --------------------------- custom errors ------------------------- //
+    //*********************************************************************//
+
+    error REV_UNAUTHORIZED();
+
+    //*********************************************************************//
+    // --------------- public immutable stored properties ---------------- //
+    //*********************************************************************//
 
     /// @notice The controller that networks are made from.
     IJBController public immutable CONTROLLER;
 
+    //*********************************************************************//
+    // ------------------- internal stored properties -------------------- //
+    //*********************************************************************//
+
     /// @notice The permissions that the provided _boostOperator should be granted. This is set once in the constructor
     /// to contain only the SET_SPLITS operation.
+    /// @dev This should only be set in the constructor.
     uint256[] internal _BOOST_OPERATOR_PERMISSIONS_INDEXES;
+
+    //*********************************************************************//
+    // ------------------------- external views -------------------------- //
+    //*********************************************************************//
+
+    /// @dev Make sure only mints can be received.
+    function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes calldata data
+    )
+        external
+        view
+        returns (bytes4)
+    {
+        data;
+        tokenId;
+        operator;
+
+        // Make sure the 721 received is the JBProjects contract.
+        if (msg.sender != address(CONTROLLER.PROJECTS())) revert();
+        // Make sure the 721 is being received as a mint.
+        if (from != address(0)) revert();
+        return IERC721Receiver.onERC721Received.selector;
+    }
+
+    //*********************************************************************//
+    // -------------------------- public views --------------------------- //
+    //*********************************************************************//
 
     /// @notice Indicates if this contract adheres to the specified interface.
     /// @dev See {IERC165-supportsInterface}.
@@ -48,12 +91,55 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
             || super.supportsInterface(_interfaceId);
     }
 
+    //*********************************************************************//
+    // -------------------------- constructor ---------------------------- //
+    //*********************************************************************//
+
     /// @param controller The controller that revnets are made from.
     constructor(IJBController controller) {
         CONTROLLER = controller;
         _BOOST_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
         _BOOST_OPERATOR_PERMISSIONS_INDEXES.push(JBBuybackHookPermissionIds.SET_POOL_PARAMS);
     }
+
+    //*********************************************************************//
+    // --------------------- external transactions ----------------------- //
+    //*********************************************************************//
+
+    /// @notice A revnet's boost operator can replace itself.
+    /// @param revnetId The ID of the revnet having its boost operator replaces.
+    /// @param newBoostOperator The address of the new boost operator.
+    function replaceBoostOperatorOf(uint256 revnetId, address newBoostOperator) external {
+        /// Make sure the message sender is the current operator.
+        if (
+            !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
+                operator: msg.sender,
+                account: address(this),
+                projectId: revnetId,
+                permissionIds: _BOOST_OPERATOR_PERMISSIONS_INDEXES
+            })
+        ) revert REV_UNAUTHORIZED();
+
+        // Remove operator permission from the old operator.
+        IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
+            account: address(this),
+            permissionsData: JBPermissionsData({operator: msg.sender, projectId: revnetId, permissionIds: new uint256[](0)})
+        });
+
+        // Give the new operator permission to change the boost recipients.
+        IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
+            account: address(this),
+            permissionsData: JBPermissionsData({
+                operator: newBoostOperator,
+                projectId: revnetId,
+                permissionIds: _BOOST_OPERATOR_PERMISSIONS_INDEXES
+            })
+        });
+    }
+
+    //*********************************************************************//
+    // ---------------------- public transactions ------------------------ //
+    //*********************************************************************//
 
     /// @notice Deploy a basic revnet.
     /// @param name The name of the ERC-20 token being create for the revnet.
@@ -91,6 +177,10 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
             extraHookMetadata: 0
         });
     }
+
+    //*********************************************************************//
+    // --------------------- itnernal transactions ----------------------- //
+    //*********************************************************************//
 
     /// @notice Deploys a revnet with the specified hook information.
     /// @param name The name of the ERC-20 token being create for the revnet.
@@ -225,27 +315,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         }
     }
 
-    /// @dev Make sure only mints can be received.
-    function onERC721Received(
-        address operator,
-        address from,
-        uint256 tokenId,
-        bytes calldata data
-    )
-        external
-        view
-        returns (bytes4)
-    {
-        data;
-        tokenId;
-        operator;
-
-        // Make sure the 721 received is the JBProjects contract.
-        if (msg.sender != address(CONTROLLER.PROJECTS())) revert();
-        // Make sure the 721 is being received as a mint.
-        if (from != address(0)) revert();
-        return IERC721Receiver.onERC721Received.selector;
-    }
 
     /// @notice Creates a group of splits that goes entirely to the provided _boostOperator.
 
@@ -302,36 +371,5 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
                 terminalToken: poolConfig.token
             });
         }
-    }
-
-    /// @notice A revnet's boost operator can replace itself.
-    /// @param revnetId The ID of the revnet having its boost operator replaces.
-    /// @param newBoostOperator The address of the new boost operator.
-    function replaceBoostOperatorOf(uint256 revnetId, address newBoostOperator) external {
-        /// Make sure the message sender is the current operator.
-        if (
-            !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
-                operator: msg.sender,
-                account: address(this),
-                projectId: revnetId,
-                permissionIds: _BOOST_OPERATOR_PERMISSIONS_INDEXES
-            })
-        ) revert UNAUTHORIZED();
-
-        // Remove operator permission from the old operator.
-        IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
-            account: address(this),
-            permissionsData: JBPermissionsData({operator: msg.sender, projectId: revnetId, permissionIds: new uint256[](0)})
-        });
-
-        // Give the new operator permission to change the boost recipients.
-        IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
-            account: address(this),
-            permissionsData: JBPermissionsData({
-                operator: newBoostOperator,
-                projectId: revnetId,
-                permissionIds: _BOOST_OPERATOR_PERMISSIONS_INDEXES
-            })
-        });
     }
 }
