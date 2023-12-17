@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import {ERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
@@ -242,7 +242,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         // Make sure the 721 received is the JBProjects contract.
         if (msg.sender != address(CONTROLLER.PROJECTS())) revert();
         // Make sure the 721 is being received as a mint.
-        if (_from != address(0)) revert();
+        if (from != address(0)) revert();
         return IERC721Receiver.onERC721Received.selector;
     }
 
