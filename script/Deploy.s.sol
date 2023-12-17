@@ -1,34 +1,40 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "forge-std/Script.sol";
+import "lib/forge-std/src/Script.sol";
+// import "forge-std/StdJson.sol";
 
-import {
-    IJBController3_1,
-    IJBPayoutRedemptionPaymentTerminal3_1_1,
-    BasicRevnetDeployer,
-    IJBGenericBuybackDelegate
-} from "./../src/BasicRevnetDeployer.sol";
+import {IJBController} from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
+import {REVBasicDeployer} from "src/REVBasicDeployer.sol";
 
 contract Deploy is Script {
-    function _run(IJBController3_1 _controller) internal {
+    function run() public {
+        uint256 chainId = block.chainid;
+        address controllerAddress;
+
+        // Ethereun Mainnet
+        if (chainId == 1) {
+            controllerAddress = address(0);
+            // Ethereum Sepolia
+        } else if (chainId == 11_155_111) {
+            controllerAddress = 0x876437e4237017d2178022d1352A59be661C4142;
+            // Optimism Mainnet
+        } else if (chainId == 420) {
+            controllerAddress = address(0);
+            // Optimism Sepolia
+        } else if (chainId == 11_155_420) {
+            controllerAddress = 0x0227b76E082c635887ec58BaCaabAcC86934fe1c;
+            // Polygon Mainnet
+        // } else if (chainId == 137) {
+        //     // Polygon Mumbai
+        // } else if (chainId == 80_001) {
+        } else {
+            revert("Invalid RPC / no juice contracts deployed on this network");
+        }
+
+        // address controllerAddress = address(123);
+        // emit k(controllerAddress);
         vm.broadcast();
-        new BasicRevnetDeployer(_controller);
-    }
-}
-
-contract DeployMainnet is Deploy {
-    function setUp() public { }
-
-    function run() public {
-        _run({ _controller: IJBController3_1(0x97a5b9D9F0F7cD676B69f584F29048D0Ef4BB59b) });
-    }
-}
-
-contract DeployGoerli is Deploy {
-    function setUp() public { }
-
-    function run() public {
-        _run({ _controller: IJBController3_1(0x1d260DE91233e650F136Bf35f8A4ea1F2b68aDB6) });
+        new REVBasicDeployer(IJBController(controllerAddress));
     }
 }

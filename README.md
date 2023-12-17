@@ -28,65 +28,49 @@ In this repo, you'll find:
 
  You can use these contracts to deploy treasuries from etherscan, or wherever else they've been exposed from.
 
-# Dev
+## Develop
 
-## Prerequisites
-### Install & Update Foundry
-Install Forge with `curl -L https://foundry.paradigm.xyz | bash`. If you already have Foundry installed, run `foundryup` to update to the latest version. More detailed instructions can be found in the [Foundry Book](https://book.getfoundry.sh/getting-started/installation).
+`revnet-templates` uses the [Foundry](https://github.com/foundry-rs/foundry) development toolchain for builds, tests, and deployments. To get set up, install [Foundry](https://github.com/foundry-rs/foundry):
 
-### Install & Update Yarn
-Follow the instructions in the [Yarn Docs](https://classic.yarnpkg.com/en/docs/install). People tend to use the latest version of Yarn 1 (not Yarn 2+).
+```bash
+curl -L https://foundry.paradigm.xyz | sh
+```
 
-## Install Included Dependencies
-Install dependencies (forge tests, Juice-contracts-V3, OZ) via `yarn install` (the `preinstall` script will run `forge install` for you)
+You can download and install dependencies with:
 
-# Adding dependencies
-## With Yarn
-If the dependency you would like to install has an NPM package, use `yarn add [package]` where [package] is the package name. This will install the dependency to `node_modules`.
+```bash
+forge install
+```
 
-Tell forge to look for node libraries by adding `node_modules` to the `foundry.toml` by updating `libs` like so: `libs = ['lib', 'node_modules']`.
+If you run into trouble with `forge install`, try using `git submodule update --init --recursive` to ensure that nested submodules have been properly initialized.
 
-Add dependencies to `remappings.txt` by running `forge remappings >> remappings.txt`. For example, the NPM package `jbx-protocol` is remapped as `@jbx-protocol/=node_modules/@jbx-protocol/`.
+Some useful commands:
 
-## With Forge
-If the dependency you would like to install does not have an up-to-date NPM package, use `forge install [dependency]` where [dependency] is the path to the dependency repo. This will install the dependency to `/lib`. Forge manages dependencies using git submodules.
+| Command               | Description                                         |
+| --------------------- | --------------------------------------------------- |
+| `forge install`       | Install the dependencies.                           |
+| `forge build`         | Compile the contracts and write artifacts to `out`. |
+| `forge fmt`           | Lint.                                               |
+| `forge test`          | Run the tests.                                      |
+| `forge build --sizes` | Get contract sizes.                                 |
+| `forge coverage`      | Generate a test coverage report.                    |
+| `foundryup`           | Update foundry. Run this periodically.              |
+| `forge clean`         | Remove the build artifacts and cache directories.   |
 
-Run `forge remappings > remappings.txt` to write the dependencies to `remappings.txt`. Note that this will overwrite that file. 
+To learn more, visit the [Foundry Book](https://book.getfoundry.sh/) docs.
 
-If nested dependencies are not installing, try this workaround `git submodule update --init --recursive --force`. Nested dependencies are dependencies of the dependencies you have installed. 
+We recommend using [Juan Blanco's solidity extension](https://marketplace.visualstudio.com/items?itemName=JuanBlanco.solidity) for VSCode.
 
-More information on remappings is available in the Forge Book.
+## Utilities
 
-# Updating dependencies
-## With Yarn
-Run `yarn upgrade [package]`.
+For convenience, several utility commands are available in `util.sh`. To see a list, run:
 
-## With Forge
-Run `foundryup` to update forge. 
+```bash
+`bash util.sh --help`.
+```
 
-Run `forge update` to update all dependencies, or run `forge update [dependency]` to update a specific dependency.
+Or make the script executable and run:
 
-# Usage
-use `yarn test` to run tests
-
-use `yarn test:fork` to run tests in CI mode (including slower mainnet fork tests)
-
-use `yarn size` to check contract size
-
-use `yarn doc` to generate natspec docs
-
-use `yarn lint` to lint the code
-
-use `yarn tree` to generate a Solidity dependency tree
-
-use `yarn deploy:mainnet` and `yarn deploy:goerli` to deploy and verify (see .env.example for required env vars, using a ledger by default).
-
-## Code coverage
-Run `yarn coverage`to display code coverage summary and generate an LCOV report
-
-To display code coverage in VSCode:
-- You need to install the [coverage gutters extension (Ryan Luker)](https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters) or any other extension handling LCOV reports
-- ctrl shift p > "Coverage Gutters: Display Coverage" (coverage are the colored markdown lines in the left gutter, after the line numbers)
-
-## PR
-Github CI flow will run both unit and forked tests, log the contracts size (with the tests) and check linting compliance.
+```bash
+./util.sh --help
+```
