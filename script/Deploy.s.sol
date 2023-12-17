@@ -2,10 +2,10 @@
 pragma solidity ^0.8.20;
 
 import "lib/forge-std/src/Script.sol";
-import "forge-std/StdJson.sol";
+// import "forge-std/StdJson.sol";
 
-import {IJBController} from "@juice/interfaces/IJBController.sol";
-import {REVBasicDeployer} from "src/REVBasicDeployer.sol";
+// import {IJBController} from "@juice/interfaces/IJBController.sol";
+// import {REVBasicDeployer} from "src/REVBasicDeployer.sol";
 
 contract Deploy is Script {
     function _run() internal {
@@ -30,20 +30,20 @@ contract Deploy is Script {
         } else {
             revert("Invalid RPC / no juice contracts deployed on this network");
         }
-        IJBController controllerAddress = IJBController(
-            stdJson.readAddress(
-                vm.readFile(
-                    string.concat(
-                        "lib/juice-buyback/lib/juice-contracts-v4/deployments/", network, "/run-latest.json"
-                    )
-                ),
-                ".transactions[9].contractAddress"
-            )
-        );
+        // IJBController controllerAddress = IJBController(
+        //     stdJson.readAddress(
+        //         vm.readFile(
+        //             string.concat(
+        //                 "lib/juice-buyback/lib/juice-contracts-v4/deployments/", network, "/run-latest.json"
+        //             )
+        //         ),
+        //         ".transactions[9].contractAddress"
+        //     )
+        // );
 
         // address controllerAddress = address(123);
         // emit k(controllerAddress);
         vm.broadcast();
-        new REVBasicDeployer(controllerAddress);
+        // new REVBasicDeployer(IJBController(controllerAddress));
     }
 }
