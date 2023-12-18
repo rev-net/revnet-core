@@ -226,10 +226,10 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         _setupBuybackHookOf(revnetId, buybackHookConfiguration);
 
         // Set the boost allocations at the default ruleset of 0.
-        CONTROLLER.SPLITS().setSplitGroupsOf({
+        CONTROLLER.setSplitGroupsOf({
             projectId: revnetId,
             rulesetId: 0,
-            groups: _makeBoostSplitGroupWith(boostOperator)
+            splitGroup: _makeBoostSplitGroupWith(boostOperator)
         });
 
         // Premint tokens to the boost operator if needed.
