@@ -34,7 +34,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
-    error REV_UNAUTHORIZED();
+    error REVBasicDeployer_Unauthorized();
 
     //*********************************************************************//
     // --------------- public immutable stored properties ---------------- //
@@ -118,7 +118,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
                 projectId: revnetId,
                 permissionIds: _BOOST_OPERATOR_PERMISSIONS_INDEXES
             })
-        ) revert REV_UNAUTHORIZED();
+        ) revert REVBasicDeployer_Unauthorized();
 
         // Remove operator permission from the old operator.
         IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
@@ -213,9 +213,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         // Deploy a juicebox for the revnet.
         revnetId = CONTROLLER.PROJECTS().createFor({owner: address(this)});
 
-        // Set the metadata for the revnet.
-        CONTROLLER.setMetadataOf({projectId: revnetId, metadata: metadata});
-
         // Issue the network's ERC-20 token.
         IJBToken token = CONTROLLER.deployERC20For({projectId: revnetId, name: name, symbol: symbol});
 
@@ -227,8 +224,11 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
             projectId: revnetId,
             rulesetConfigurations: _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata),
             terminalConfigurations: terminalConfigurations,
-            memo: string.concat("$", symbol, "  deployed")
+            memo: string.concat("$", symbol, " revnet deployed")
         });
+
+        // Set the metadata for the revnet.
+        CONTROLLER.setMetadataOf({projectId: revnetId, metadata: metadata});
 
         // Set the boost allocations at the default ruleset of 0.
         CONTROLLER.SPLITS().setSplitGroupsOf({
