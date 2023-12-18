@@ -211,24 +211,19 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         returns (uint256 revnetId)
     {
         // Deploy a juicebox for the revnet.
-        revnetId = CONTROLLER.PROJECTS().createFor({owner: address(this)});
+        revnetId = CONTROLLER.launchProjectFor({
+            owner: address(this),
+            projectMetadata: metadata,
+            rulesetConfigurations: _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata),
+            terminalConfigurations: terminalConfigurations,
+            memo: string.concat("$", symbol, " revnet deployed")
+        });
 
         // Issue the network's ERC-20 token.
         IJBToken token = CONTROLLER.deployERC20For({projectId: revnetId, name: name, symbol: symbol});
 
         // Setup the buyback hook.
         _setupBuybackHookOf(revnetId, buybackHookConfiguration);
-
-        // Configure the revnet's rulesets using BBD.
-        CONTROLLER.launchRulesetsFor({
-            projectId: revnetId,
-            rulesetConfigurations: _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata),
-            terminalConfigurations: terminalConfigurations,
-            memo: string.concat("$", symbol, " revnet deployed")
-        });
-
-        // Set the metadata for the revnet.
-        CONTROLLER.setMetadataOf({projectId: revnetId, metadata: metadata});
 
         // Set the boost allocations at the default ruleset of 0.
         CONTROLLER.SPLITS().setSplitGroupsOf({
@@ -310,8 +305,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
                 dataHook: dataHook,
                 metadata: extraMetadataData
             });
-
-            rulesetConfigurations[0].fundAccessLimitGroups = new JBFundAccessLimitGroup[](0);
         }
     }
 
