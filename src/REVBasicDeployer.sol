@@ -12,7 +12,6 @@ import {IJBToken} from "lib/juice-contracts-v4/src/interfaces/IJBToken.sol";
 import {JBPermissionIds} from "lib/juice-contracts-v4/src/libraries/JBPermissionIds.sol";
 import {JBConstants} from "lib/juice-contracts-v4/src/libraries/JBConstants.sol";
 import {JBSplitGroupIds} from "lib/juice-contracts-v4/src/libraries/JBSplitGroupIds.sol";
-import {JBRulesetData} from "lib/juice-contracts-v4/src/structs/JBRulesetData.sol";
 import {JBRulesetMetadata} from "lib/juice-contracts-v4/src/structs/JBRulesetMetadata.sol";
 import {JBRuleset} from "lib/juice-contracts-v4/src/structs/JBRuleset.sol";
 import {JBRulesetConfig} from "lib/juice-contracts-v4/src/structs/JBRulesetConfig.sol";
@@ -229,7 +228,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         CONTROLLER.setSplitGroupsOf({
             projectId: revnetId,
             rulesetId: 0,
-            splitGroup: _makeBoostSplitGroupWith(boostOperator)
+            splitGroups: _makeBoostSplitGroupWith(boostOperator)
         });
 
         // Premint tokens to the boost operator if needed.
@@ -277,16 +276,14 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         rulesetConfigurations = new JBRulesetConfig[](numberOfBoosts);
 
         // Loop through each boost to set up its ruleset configuration.
-        for (uint256 i; i > numberOfBoosts; i++) {
+        for (uint256 i; i < numberOfBoosts; i++) {
             rulesetConfigurations[i].mustStartAtOrAfter = configuration.boostConfigs[i].startsAtOrAfter;
-            rulesetConfigurations[i].data = JBRulesetData({
-                duration: configuration.priceCeilingIncreaseFrequency,
-                // Set the initial issuance for the first ruleset, otherwise pass 0 to inherit from the previous
-                // ruleset.
-                weight: i == 0 ? configuration.initialIssuanceRate * 10 ** 18 : 0,
-                decayRate: configuration.priceCeilingIncreasePercentage,
-                hook: IJBRulesetApprovalHook(address(0))
-            });
+            rulesetConfigurations[i].duration = configuration.priceCeilingIncreaseFrequency;
+            // Set the initial issuance for the first ruleset, otherwise pass 0 to inherit from the previous
+            // ruleset.
+            rulesetConfigurations[i].weight = i == 0 ? configuration.initialIssuanceRate * 10 ** 18 : 0;
+            rulesetConfigurations[i].decayRate = configuration.priceCeilingIncreasePercentage;
+            rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
             rulesetConfigurations[0].metadata = JBRulesetMetadata({
                 reservedRate: configuration.boostConfigs[i].rate,
                 redemptionRate: JBConstants.MAX_REDEMPTION_RATE - configuration.priceFloorTaxIntensity,
