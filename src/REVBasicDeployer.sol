@@ -293,7 +293,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
                 baseCurrency: configuration.baseCurrency,
                 pausePay: false,
                 pauseCreditTransfers: false,
-                allowOwnerMinting: i == 0, // Allow this contract to premint tokens as the network owner.
+                allowOwnerMinting: true, // Allow this contract to premint tokens as the network owner.
                 allowTerminalMigration: false,
                 allowSetTerminals: false,
                 allowControllerMigration: false,
