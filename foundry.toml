@@ -7,6 +7,7 @@ optimizer_runs = 100000000
 block_number = 14126430
 block_timestamp = 1643802347
 runs = 4096
+fs_permissions = [{ access = "read", path = "lib/juice-contracts-v4/broadcast/Deploy.s.sol" }] # Get the deployment addresses to base the revnets on.
 
 [fmt]
 number_underscore = "thousands"
