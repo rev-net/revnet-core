@@ -20,7 +20,6 @@ import {REVBasicDeployer} from "./REVBasicDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also calls other hooks when paid.
 contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
-
     //*********************************************************************//
     // ------------------------ private constants ------------------------ //
     //*********************************************************************//
@@ -88,7 +87,8 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
         uint256 numberOfStoredPayHookSpecifications = storedPayHookSpecifications.length;
 
         // Each hook specification must run, plus the buyback hook if provided.
-        hookSpecifications = new JBPayHookSpecification[](numberOfStoredPayHookSpecifications + (usesBuybackHook ? 1 : 0));
+        hookSpecifications =
+            new JBPayHookSpecification[](numberOfStoredPayHookSpecifications + (usesBuybackHook ? 1 : 0));
 
         // Add the other expected pay hooks.
         for (uint256 i; i < numberOfStoredPayHookSpecifications; i++) {
@@ -166,8 +166,7 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
         returns (uint256 revnetId)
     {
         // Deploy the revnet
-        revnetId =
-         _deployRevnetWith({
+        revnetId = _deployRevnetWith({
             name: name,
             symbol: symbol,
             metadata: metadata,
@@ -209,7 +208,12 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
     /// @notice Stores pay hooks for the provided revnet.
     /// @param revnetId The ID of the revnet to which the pay hooks apply.
     /// @param payHookSpecifications The pay hooks to store.
-    function _storeHookSpecificationsOf(uint256 revnetId, JBPayHookSpecification[] memory payHookSpecifications) internal {
+    function _storeHookSpecificationsOf(
+        uint256 revnetId,
+        JBPayHookSpecification[] memory payHookSpecifications
+    )
+        internal
+    {
         // Keep a reference to the number of pay hooks are being stored.
         uint256 numberOfPayHookSpecifications = payHookSpecifications.length;
 
