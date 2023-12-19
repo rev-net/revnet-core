@@ -13,13 +13,11 @@ import {JBPermissionIds} from "lib/juice-contracts-v4/src/libraries/JBPermission
 import {JBConstants} from "lib/juice-contracts-v4/src/libraries/JBConstants.sol";
 import {JBSplitGroupIds} from "lib/juice-contracts-v4/src/libraries/JBSplitGroupIds.sol";
 import {JBRulesetMetadata} from "lib/juice-contracts-v4/src/structs/JBRulesetMetadata.sol";
-import {JBRuleset} from "lib/juice-contracts-v4/src/structs/JBRuleset.sol";
 import {JBRulesetConfig} from "lib/juice-contracts-v4/src/structs/JBRulesetConfig.sol";
 import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalConfig.sol";
 import {JBSplitGroup} from "lib/juice-contracts-v4/src/structs/JBSplitGroup.sol";
 import {JBSplit} from "lib/juice-contracts-v4/src/structs/JBSplit.sol";
 import {JBPermissionsData} from "lib/juice-contracts-v4/src/structs/JBPermissionsData.sol";
-import {JBFundAccessLimitGroup} from "lib/juice-contracts-v4/src/structs/JBFundAccessLimitGroup.sol";
 import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
 import {JBBuybackHookPermissionIds} from "lib/juice-buyback/src/libraries/JBBuybackHookPermissionIds.sol";
 import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
@@ -305,7 +303,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         }
     }
 
-
     /// @notice Creates a group of splits that goes entirely to the provided _boostOperator.
 
     /// @param boostOperator The address to send the entire split amount to.
@@ -339,7 +336,8 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
 
     /// @notice Sets up a buyback hook.
     /// @param revnetId The ID of the revnet to which the buybacks should apply.
-    /// @param buybackHookConfiguration Data used to setup pools that'll be used to buyback tokens from if an optimal price
+    /// @param buybackHookConfiguration Data used to setup pools that'll be used to buyback tokens from if an optimal
+    /// price
     /// is presented.
     function _setupBuybackHookOf(uint256 revnetId, REVBuybackHookConfig memory buybackHookConfiguration) internal {
         // Get a reference to the number of pools that need setting up.
