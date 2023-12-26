@@ -276,15 +276,15 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         // Loop through each boost to set up its ruleset configuration.
         for (uint256 i; i < numberOfBoosts; i++) {
             rulesetConfigurations[i].mustStartAtOrAfter = configuration.boostConfigs[i].startsAtOrAfter;
-            rulesetConfigurations[i].duration = configuration.priceCeilingIncreaseFrequency;
+            rulesetConfigurations[i].duration = configuration.boostConfigs[i].priceCeilingIncreaseFrequency;
             // Set the initial issuance for the first ruleset, otherwise pass 0 to inherit from the previous
             // ruleset.
             rulesetConfigurations[i].weight = i == 0 ? configuration.initialIssuanceRate * 10 ** 18 : 0;
-            rulesetConfigurations[i].decayRate = configuration.priceCeilingIncreasePercentage;
+            rulesetConfigurations[i].decayRate = configuration.boostConfigs[i].priceCeilingIncreasePercentage;
             rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
             rulesetConfigurations[i].metadata = JBRulesetMetadata({
                 reservedRate: configuration.boostConfigs[i].rate,
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - configuration.priceFloorTaxIntensity,
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - configuration.boostConfigs[i].priceFloorTaxIntensity,
                 baseCurrency: configuration.baseCurrency,
                 pausePay: false,
                 pauseCreditTransfers: false,
