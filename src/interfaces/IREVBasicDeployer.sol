@@ -10,7 +10,6 @@ interface IREVBasicDeployer {
         string memory symbol,
         string memory metadata,
         REVConfig memory configuration,
-        address boostOperator,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration
     )

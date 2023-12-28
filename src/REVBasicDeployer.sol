@@ -143,8 +143,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     /// @param symbol The symbol of the ERC-20 token being created for the revnet.
     /// @param metadata The metadata containing revnet's info.
     /// @param configuration The data needed to deploy a basic revnet.
-    /// @param boostOperator The address that will receive the token premint and initial boost, and who is
-    /// allowed to change the boost recipients. Only the boost operator can replace itself after deployment.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
     /// for new participants.
@@ -154,7 +152,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         string memory symbol,
         string memory metadata,
         REVConfig memory configuration,
-        address boostOperator,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration
     )
@@ -167,7 +164,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
             symbol: symbol,
             metadata: metadata,
             configuration: configuration,
-            boostOperator: boostOperator,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
             dataHook: buybackHookConfiguration.hook,
@@ -184,8 +180,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     /// @param symbol The symbol of the ERC-20 token being created for the revnet.
     /// @param metadata The metadata containing revnet's info.
     /// @param configuration The data needed to deploy a basic revnet.
-    /// @param boostOperator The address that will receive the token premint and initial boost, and who is
-    /// allowed to change the boost recipients. Only the boost operator can replace itself after deployment.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
     /// for new participants.
@@ -197,7 +191,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         string memory symbol,
         string memory metadata,
         REVConfig memory configuration,
-        address boostOperator,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
         IJBBuybackHook dataHook,
@@ -226,7 +219,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         CONTROLLER.setSplitGroupsOf({
             projectId: revnetId,
             rulesetId: 0,
-            splitGroups: _makeBoostSplitGroupWith(boostOperator)
+            splitGroups: _makeBoostSplitGroupWith(configuration.operator)
         });
 
         // Premint tokens to the boost operator if needed.
@@ -234,7 +227,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
             CONTROLLER.mintTokensOf({
                 projectId: revnetId,
                 tokenCount: configuration.premintTokenAmount * 10 ** token.decimals(),
-                beneficiary: boostOperator,
+                beneficiary: configuration.operator,
                 memo: string.concat("$", symbol, " preminted"),
                 useReservedRate: false
             });
@@ -244,16 +237,14 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: boostOperator,
+                operator: configuration.operator,
                 projectId: revnetId,
                 permissionIds: _BOOST_OPERATOR_PERMISSIONS_INDEXES
             })
         });
     }
 
-    /// @notice The address that will receive each boost allocation.
-    /// @notice Schedules the initial ruleset for the revnet, and queues all subsequent rulesets that define the boost
-    /// periods.
+    /// @notice Schedules the initial ruleset for the revnet, and queues all subsequent rulesets that define the stages.
     /// @notice configuration The data that defines the revnet's characteristics.
     /// @notice dataHook The address of the data hook.
     /// @notice extraMetadata Extra info to send to the hook.
@@ -267,24 +258,24 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         virtual
         returns (JBRulesetConfig[] memory rulesetConfigurations)
     {
-        // Keep a reference to the number of boost periods to schedule.
-        uint256 numberOfBoosts = configuration.boostConfigs.length;
+        // Keep a reference to the number of stages to schedule.
+        uint256 numberOfStages = configuration.stageConfigurations.length;
 
-        // Each boost is modeled as a ruleset reconfiguration.
-        rulesetConfigurations = new JBRulesetConfig[](numberOfBoosts);
+        // Each stage is modeled as a ruleset reconfiguration.
+        rulesetConfigurations = new JBRulesetConfig[](numberOfStages);
 
-        // Loop through each boost to set up its ruleset configuration.
-        for (uint256 i; i < numberOfBoosts; i++) {
-            rulesetConfigurations[i].mustStartAtOrAfter = configuration.boostConfigs[i].startsAtOrAfter;
-            rulesetConfigurations[i].duration = configuration.boostConfigs[i].priceCeilingIncreaseFrequency;
+        // Loop through each stage to set up its ruleset configuration.
+        for (uint256 i; i < numberOfStages; i++) {
+            rulesetConfigurations[i].mustStartAtOrAfter = configuration.stageConfigurations[i].startsAtOrAfter;
+            rulesetConfigurations[i].duration = configuration.stageConfigurations[i].priceCeilingIncreaseFrequency;
             // Set the initial issuance for the first ruleset, otherwise pass 0 to inherit from the previous
             // ruleset.
             rulesetConfigurations[i].weight = i == 0 ? configuration.initialIssuanceRate * 10 ** 18 : 0;
-            rulesetConfigurations[i].decayRate = configuration.boostConfigs[i].priceCeilingIncreasePercentage;
+            rulesetConfigurations[i].decayRate = configuration.stageConfigurations[i].priceCeilingIncreasePercentage;
             rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
             rulesetConfigurations[i].metadata = JBRulesetMetadata({
-                reservedRate: configuration.boostConfigs[i].rate,
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - configuration.boostConfigs[i].priceFloorTaxIntensity,
+                reservedRate: configuration.stageConfigurations[i].boostRate,
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - configuration.stageConfigurations[i].priceFloorTaxIntensity,
                 baseCurrency: configuration.baseCurrency,
                 pausePay: false,
                 pauseCreditTransfers: false,
