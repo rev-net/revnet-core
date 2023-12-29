@@ -4,6 +4,9 @@ pragma solidity ^0.8.0;
 /// @custom:member startsAtOrAfter The timestamp to start a stage at the given rate at or after.
 /// @custom:member boostRate The percentage of newly issued tokens that should be reserved for the _boostOperator, out of
 /// 10_000 (JBConstants.MAX_RESERVED_RATE).
+/// @custom:member initialIssuanceRate The number of tokens that should be minted initially per 1 unit of the base
+/// currency contributed to the revnet. This should _not_ be specified as a fixed point number with 18 decimals, this
+/// will be applied internally.
 /// @custom:member priceCeilingIncreaseFrequency The number of seconds between applied price ceiling increases. This
 /// should be at least 24 hours.
 /// @custom:member priceCeilingIncreasePercentage The rate at which the price ceiling should increase over time, thus
@@ -17,6 +20,7 @@ pragma solidity ^0.8.0;
 struct REVStageConfig {
     uint40 startsAtOrAfter;
     uint16 boostRate;
+    uint32 initialIssuanceRate;
     uint40 priceCeilingIncreaseFrequency;
     uint32 priceCeilingIncreasePercentage;
     uint16 priceFloorTaxIntensity;
