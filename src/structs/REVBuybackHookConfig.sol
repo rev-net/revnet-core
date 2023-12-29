@@ -5,8 +5,8 @@ import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.so
 import {REVBuybackPoolConfig} from "./REVBuybackPoolConfig.sol";
 
 /// @custom:member hook The buyback hook to use.
-/// @custom:member poolConfigs The pools to setup on the given buyback contract.
+/// @custom:member poolConfigurations The pools to setup on the given buyback contract.
 struct REVBuybackHookConfig {
     IJBBuybackHook hook;
-    REVBuybackPoolConfig[] poolConfigs;
+    REVBuybackPoolConfig[] poolConfigurations;
 }

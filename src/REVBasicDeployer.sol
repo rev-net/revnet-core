@@ -332,14 +332,14 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     /// is presented.
     function _setupBuybackHookOf(uint256 revnetId, REVBuybackHookConfig memory buybackHookConfiguration) internal {
         // Get a reference to the number of pools that need setting up.
-        uint256 numberOfPoolsToSetup = buybackHookConfiguration.poolConfigs.length;
+        uint256 numberOfPoolsToSetup = buybackHookConfiguration.poolConfigurations.length;
 
         // Keep a reference to the pool being iterated on.
         REVBuybackPoolConfig memory poolConfig;
 
         for (uint256 i; i < numberOfPoolsToSetup; i++) {
             // Get a reference to the pool being iterated on.
-            poolConfig = buybackHookConfiguration.poolConfigs[i];
+            poolConfig = buybackHookConfiguration.poolConfigurations[i];
 
             // Set the pool for the buyback contract.
             buybackHookConfiguration.hook.setPoolFor({

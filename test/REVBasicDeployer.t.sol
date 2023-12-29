@@ -53,11 +53,11 @@ contract REVBasicDeployerTest is Test {
     //             tokensToAccept: tokensToAccept
     //     });
 
-    //     REVBuybackPoolConfig[] memory poolConfigs = new REVBuybackPoolConfig[](1);
+    //     REVBuybackPoolConfig[] memory poolConfigurations = new REVBuybackPoolConfig[](1);
 
     //     REVBuybackHookConfig memory buybackHookConfiguration = REVBuybackHookConfig({
     //         hook: address(0),
-    //         poolConfigs: poolConfigs
+    //         poolConfigurations: poolConfigurations
     //     });
 
     //     revnetId = deployRevnetFor({
