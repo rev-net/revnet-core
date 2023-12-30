@@ -210,7 +210,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         });
 
         // Issue the network's ERC-20 token.
-        IJBToken token = CONTROLLER.deployERC20For({projectId: revnetId, name: name, symbol: symbol});
+        CONTROLLER.deployERC20For({projectId: revnetId, name: name, symbol: symbol});
 
         // Setup the buyback hook.
         _setupBuybackHookOf(revnetId, buybackHookConfiguration);
@@ -226,7 +226,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         if (configuration.premintTokenAmount > 0) {
             CONTROLLER.mintTokensOf({
                 projectId: revnetId,
-                tokenCount: configuration.premintTokenAmount * 10 ** token.decimals(),
+                tokenCount: configuration.premintTokenAmount,
                 beneficiary: configuration.initialBoostOperator,
                 memo: string.concat("$", symbol, " preminted"),
                 useReservedRate: false
@@ -270,7 +270,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
             rulesetConfigurations[i].duration = configuration.stageConfigurations[i].priceCeilingIncreaseFrequency;
             // Set the initial issuance for the first ruleset, otherwise pass 0 to inherit from the previous
             // ruleset.
-            rulesetConfigurations[i].weight = configuration.stageConfigurations[i].initialIssuanceRate * 10 ** 18;
+            rulesetConfigurations[i].weight = configuration.stageConfigurations[i].initialIssuanceRate;
             rulesetConfigurations[i].decayRate = configuration.stageConfigurations[i].priceCeilingIncreasePercentage;
             rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
             rulesetConfigurations[i].metadata = JBRulesetMetadata({
