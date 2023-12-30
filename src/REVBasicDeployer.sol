@@ -219,7 +219,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         CONTROLLER.setSplitGroupsOf({
             projectId: revnetId,
             rulesetId: 0,
-            splitGroups: _makeBoostSplitGroupWith(configuration.operator)
+            splitGroups: _makeBoostSplitGroupWith(configuration.initialBoostOperator)
         });
 
         // Premint tokens to the boost operator if needed.
@@ -227,7 +227,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
             CONTROLLER.mintTokensOf({
                 projectId: revnetId,
                 tokenCount: configuration.premintTokenAmount * 10 ** token.decimals(),
-                beneficiary: configuration.operator,
+                beneficiary: configuration.initialBoostOperator,
                 memo: string.concat("$", symbol, " preminted"),
                 useReservedRate: false
             });
@@ -237,7 +237,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: configuration.operator,
+                operator: configuration.initialBoostOperator,
                 projectId: revnetId,
                 permissionIds: _BOOST_OPERATOR_PERMISSIONS_INDEXES
             })
