@@ -150,7 +150,7 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
     /// for new participants.
-    /// @param payHooksSpecifications Any hooks that should run when the revnet is paid.
+    /// @param payHookSpecifications Any hooks that should run when the revnet is paid.
     /// @param extraHookMetadata Extra metadata to attach to the cycle for the delegates to use.
     /// @return revnetId The ID of the newly created revnet.
     function deployPayHookRevnetWith(
@@ -160,7 +160,7 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
-        JBPayHookSpecification[] memory payHooksSpecifications,
+        JBPayHookSpecification[] memory payHookSpecifications,
         uint16 extraHookMetadata
     )
         public
@@ -179,7 +179,7 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
         });
 
         // Store the pay hooks.
-        _storeHookSpecificationsOf(revnetId, payHooksSpecifications);
+        _storeHookSpecificationsOf(revnetId, payHookSpecifications);
     }
 
     //*********************************************************************//

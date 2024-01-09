@@ -5,6 +5,7 @@ import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/
 import {IJBController} from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
 import {IJBPermissioned} from "lib/juice-contracts-v4/src/interfaces/IJBPermissioned.sol";
 import {IJBRulesetDataHook} from "lib/juice-contracts-v4/src/interfaces/IJBRulesetDataHook.sol";
+import {IJBPayHook} from "lib/juice-contracts-v4/src/interfaces/IJBPayHook.sol";
 import {JBPermissionIds} from "lib/juice-contracts-v4/src/libraries/JBPermissionIds.sol";
 import {JBBeforeRedeemRecordedContext} from "lib/juice-contracts-v4/src/structs/JBBeforeRedeemRecordedContext.sol";
 import {JBBeforePayRecordedContext} from "lib/juice-contracts-v4/src/structs/JBBeforePayRecordedContext.sol";
@@ -14,7 +15,9 @@ import {JBRulesetConfig} from "lib/juice-contracts-v4/src/structs/JBRulesetConfi
 import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalConfig.sol";
 import {JBPermissionsData} from "lib/juice-contracts-v4/src/structs/JBPermissionsData.sol";
 import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
-import {IJBTiered721HookDeployer} from "lib/juice-721-hook/src/interfaces/IJBTiered721HookDeployer.sol";
+import {IJB721TiersHookDeployer} from "lib/juice-721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
+import {IJB721TiersHook} from "lib/juice-721-hook/src/interfaces/IJB721TiersHook.sol";
+import {JBDeploy721TiersHookConfig} from "lib/juice-721-hook/src/structs/JBDeploy721TiersHookConfig.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVPayHookDeployer} from "./REVPayHookDeployer.sol";
@@ -22,17 +25,17 @@ import {REVPayHookDeployer} from "./REVPayHookDeployer.sol";
 /// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s.
 contract Tiered721RevnetDeployer is REVPayHookDeployer {
     /// @notice The contract responsible for deploying the tiered 721 hook.
-    IJBTiered721HookDeployer public immutable TIERED_721_HOOK_DEPLOYER;
+    IJB721TiersHookDeployer public immutable HOOK_DEPLOYER;
 
     /// @param controller The controller that revnets are made from.
-    /// @param tiered721HookDeployer The tiered 721 hook deployer.
+    /// @param hookDeployer The 721 tiers hook deployer.
     constructor(
         IJBController controller,
-        IJBTiered721HookDeployer tiered721HookDeployer
+        IJB721TiersHookDeployer hookDeployer
     )
         REVPayHookDeployer(controller)
     {
-        TIERED_721_HOOK_DEPLOYER = tiered721HookDeployer;
+        HOOK_DEPLOYER = hookDeployer;
     }
 
     /// @notice Deploy a revnet that supports 721 sales.
@@ -41,8 +44,8 @@ contract Tiered721RevnetDeployer is REVPayHookDeployer {
     /// @param metadata The metadata containing revnet's info.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
-    /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
-    /// for new participants.
+    /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price for new participants.
+    /// @param hookConfiguration Data used for setting up the 721 tiers.
     /// @param otherPayHooksSpecifications Any hooks that should run when the revnet is paid alongside the 721 hook.
     /// @param extraHookMetadata Extra metadata to attach to the cycle for the delegates to use.
     /// @return revnetId The ID of the newly created revnet.
@@ -53,7 +56,7 @@ contract Tiered721RevnetDeployer is REVPayHookDeployer {
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
-        JBDeployTiered721DelegateData memory tiered721SetupData,
+        JBDeploy721TiersHookConfig memory hookConfiguration,
         JBPayHookSpecification[] memory otherPayHooksSpecifications,
         uint16 extraHookMetadata
     )
@@ -61,25 +64,25 @@ contract Tiered721RevnetDeployer is REVPayHookDeployer {
         returns (uint256 revnetId)
     {
         // Get the revnet ID, optimistically knowing it will be one greater than the current count.
-        revnetId = controller.projects().count() + 1;
+        revnetId = CONTROLLER.PROJECTS().count() + 1;
 
         // Keep a reference to the number of pay hooks passed in.
         uint256 numberOfOtherPayHooks = otherPayHooksSpecifications.length;
 
         // Track an updated list of pay hooks that'll also fit the tiered 721 hook.
-        JBPayHookSpecification[] memory payHooks = new JBPayHookSpecification[](numberOfOtherPayHooks + 1);
+        JBPayHookSpecification[] memory payHookSpecifications = new JBPayHookSpecification[](numberOfOtherPayHooks + 1);
 
         // Repopulate the updated list with the params passed in.
         for (uint256 i; i < numberOfOtherPayHooks; i++) {
-            payHooks[i] = otherPayHooksSpecifications[i];
+            payHookSpecifications[i] = otherPayHooksSpecifications[i];
         }
 
         // Deploy the tiered 721 hook contract.
-        IJBTiered721Hook tiered721Hook = TIERED_721_HOOK_DEPLOYER.deployHookFor(revnetId, tiered721SetupData);
+        IJB721TiersHook hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration);
 
         // Add the tiered 721 hook at the end.
-        payHooks[numberOfOtherPayHooks] = JBPayHookSpecification({
-            delegate: IJBPayHook(address(tiered721Hook)),
+        payHookSpecifications[numberOfOtherPayHooks] = JBPayHookSpecification({
+            hook: IJBPayHook(address(hook)),
             amount: 0,
             metadata: bytes("")
         });
@@ -91,7 +94,7 @@ contract Tiered721RevnetDeployer is REVPayHookDeployer {
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
-            payHooksSpecifications: payHooksSpecifications,
+            payHookSpecifications: payHookSpecifications,
             extraHookMetadata: extraHookMetadata
         });
     }
