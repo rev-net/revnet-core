@@ -20,14 +20,6 @@ import {REVBasicDeployer} from "./REVBasicDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also calls other hooks when paid.
 contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
-    //*********************************************************************//
-    // ------------------------ private constants ------------------------ //
-    //*********************************************************************//
-
-    /// @notice The permissions that the provided buyback hook should be granted since it wont be used as the data
-    /// source.
-    /// This is set once in the constructor to contain only the MINT operation.
-    uint256[] private _BUYBACK_HOOK_PERMISSION_IDS;
 
     //*********************************************************************//
     // --------------------- public stored properties -------------------- //
@@ -126,6 +118,18 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
     }
 
     //*********************************************************************//
+    // ------------------------- external views -------------------------- //
+    //*********************************************************************//
+
+    /// @notice Required by the IJBRulesetDataHook interfaces.
+    /// @param revnetId The ID of the revnet to check permissions for.
+    /// @param addr The address to check if has permissions.
+    /// @return flag The flag indicating if the address has permissions to mint on the revnet's behalf.
+    function hasMintPermissionFor(uint256 revnetId, address addr) external view returns (bool) {
+        return addr == address(buybackHookOf[revnetId]);
+    }
+
+    //*********************************************************************//
     // -------------------------- constructor ---------------------------- //
     //*********************************************************************//
 
@@ -157,7 +161,7 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
         JBPayHookSpecification[] memory payHooksSpecifications,
-        uint8 extraHookMetadata
+        uint16 extraHookMetadata
     )
         public
         returns (uint256 revnetId)
@@ -173,25 +177,6 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
             dataHook: IJBBuybackHook(address(this)),
             extraHookMetadata: extraHookMetadata
         });
-
-        // Give the buyback hook permission to mint on this contract's behald if it doesn't yet have it.
-        if (
-            !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
-                operator: address(buybackHookConfiguration.hook),
-                account: address(this),
-                projectId: 0,
-                permissionIds: _BUYBACK_HOOK_PERMISSION_IDS
-            })
-        ) {
-            IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
-                account: address(this),
-                permissionsData: JBPermissionsData({
-                    operator: address(buybackHookConfiguration.hook),
-                    projectId: 0,
-                    permissionIds: _BUYBACK_HOOK_PERMISSION_IDS
-                })
-            });
-        }
 
         // Store the pay hooks.
         _storeHookSpecificationsOf(revnetId, payHooksSpecifications);
