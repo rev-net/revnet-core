@@ -4,3 +4,6 @@
 [submodule "lib/juice-buyback"]
 	path = lib/juice-buyback
 	url = https://github.com/Bananapus/juice-buyback
+[submodule "lib/juice-721-hook"]
+	path = lib/juice-721-hook
+	url = https://github.com/Bananapus/juice-721-hook
