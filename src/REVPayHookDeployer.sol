@@ -20,7 +20,6 @@ import {REVBasicDeployer} from "./REVBasicDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also calls other hooks when paid.
 contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
-
     //*********************************************************************//
     // --------------------- public stored properties -------------------- //
     //*********************************************************************//

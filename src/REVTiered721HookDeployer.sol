@@ -29,12 +29,7 @@ contract Tiered721RevnetDeployer is REVPayHookDeployer {
 
     /// @param controller The controller that revnets are made from.
     /// @param hookDeployer The 721 tiers hook deployer.
-    constructor(
-        IJBController controller,
-        IJB721TiersHookDeployer hookDeployer
-    )
-        REVPayHookDeployer(controller)
-    {
+    constructor(IJBController controller, IJB721TiersHookDeployer hookDeployer) REVPayHookDeployer(controller) {
         HOOK_DEPLOYER = hookDeployer;
     }
 
@@ -44,7 +39,8 @@ contract Tiered721RevnetDeployer is REVPayHookDeployer {
     /// @param metadata The metadata containing revnet's info.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
-    /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price for new participants.
+    /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
+    /// for new participants.
     /// @param hookConfiguration Data used for setting up the 721 tiers.
     /// @param otherPayHooksSpecifications Any hooks that should run when the revnet is paid alongside the 721 hook.
     /// @param extraHookMetadata Extra metadata to attach to the cycle for the delegates to use.
@@ -81,11 +77,8 @@ contract Tiered721RevnetDeployer is REVPayHookDeployer {
         IJB721TiersHook hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration);
 
         // Add the tiered 721 hook at the end.
-        payHookSpecifications[numberOfOtherPayHooks] = JBPayHookSpecification({
-            hook: IJBPayHook(address(hook)),
-            amount: 0,
-            metadata: bytes("")
-        });
+        payHookSpecifications[numberOfOtherPayHooks] =
+            JBPayHookSpecification({hook: IJBPayHook(address(hook)), amount: 0, metadata: bytes("")});
 
         super.deployPayHookRevnetWith({
             name: name,

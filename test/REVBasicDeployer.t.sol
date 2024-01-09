@@ -10,69 +10,69 @@ import "forge-std/Test.sol";
 // import {REVBoostConfig} from "../src/structs/REVBoostConfig.sol";
 
 contract REVBasicDeployerTest is Test {
-    // // IJBProjects PROJECTS;
-    // // IJBPermissions PERMISSIONS;
+// // IJBProjects PROJECTS;
+// // IJBPermissions PERMISSIONS;
 
-    // function setUp() public {
-    //     // // Deploy the permissions contract.
-    //     // PERMISSIONS = new JBPermissions();
-    //     // // Deploy the projects contract.
-    //     // PROJECTS = new JBProjects(address(123));
+// function setUp() public {
+//     // // Deploy the permissions contract.
+//     // PERMISSIONS = new JBPermissions();
+//     // // Deploy the projects contract.
+//     // PROJECTS = new JBProjects(address(123));
 
-    // }
+// }
 
-    // function testdeployerbecomesowner(
-    //     address projectOwner,
-    //     address owner
-    // )
-    //     public
-    // {
-    //     string memory name = "token name";
-    //     string memory symbol = "token symbol";
-    //     string memory metadata = "im a revnet";
-    //     REVBoostConfig[] memory boosts = new REVBoostConfig[](1);
-    //     boosts[0] = REVBoostConfig({
-    //         rate: 1,
-    //         startsAtOrAfter: 0
-    //     });
-    //     REVConfig memory deployConfig = REVConfig({
-    //         baseCurrency: JBConstants.NATIVE_TOKEN,
-    //         initialIssuanceRate: 1000,
-    //         premintTokenAmount: 1000
-    //         priceCeilingIncreaseFrequency: 100,
-    //         priceCeilingIncreasePercentage: 100,
-    //         priceFloorTaxIntensity: 100,
-    //         boosts: boosts
-    //     });
-    //     address boostOperator = address(123);
-    //     JBTerminalConfig[] memory terminalConfigurations = new JBTerminalConfig[](1);
-    //     address[] memory tokensToAccept = new address[](0);
-    //     tokensToAccept[0] = JBConstants.NATIVE_TOKEN;
-    //     terminalConfigurations = JBTerminalConfig({
-    //             terminal: address(13);
-    //             tokensToAccept: tokensToAccept
-    //     });
+// function testdeployerbecomesowner(
+//     address projectOwner,
+//     address owner
+// )
+//     public
+// {
+//     string memory name = "token name";
+//     string memory symbol = "token symbol";
+//     string memory metadata = "im a revnet";
+//     REVBoostConfig[] memory boosts = new REVBoostConfig[](1);
+//     boosts[0] = REVBoostConfig({
+//         rate: 1,
+//         startsAtOrAfter: 0
+//     });
+//     REVConfig memory deployConfig = REVConfig({
+//         baseCurrency: JBConstants.NATIVE_TOKEN,
+//         initialIssuanceRate: 1000,
+//         premintTokenAmount: 1000
+//         priceCeilingIncreaseFrequency: 100,
+//         priceCeilingIncreasePercentage: 100,
+//         priceFloorTaxIntensity: 100,
+//         boosts: boosts
+//     });
+//     address boostOperator = address(123);
+//     JBTerminalConfig[] memory terminalConfigurations = new JBTerminalConfig[](1);
+//     address[] memory tokensToAccept = new address[](0);
+//     tokensToAccept[0] = JBConstants.NATIVE_TOKEN;
+//     terminalConfigurations = JBTerminalConfig({
+//             terminal: address(13);
+//             tokensToAccept: tokensToAccept
+//     });
 
-    //     REVBuybackPoolConfig[] memory poolConfigurations = new REVBuybackPoolConfig[](1);
+//     REVBuybackPoolConfig[] memory poolConfigurations = new REVBuybackPoolConfig[](1);
 
-    //     REVBuybackHookConfig memory buybackHookConfiguration = REVBuybackHookConfig({
-    //         hook: address(0),
-    //         poolConfigurations: poolConfigurations
-    //     });
+//     REVBuybackHookConfig memory buybackHookConfiguration = REVBuybackHookConfig({
+//         hook: address(0),
+//         poolConfigurations: poolConfigurations
+//     });
 
-    //     revnetId = deployRevnetFor({
-    //         name: tokenName,
-    //         symbol: symbol,
-    //         metadata: revnetMetadata,
-    //         deployConfig: deployConfig,
-    //         boostOperator: boostOperator,
-    //         terminalConfigurations: terminalConfigurations,
-    //         buybackHookConfiguration: buybackHookConfiguration
-    //     });
+//     revnetId = deployRevnetFor({
+//         name: tokenName,
+//         symbol: symbol,
+//         metadata: revnetMetadata,
+//         deployConfig: deployConfig,
+//         boostOperator: boostOperator,
+//         terminalConfigurations: terminalConfigurations,
+//         buybackHookConfiguration: buybackHookConfiguration
+//     });
 
-    //     // `CreateFor` won't work if the address is a contract that doesn't support `ERC721Receiver`.
-    //     // vm.assume(projectOwner != address(0));
+//     // `CreateFor` won't work if the address is a contract that doesn't support `ERC721Receiver`.
+//     // vm.assume(projectOwner != address(0));
 
-    //     assertEq(uint256(1), uint256(1));
-    // }
+//     assertEq(uint256(1), uint256(1));
+// }
 }

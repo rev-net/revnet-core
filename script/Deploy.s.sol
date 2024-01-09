@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
-import "lib/forge-std/src/Script.sol";
-// import "forge-std/StdJson.sol";
-
+import {Script, stdJson} from "lib/forge-std/src/Script.sol";
+import {Strings} from "lib/openzeppelin-contracts/contracts/utils/Strings.sol";
 import {IJBController} from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
 import {REVBasicDeployer} from "src/REVBasicDeployer.sol";
 
@@ -33,17 +32,33 @@ contract Deploy is Script {
             revert("Invalid RPC / no juice contracts deployed on this network");
         }
 
-        address controllerAddress = 
-            stdJson.readAddress(
-            vm.readFile(
-                string.concat(
-                    "lib/juice-contracts-v4/broadcast/Deploy.s.sol/", chain, "/run-latest.json"
-                )
-            ),
-            ".transactions[7].contractAddress"
+        address controllerAddress = _getDeploymentAddress(
+            string.concat("lib/juice-contracts-v4/broadcast/Deploy.s.sol/", chain, "/run-latest.json"), "JBController"
         );
 
         vm.broadcast();
         new REVBasicDeployer(IJBController(controllerAddress));
+    }
+
+    /// @notice Get the address of a contract that was deployed by the Deploy script.
+    /// @dev Reverts if the contract was not found.
+    /// @param path The path to the deployment file.
+    /// @param contractName The name of the contract to get the address of.
+    /// @return The address of the contract.
+    function _getDeploymentAddress(string memory path, string memory contractName) internal view returns (address) {
+        string memory deploymentJson = vm.readFile(path);
+        uint256 nOfTransactions = stdJson.readStringArray(deploymentJson, ".transactions").length;
+
+        for (uint256 i = 0; i < nOfTransactions; i++) {
+            string memory currentKey = string.concat(".transactions", "[", Strings.toString(i), "]");
+            string memory currentContractName =
+                stdJson.readString(deploymentJson, string.concat(currentKey, ".contractName"));
+
+            if (keccak256(abi.encodePacked(currentContractName)) == keccak256(abi.encodePacked(contractName))) {
+                return stdJson.readAddress(deploymentJson, string.concat(currentKey, ".contractAddress"));
+            }
+        }
+
+        revert(string.concat("Could not find contract with name '", contractName, "' in deployment file '", path, "'"));
     }
 }

@@ -2,7 +2,8 @@
 pragma solidity ^0.8.0;
 
 /// @custom:member startsAtOrAfter The timestamp to start a stage at the given rate at or after.
-/// @custom:member boostRate The percentage of newly issued tokens that should be reserved for the _boostOperator, out of
+/// @custom:member boostRate The percentage of newly issued tokens that should be reserved for the _boostOperator, out
+/// of
 /// 10_000 (JBConstants.MAX_RESERVED_RATE).
 /// @custom:member initialIssuanceRate The number of tokens that should be minted initially per 1 unit of the base
 /// currency contributed to the revnet.

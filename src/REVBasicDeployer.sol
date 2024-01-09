@@ -275,7 +275,8 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
             rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
             rulesetConfigurations[i].metadata = JBRulesetMetadata({
                 reservedRate: configuration.stageConfigurations[i].boostRate,
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - configuration.stageConfigurations[i].priceFloorTaxIntensity,
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE
+                    - configuration.stageConfigurations[i].priceFloorTaxIntensity,
                 baseCurrency: configuration.baseCurrency,
                 pausePay: false,
                 pauseCreditTransfers: false,
