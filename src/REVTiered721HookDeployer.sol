@@ -14,30 +14,25 @@ import {JBRulesetConfig} from "lib/juice-contracts-v4/src/structs/JBRulesetConfi
 import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalConfig.sol";
 import {JBPermissionsData} from "lib/juice-contracts-v4/src/structs/JBPermissionsData.sol";
 import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
+import {IJBTiered721HookDeployer} from "lib/juice-721-hook/src/interfaces/IJBTiered721HookDeployer.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
-import {PayHookRevnetDeployer} from "./PayHookRevnetDeployer.sol";
+import {REVPayHookDeployer} from "./REVPayHookDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s.
-contract Tiered721RevnetDeployer is PayHookRevnetDeployer {
-    /// @notice The directory of terminals and controllers for revnets.
-    IJBDirectory public immutable directory;
-
+contract Tiered721RevnetDeployer is REVPayHookDeployer {
     /// @notice The contract responsible for deploying the tiered 721 hook.
-    IJBTiered721HookDeployer public immutable tiered721HookDeployer;
+    IJBTiered721HookDeployer public immutable TIERED_721_HOOK_DEPLOYER;
 
-    /// @param directory The directory of terminals and controllers for revnets.
-    /// @param tiered721HookDeployer The tiered 721 hook deployer.
     /// @param controller The controller that revnets are made from.
+    /// @param tiered721HookDeployer The tiered 721 hook deployer.
     constructor(
-        IJBDirectory directory,
-        IJBTiered721HookDeployer tiered721HookDeployer,
-        IJBController3_1 controller
+        IJBController controller,
+        IJBTiered721HookDeployer tiered721HookDeployer
     )
         REVPayHookDeployer(controller)
     {
-        directory = directory;
-        tiered721HookDeployer = tiered721HookDeployer;
+        TIERED_721_HOOK_DEPLOYER = tiered721HookDeployer;
     }
 
     /// @notice Deploy a revnet that supports 721 sales.
@@ -66,7 +61,7 @@ contract Tiered721RevnetDeployer is PayHookRevnetDeployer {
         returns (uint256 revnetId)
     {
         // Get the revnet ID, optimistically knowing it will be one greater than the current count.
-        revnetId = directory.projects().count() + 1;
+        revnetId = controller.projects().count() + 1;
 
         // Keep a reference to the number of pay hooks passed in.
         uint256 numberOfOtherPayHooks = otherPayHooksSpecifications.length;
@@ -80,7 +75,7 @@ contract Tiered721RevnetDeployer is PayHookRevnetDeployer {
         }
 
         // Deploy the tiered 721 hook contract.
-        IJBTiered721Hook tiered721Hook = tiered721HookDeployer.deployHookFor(revnetId, tiered721SetupData);
+        IJBTiered721Hook tiered721Hook = TIERED_721_HOOK_DEPLOYER.deployHookFor(revnetId, tiered721SetupData);
 
         // Add the tiered 721 hook at the end.
         payHooks[numberOfOtherPayHooks] = JBPayHookSpecification({
