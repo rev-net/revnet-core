@@ -10,3 +10,6 @@
 	url = https://github.com/Bananapus/juice-721-hook
 	branch = language-updates
 
+[submodule "lib/openzeppelin-contracts"]
+	path = lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
