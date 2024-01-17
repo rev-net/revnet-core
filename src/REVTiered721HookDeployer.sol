@@ -23,7 +23,7 @@ import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVPayHookDeployer} from "./REVPayHookDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s.
-contract REVTiered721RevnetDeployer is REVPayHookDeployer {
+contract REVTiered721HookDeployer is REVPayHookDeployer {
     /// @notice The contract responsible for deploying the tiered 721 hook.
     IJB721TiersHookDeployer public immutable HOOK_DEPLOYER;
 

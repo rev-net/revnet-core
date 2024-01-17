@@ -1,33 +1,28 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
-import { CroptopPublisher, AllowedPost } from "@croptop/publisher/src/CroptopPublisher.sol";
-import { JB721Operations } from "@jbx-protocol/juice-721-delegate/contracts/libraries/JB721Operations.sol";
-import { IJBTiered721DelegateDeployer } from
-    "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721DelegateDeployer.sol";
-import { JBDeployTiered721DelegateData } from
-    "@jbx-protocol/juice-721-delegate/contracts/structs/JBDeployTiered721DelegateData.sol";
-import { IJBController3_1 } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController3_1.sol";
-import { IJBDirectory } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol";
-import { IJBPaymentTerminal } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPaymentTerminal.sol";
-import { IJBOperatable } from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBOperatable.sol";
-import { IJBPayoutRedemptionPaymentTerminal3_1_1 } from
-    "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayoutRedemptionPaymentTerminal3_1_1.sol";
-import { JBOperatorData } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBOperatorData.sol";
-import { JBPayDelegateAllocation3_1_1 } from
-    "@jbx-protocol/juice-contracts-v3/contracts/structs/JBPayDelegateAllocation3_1_1.sol";
-import { JBProjectMetadata } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBProjectMetadata.sol";
-import { IJBGenericBuybackDelegate } from
-    "@jbx-protocol/juice-buyback-delegate/contracts/interfaces/IJBGenericBuybackDelegate.sol";
-import { REVTiered721RevnetDeployer } from "./REVTiered721RevnetDeployer.sol";
+import { CroptopPublisher, AllowedPost } from "lib/croptop-contracts/src/CroptopPublisher.sol";
+import { IJBController } from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
+import {IJBPermissioned} from "lib/juice-contracts-v4/src/interfaces/IJBPermissioned.sol";
+import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalConfig.sol";
+import {JBPayHookSpecification} from "lib/juice-contracts-v4/src/structs/JBPayHookSpecification.sol";
+import {JBPermissionsData} from "lib/juice-contracts-v4/src/structs/JBPermissionsData.sol";
+import {JB721PermissionIds} from "lib/juice-721-hook/src/libraries/JB721PermissionIds.sol";
+import {IJB721TiersHookDeployer} from "lib/juice-721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
+import {JBDeploy721TiersHookConfig} from "lib/juice-721-hook/src/structs/JBDeploy721TiersHookConfig.sol";
 
-/// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s via a croptop proxy.
-contract REVCroptopDeployer is REVTiered721RevnetDeployer {
+import {REVConfig} from "./structs/REVConfig.sol";
+import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
+import { REVTiered721HookDeployer } from "./REVTiered721HookDeployer.sol";
+
+/// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s via the croptop publisher.
+contract REVCroptopDeployer is REVTiered721HookDeployer {
     /// @notice The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     CroptopPublisher public PUBLISHER;
 
     /// @notice The permissions that the croptop publisher should be granted. This is set once in the constructor to
     /// contain only the ADJUST_TIERS operation.
+    /// @dev This should only be set in the constructor.
     uint256[] internal _CROPTOP_PERMISSIONS_INDEXES;
 
     /// @param controller The controller that revnets are made from.
@@ -38,10 +33,10 @@ contract REVCroptopDeployer is REVTiered721RevnetDeployer {
         IJB721TiersHookDeployer hookDeployer,
         CroptopPublisher publisher
     )
-        Tiered721RevnetDeployer(controller, hookDeployer )
+        REVTiered721HookDeployer(controller, hookDeployer )
     {
         PUBLISHER = publisher;
-        _CROPTOP_PERMISSIONS_INDEXES.push(JB721Operations.ADJUST_TIERS);
+        _CROPTOP_PERMISSIONS_INDEXES.push(JB721PermissionIds.ADJUST_TIERS);
     }
 
     /// @notice Deploy a revnet that supports 721 sales.
@@ -66,7 +61,7 @@ contract REVCroptopDeployer is REVTiered721RevnetDeployer {
         REVBuybackHookConfig memory buybackHookConfiguration,
         JBDeploy721TiersHookConfig memory hookConfiguration,
         JBPayHookSpecification[] memory otherPayHooksSpecifications,
-        uint16 extraHookMetadata
+        uint16 extraHookMetadata,
         AllowedPost[] memory allowedPosts
     )
         public
@@ -79,23 +74,23 @@ contract REVCroptopDeployer is REVTiered721RevnetDeployer {
             metadata: metadata,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
-            buybackHookConfigurations: buybackHookConfigurations,
+            buybackHookConfiguration: buybackHookConfiguration,
             hookConfiguration: hookConfiguration,
             otherPayHooksSpecifications: otherPayHooksSpecifications,
             extraHookMetadata: extraHookMetadata
         });
 
         // Configure allowed posts.
-        if (allowedPosts.length != 0) publisher.configurePostingCriteriaFor(revnetId, allowedPosts);
+        if (allowedPosts.length != 0) PUBLISHER.configurePostingCriteriaFor(revnetId, allowedPosts);
 
         // Give the croptop publisher permission to post on this contract's behalf.
-        IJBPermissioned(address(controller)).PERMISSIONS().setPermissionsFor(
+        IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: address(publisher),
+                operator: address(PUBLISHER),
                 projectId: revnetId,
                 permissionIds: _CROPTOP_PERMISSIONS_INDEXES
             })
-        );
+        });
     }
 }
