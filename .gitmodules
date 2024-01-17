@@ -15,3 +15,6 @@
 	path = lib/juice-721-hook
 	url = https://github.com/Bananapus/juice-721-hook
 	branch = language-updates
+[submodule "lib/croptop-contracts"]
+	path = lib/croptop-contracts
+	url = https://github.com/mejango/croptop-contracts
