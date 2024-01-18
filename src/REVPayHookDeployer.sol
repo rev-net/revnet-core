@@ -3,16 +3,13 @@ pragma solidity ^0.8.23;
 
 import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import {IJBController} from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
-import {IJBPermissioned} from "lib/juice-contracts-v4/src/interfaces/IJBPermissioned.sol";
 import {IJBRulesetDataHook} from "lib/juice-contracts-v4/src/interfaces/IJBRulesetDataHook.sol";
 import {JBPermissionIds} from "lib/juice-contracts-v4/src/libraries/JBPermissionIds.sol";
 import {JBBeforeRedeemRecordedContext} from "lib/juice-contracts-v4/src/structs/JBBeforeRedeemRecordedContext.sol";
 import {JBBeforePayRecordedContext} from "lib/juice-contracts-v4/src/structs/JBBeforePayRecordedContext.sol";
 import {JBRedeemHookSpecification} from "lib/juice-contracts-v4/src/structs/JBRedeemHookSpecification.sol";
 import {JBPayHookSpecification} from "lib/juice-contracts-v4/src/structs/JBPayHookSpecification.sol";
-import {JBRulesetConfig} from "lib/juice-contracts-v4/src/structs/JBRulesetConfig.sol";
 import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalConfig.sol";
-import {JBPermissionsData} from "lib/juice-contracts-v4/src/structs/JBPermissionsData.sol";
 import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
@@ -91,14 +88,13 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
     }
 
     /// @notice This function is never called, it needs to be included to adhere to the interface.
-    function beforeRedeemRecordedWith(JBBeforeRedeemRecordedContext calldata context)
+    function beforeRedeemRecordedWith(JBBeforeRedeemRecordedContext calldata)
         external
         view
         virtual
         override
         returns (uint256, JBRedeemHookSpecification[] memory specifications)
     {
-        context; // Unused.
         return (0, specifications);
     }
 
@@ -199,7 +195,8 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
 
         // Store the pay hooks.
         for (uint256 i; i < numberOfPayHookSpecifications; i++) {
-            _payHookSpecificationsOf[revnetId][i] = payHookSpecifications[i];
+            // Store the value.
+            _payHookSpecificationsOf[revnetId].push(payHookSpecifications[i]);
         }
     }
 }

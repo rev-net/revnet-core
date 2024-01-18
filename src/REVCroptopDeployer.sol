@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import { CroptopPublisher, AllowedPost } from "lib/croptop-contracts/src/CroptopPublisher.sol";
-import { IJBController } from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
+import {CroptopPublisher, AllowedPost} from "lib/croptop-contracts/src/CroptopPublisher.sol";
+import {IJBController} from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
 import {IJBPermissioned} from "lib/juice-contracts-v4/src/interfaces/IJBPermissioned.sol";
 import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalConfig.sol";
 import {JBPayHookSpecification} from "lib/juice-contracts-v4/src/structs/JBPayHookSpecification.sol";
@@ -13,9 +13,10 @@ import {JBDeploy721TiersHookConfig} from "lib/juice-721-hook/src/structs/JBDeplo
 
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
-import { REVTiered721HookDeployer } from "./REVTiered721HookDeployer.sol";
+import {REVTiered721HookDeployer} from "./REVTiered721HookDeployer.sol";
 
-/// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s via the croptop publisher.
+/// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s via the croptop
+/// publisher.
 contract REVCroptopDeployer is REVTiered721HookDeployer {
     /// @notice The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     CroptopPublisher public PUBLISHER;
@@ -29,11 +30,11 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
     /// @param hookDeployer The 721 tiers hook deployer.
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     constructor(
-        IJBController controller, 
+        IJBController controller,
         IJB721TiersHookDeployer hookDeployer,
         CroptopPublisher publisher
     )
-        REVTiered721HookDeployer(controller, hookDeployer )
+        REVTiered721HookDeployer(controller, hookDeployer)
     {
         PUBLISHER = publisher;
         _CROPTOP_PERMISSIONS_INDEXES.push(JB721PermissionIds.ADJUST_TIERS);
@@ -81,7 +82,9 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
         });
 
         // Configure allowed posts.
-        if (allowedPosts.length != 0) PUBLISHER.configurePostingCriteriaFor(revnetId, allowedPosts);
+        if (allowedPosts.length != 0) {
+            PUBLISHER.configurePostingCriteriaFor(revnetId, allowedPosts);
+        }
 
         // Give the croptop publisher permission to post on this contract's behalf.
         IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
