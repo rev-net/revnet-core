@@ -19,7 +19,8 @@ import {JBSplitGroup} from "lib/juice-contracts-v4/src/structs/JBSplitGroup.sol"
 import {JBSplit} from "lib/juice-contracts-v4/src/structs/JBSplit.sol";
 import {JBPermissionsData} from "lib/juice-contracts-v4/src/structs/JBPermissionsData.sol";
 import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
-import {JBBuybackHookPermissionIds} from "lib/juice-buyback/src/libraries/JBBuybackHookPermissionIds.sol";
+import {JBBuybackPermissionIds} from "lib/juice-buyback/src/libraries/JBBuybackPermissionIds.sol";
+
 import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
@@ -96,7 +97,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     constructor(IJBController controller) {
         CONTROLLER = controller;
         _BOOST_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
-        _BOOST_OPERATOR_PERMISSIONS_INDEXES.push(JBBuybackHookPermissionIds.SET_POOL_PARAMS);
+        _BOOST_OPERATOR_PERMISSIONS_INDEXES.push(JBBuybackPermissionIds.SET_POOL_PARAMS);
     }
 
     //*********************************************************************//
