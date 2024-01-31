@@ -10,11 +10,12 @@
 [submodule "lib/juice-buyback"]
 	path = lib/juice-buyback
 	url = https://github.com/Bananapus/juice-buyback
-	branch = language-updates
 [submodule "lib/juice-721-hook"]
 	path = lib/juice-721-hook
 	url = https://github.com/Bananapus/juice-721-hook
-	branch = language-updates
+[submodule "lib/juice-ownable"]
+	path = lib/juice-ownable
+	url = https://github.com/Bananapus/juice-ownable
 [submodule "lib/croptop-contracts"]
 	path = lib/croptop-contracts
 	url = https://github.com/mejango/croptop-contracts

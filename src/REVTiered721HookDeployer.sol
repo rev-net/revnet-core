@@ -2,12 +2,13 @@
 pragma solidity ^0.8.23;
 
 import {IJBController} from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
+import {JBOwnable} from "lib/juice-ownable/src/JBOwnable.sol";
 import {IJBPayHook} from "lib/juice-contracts-v4/src/interfaces/IJBPayHook.sol";
 import {JBPayHookSpecification} from "lib/juice-contracts-v4/src/structs/JBPayHookSpecification.sol";
 import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalConfig.sol";
 import {IJB721TiersHookDeployer} from "lib/juice-721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJB721TiersHook} from "lib/juice-721-hook/src/interfaces/IJB721TiersHook.sol";
-import {JBDeploy721TiersHookConfig} from "lib/juice-721-hook/src/structs/JBDeploy721TiersHookConfig.sol";
+import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVPayHookDeployer} from "./REVPayHookDeployer.sol";
@@ -42,7 +43,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
-        JBDeploy721TiersHookConfig memory hookConfiguration,
+        REVDeploy721TiersHookConfig memory hookConfiguration,
         JBPayHookSpecification[] memory otherPayHooksSpecifications,
         uint16 extraHookMetadata
     )
@@ -64,7 +65,10 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
         }
 
         // Deploy the tiered 721 hook contract.
-        IJB721TiersHook hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration);
+        IJB721TiersHook hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration.baselineConfig);
+
+        // Transfer the hook's ownership to the address that called this function.
+        if (hookConfiguration.customOwner != address(0)) JBOwnable(address(hook)).transferOwnership(hookConfiguration.customOwner);
 
         // Add the tiered 721 hook at the end.
         payHookSpecifications[numberOfOtherPayHooks] =
