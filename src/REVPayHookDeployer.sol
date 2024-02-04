@@ -141,7 +141,7 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
     /// @notice Deploy a basic revnet that also calls other specified pay hooks.
     /// @param name The name of the ERC-20 token being create for the revnet.
     /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param projectMetadata The metadata containing revnet's info.
+    /// @param projectUri The metadata URI containing revnet's info.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -152,7 +152,7 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
     function deployPayHookRevnetWith(
         string memory name,
         string memory symbol,
-        string memory projectMetadata,
+        string memory projectUri,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -166,7 +166,7 @@ contract REVPayHookDeployer is REVBasicDeployer, IJBRulesetDataHook {
         revnetId = _deployRevnetWith({
             name: name,
             symbol: symbol,
-            projectMetadata: projectMetadata,
+            projectUri: projectUri,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,

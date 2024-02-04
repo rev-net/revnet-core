@@ -142,7 +142,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     /// @notice Deploy a basic revnet.
     /// @param name The name of the ERC-20 token being create for the revnet.
     /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param projectMetadata The metadata containing revnet's info.
+    /// @param projectUri The metadata URI containing revnet's info.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -151,7 +151,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     function deployRevnetWith(
         string memory name,
         string memory symbol,
-        string memory projectMetadata,
+        string memory projectUri,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration
@@ -163,7 +163,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         return _deployRevnetWith({
             name: name,
             symbol: symbol,
-            projectMetadata: projectMetadata,
+            projectUri: projectUri,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
@@ -179,7 +179,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     /// @notice Deploys a revnet with the specified hook information.
     /// @param name The name of the ERC-20 token being create for the revnet.
     /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param projectMetadata The metadata containing revnet's info.
+    /// @param projectUri The metadata URI containing revnet's info.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -190,7 +190,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     function _deployRevnetWith(
         string memory name,
         string memory symbol,
-        string memory projectMetadata,
+        string memory projectUri,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -204,7 +204,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         // Deploy a juicebox for the revnet.
         revnetId = CONTROLLER.launchProjectFor({
             owner: address(this),
-            projectMetadata: projectMetadata,
+            projectUri: projectUri,
             rulesetConfigurations: _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata),
             terminalConfigurations: terminalConfigurations,
             memo: string.concat("$", symbol, " revnet deployed")
