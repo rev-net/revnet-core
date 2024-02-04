@@ -28,7 +28,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
     /// @notice Deploy a revnet that supports 721 sales.
     /// @param name The name of the ERC-20 token being create for the revnet.
     /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param metadata The metadata containing revnet's info.
+    /// @param projectMetadata The metadata containing revnet's info.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -40,7 +40,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
     function deployTiered721RevnetFor(
         string memory name,
         string memory symbol,
-        string memory metadata,
+        string memory projectMetadata,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -66,10 +66,10 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
         }
 
         // Deploy the tiered 721 hook contract.
-        IJB721TiersHook hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration.baselineConfig);
+        IJB721TiersHook hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration.baseline721HookConfiguration);
 
         // Transfer the hook's ownership to the address that called this function.
-        if (hookConfiguration.customOwner != address(0)) JBOwnable(address(hook)).transferOwnership(hookConfiguration.customOwner);
+        if (hookConfiguration.owner != address(0)) JBOwnable(address(hook)).transferOwnership(hookConfiguration.owner);
 
         // Add the tiered 721 hook at the end.
         payHookSpecifications[numberOfOtherPayHooks] =
@@ -78,7 +78,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
         super.deployPayHookRevnetWith({
             name: name,
             symbol: symbol,
-            metadata: metadata,
+            projectMetadata: projectMetadata,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,

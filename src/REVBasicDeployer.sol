@@ -45,10 +45,10 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     // ------------------- internal stored properties -------------------- //
     //*********************************************************************//
 
-    /// @notice The permissions that the provided _boostOperator should be granted. This is set once in the constructor
+    /// @notice The permissions that the provided operator should be granted. This is set once in the constructor
     /// to contain only the SET_SPLITS operation.
     /// @dev This should only be set in the constructor.
-    uint256[] internal _BOOST_OPERATOR_PERMISSIONS_INDEXES;
+    uint256[] internal _OPERATOR_PERMISSIONS_INDEXES;
 
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
@@ -96,25 +96,25 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     /// @param controller The controller that revnets are made from.
     constructor(IJBController controller) {
         CONTROLLER = controller;
-        _BOOST_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
-        _BOOST_OPERATOR_PERMISSIONS_INDEXES.push(JBBuybackPermissionIds.SET_POOL_PARAMS);
+        _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
+        _OPERATOR_PERMISSIONS_INDEXES.push(JBBuybackPermissionIds.SET_POOL_PARAMS);
     }
 
     //*********************************************************************//
     // --------------------- external transactions ----------------------- //
     //*********************************************************************//
 
-    /// @notice A revnet's boost operator can replace itself.
-    /// @param revnetId The ID of the revnet having its boost operator replaces.
-    /// @param newBoostOperator The address of the new boost operator.
-    function replaceBoostOperatorOf(uint256 revnetId, address newBoostOperator) external {
+    /// @notice A revnet's operator can replace itself.
+    /// @param revnetId The ID of the revnet having its operator replaced.
+    /// @param newOperator The address of the new operator.
+    function replaceOperatorOf(uint256 revnetId, address newOperator) external {
         /// Make sure the message sender is the current operator.
         if (
             !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
                 operator: msg.sender,
                 account: address(this),
                 projectId: revnetId,
-                permissionIds: _BOOST_OPERATOR_PERMISSIONS_INDEXES
+                permissionIds: _OPERATOR_PERMISSIONS_INDEXES
             })
         ) revert REVBasicDeployer_Unauthorized();
 
@@ -124,13 +124,13 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
             permissionsData: JBPermissionsData({operator: msg.sender, projectId: revnetId, permissionIds: new uint256[](0)})
         });
 
-        // Give the new operator permission to change the boost recipients.
+        // Give the new operator permission to change the recipients of the operator's split.
         IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: newBoostOperator,
+                operator: newOperator,
                 projectId: revnetId,
-                permissionIds: _BOOST_OPERATOR_PERMISSIONS_INDEXES
+                permissionIds: _OPERATOR_PERMISSIONS_INDEXES
             })
         });
     }
@@ -142,7 +142,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     /// @notice Deploy a basic revnet.
     /// @param name The name of the ERC-20 token being create for the revnet.
     /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param metadata The metadata containing revnet's info.
+    /// @param projectMetadata The metadata containing revnet's info.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -151,7 +151,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     function deployRevnetWith(
         string memory name,
         string memory symbol,
-        string memory metadata,
+        string memory projectMetadata,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration
@@ -163,7 +163,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         return _deployRevnetWith({
             name: name,
             symbol: symbol,
-            metadata: metadata,
+            projectMetadata: projectMetadata,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
@@ -179,7 +179,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     /// @notice Deploys a revnet with the specified hook information.
     /// @param name The name of the ERC-20 token being create for the revnet.
     /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param metadata The metadata containing revnet's info.
+    /// @param projectMetadata The metadata containing revnet's info.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -190,7 +190,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     function _deployRevnetWith(
         string memory name,
         string memory symbol,
-        string memory metadata,
+        string memory projectMetadata,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -204,7 +204,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         // Deploy a juicebox for the revnet.
         revnetId = CONTROLLER.launchProjectFor({
             owner: address(this),
-            projectMetadata: metadata,
+            projectMetadata: projectMetadata,
             rulesetConfigurations: _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata),
             terminalConfigurations: terminalConfigurations,
             memo: string.concat("$", symbol, " revnet deployed")
@@ -216,31 +216,31 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         // Setup the buyback hook.
         _setupBuybackHookOf(revnetId, buybackHookConfiguration);
 
-        // Set the boost allocations at the default ruleset of 0.
+        // Set the operator splits at the default ruleset of 0.
         CONTROLLER.setSplitGroupsOf({
             projectId: revnetId,
             rulesetId: 0,
-            splitGroups: _makeBoostSplitGroupWith(configuration.initialBoostOperator)
+            splitGroups: _makeOperatorSplitGroupWith(configuration.initialOperator)
         });
 
-        // Premint tokens to the boost operator if needed.
+        // Premint tokens to the operator if needed.
         if (configuration.premintTokenAmount > 0) {
             CONTROLLER.mintTokensOf({
                 projectId: revnetId,
                 tokenCount: configuration.premintTokenAmount,
-                beneficiary: configuration.initialBoostOperator,
+                beneficiary: configuration.initialOperator,
                 memo: string.concat("$", symbol, " preminted"),
                 useReservedRate: false
             });
         }
 
-        // Give the boost operator permission to change the boost recipients.
+        // Give the operator permission to change the recipients of the operator's split.
         IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: configuration.initialBoostOperator,
+                operator: configuration.initialOperator,
                 projectId: revnetId,
-                permissionIds: _BOOST_OPERATOR_PERMISSIONS_INDEXES
+                permissionIds: _OPERATOR_PERMISSIONS_INDEXES
             })
         });
     }
@@ -275,7 +275,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
             rulesetConfigurations[i].decayRate = configuration.stageConfigurations[i].priceCeilingIncreasePercentage;
             rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
             rulesetConfigurations[i].metadata = JBRulesetMetadata({
-                reservedRate: configuration.stageConfigurations[i].boostRate,
+                reservedRate: configuration.stageConfigurations[i].operatorSplitRate,
                 redemptionRate: JBConstants.MAX_REDEMPTION_RATE
                     - configuration.stageConfigurations[i].priceFloorTaxIntensity,
                 baseCurrency: configuration.baseCurrency,
@@ -296,11 +296,11 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         }
     }
 
-    /// @notice Creates a group of splits that goes entirely to the provided _boostOperator.
+    /// @notice Creates a group of splits that goes entirely to the provided operator.
 
-    /// @param boostOperator The address to send the entire split amount to.
-    /// @return splitGroups The split groups representing boost allocations.
-    function _makeBoostSplitGroupWith(address boostOperator)
+    /// @param operator The address to send the entire split amount to.
+    /// @return splitGroups The split groups representing operator's split.
+    function _makeOperatorSplitGroupWith(address operator)
         internal
         pure
         returns (JBSplitGroup[] memory splitGroups)
@@ -313,12 +313,12 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         // Make a new splits specifying where the reserved tokens will be sent.
         JBSplit[] memory splits = new JBSplit[](1);
 
-        // Send the boostOperator all of the reserved tokens. They'll be able to change this later whenever they wish.
+        // Send the operator all of the splits. They'll be able to change this later whenever they wish.
         splits[0] = JBSplit({
             preferAddToBalance: false,
             percent: JBConstants.SPLITS_TOTAL_PERCENT,
             projectId: 0,
-            beneficiary: payable(boostOperator),
+            beneficiary: payable(operator),
             lockedUntil: 0,
             hook: IJBSplitHook(address(0))
         });

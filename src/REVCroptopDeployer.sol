@@ -43,7 +43,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
     /// @notice Deploy a revnet that supports 721 sales.
     /// @param name The name of the ERC-20 token being create for the revnet.
     /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param metadata The metadata containing revnet's info.
+    /// @param projectMetadata The metadata containing revnet's info.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -56,7 +56,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
     function deployCroptopRevnetFor(
         string memory name,
         string memory symbol,
-        string memory metadata,
+        string memory projectMetadata,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -72,7 +72,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
         revnetId = super.deployTiered721RevnetFor({
             name: name,
             symbol: symbol,
-            metadata: metadata,
+            projectMetadata: projectMetadata,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
