@@ -12,7 +12,7 @@ import {IJB721TiersHook} from "lib/juice-721-hook/src/interfaces/IJB721TiersHook
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
-import {REVPayHookDeployer} from "./REVPayHookDeployer.sol";
+import {REVPayHookDeployer, SuckerTokenConfig} from "./REVPayHookDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s.
 contract REVTiered721HookDeployer is REVPayHookDeployer {
@@ -21,7 +21,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
 
     /// @param controller The controller that revnets are made from.
     /// @param hookDeployer The 721 tiers hook deployer.
-    constructor(IJBController controller, IJB721TiersHookDeployer hookDeployer) REVPayHookDeployer(controller) {
+    constructor(IJBController controller, address suckerDeployer, IJB721TiersHookDeployer hookDeployer) REVPayHookDeployer(controller, suckerDeployer) {
         HOOK_DEPLOYER = hookDeployer;
     }
 
@@ -46,7 +46,10 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
         REVBuybackHookConfig memory buybackHookConfiguration,
         REVDeploy721TiersHookConfig memory hookConfiguration,
         JBPayHookSpecification[] memory otherPayHooksSpecifications,
-        uint16 extraHookMetadata
+        uint16 extraHookMetadata,
+        SuckerTokenConfig[] calldata suckerTokenConfig,
+        bool isSucker,
+        bytes32 suckerSalt
     )
         public
         returns (uint256 revnetId)
@@ -83,7 +86,10 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
             payHookSpecifications: payHookSpecifications,
-            extraHookMetadata: extraHookMetadata
+            extraHookMetadata: extraHookMetadata,
+            suckerTokenConfig: suckerTokenConfig,
+            isSucker: isSucker,
+            suckerSalt: suckerSalt
         });
     }
 }

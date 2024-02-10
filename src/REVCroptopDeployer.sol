@@ -13,7 +13,7 @@ import {IJB721TiersHookDeployer} from "lib/juice-721-hook/src/interfaces/IJB721T
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
-import {REVTiered721HookDeployer} from "./REVTiered721HookDeployer.sol";
+import {REVTiered721HookDeployer, SuckerTokenConfig} from "./REVTiered721HookDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s via the croptop
 /// publisher.
@@ -31,10 +31,11 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     constructor(
         IJBController controller,
+        address suckerDeployer,
         IJB721TiersHookDeployer hookDeployer,
         CroptopPublisher publisher
     )
-        REVTiered721HookDeployer(controller, hookDeployer)
+        REVTiered721HookDeployer(controller, suckerDeployer, hookDeployer)
     {
         PUBLISHER = publisher;
         _CROPTOP_PERMISSIONS_INDEXES.push(JB721PermissionIds.ADJUST_TIERS);
@@ -63,7 +64,10 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
         REVDeploy721TiersHookConfig memory hookConfiguration,
         JBPayHookSpecification[] memory otherPayHooksSpecifications,
         uint16 extraHookMetadata,
-        AllowedPost[] memory allowedPosts
+        AllowedPost[] memory allowedPosts,
+        SuckerTokenConfig[] calldata suckerTokenConfig,
+        bool isSucker,
+        bytes32 suckerSalt
     )
         public
         returns (uint256 revnetId)
@@ -78,7 +82,10 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
             buybackHookConfiguration: buybackHookConfiguration,
             hookConfiguration: hookConfiguration,
             otherPayHooksSpecifications: otherPayHooksSpecifications,
-            extraHookMetadata: extraHookMetadata
+            extraHookMetadata: extraHookMetadata,
+            suckerTokenConfig: suckerTokenConfig,
+            isSucker: isSucker,
+            suckerSalt: suckerSalt
         });
 
         // Configure allowed posts.

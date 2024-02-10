@@ -51,12 +51,12 @@ contract Deploy is Script {
         );
 
         vm.startBroadcast();
-        new REVBasicDeployer(IJBController(controllerAddress));
-        new REVCroptopDeployer(
-            IJBController(controllerAddress),
-            IJB721TiersHookDeployer(hookDeployerAddress),
-            CroptopPublisher(croptopPublisherAddress)
-        );
+        // new REVBasicDeployer(IJBController(controllerAddress));
+        // new REVCroptopDeployer(
+        //     IJBController(controllerAddress),
+        //     IJB721TiersHookDeployer(hookDeployerAddress),
+        //     CroptopPublisher(croptopPublisherAddress)
+        // );
         vm.stopBroadcast();
     }
 

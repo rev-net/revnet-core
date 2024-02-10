@@ -9,25 +9,31 @@ import {IJBRulesetApprovalHook} from "lib/juice-contracts-v4/src/interfaces/IJBR
 import {IJBPermissioned} from "lib/juice-contracts-v4/src/interfaces/IJBPermissioned.sol";
 import {IJBSplitHook} from "lib/juice-contracts-v4/src/interfaces/IJBSplitHook.sol";
 import {IJBToken} from "lib/juice-contracts-v4/src/interfaces/IJBToken.sol";
+import {IJBPayHook} from "lib/juice-contracts-v4/src/interfaces/IJBPayHook.sol";
 import {JBPermissionIds} from "lib/juice-contracts-v4/src/libraries/JBPermissionIds.sol";
 import {JBConstants} from "lib/juice-contracts-v4/src/libraries/JBConstants.sol";
 import {JBSplitGroupIds} from "lib/juice-contracts-v4/src/libraries/JBSplitGroupIds.sol";
 import {JBRulesetMetadata} from "lib/juice-contracts-v4/src/structs/JBRulesetMetadata.sol";
 import {JBRulesetConfig} from "lib/juice-contracts-v4/src/structs/JBRulesetConfig.sol";
+import {JBPayHookSpecification} from "lib/juice-contracts-v4/src/structs/JBPayHookSpecification.sol";
 import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalConfig.sol";
 import {JBSplitGroup} from "lib/juice-contracts-v4/src/structs/JBSplitGroup.sol";
 import {JBSplit} from "lib/juice-contracts-v4/src/structs/JBSplit.sol";
 import {JBPermissionsData} from "lib/juice-contracts-v4/src/structs/JBPermissionsData.sol";
+import {JBBeforeRedeemRecordedContext} from "lib/juice-contracts-v4/src/structs/JBBeforeRedeemRecordedContext.sol";
+import {JBBeforePayRecordedContext} from "lib/juice-contracts-v4/src/structs/JBBeforePayRecordedContext.sol";
+import {IJBRulesetDataHook} from "lib/juice-contracts-v4/src/interfaces/IJBRulesetDataHook.sol";
+import {JBRedeemHookSpecification} from "lib/juice-contracts-v4/src/structs/JBRedeemHookSpecification.sol";
 import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
 import {JBBuybackPermissionIds} from "lib/juice-buyback/src/libraries/JBBuybackPermissionIds.sol";
 
-import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
+import {IREVBasicDeployer, BPSuckerDeployer, SuckerTokenConfig, BPTokenConfig, BPSucker} from "./interfaces/IREVBasicDeployer.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
 
 /// @notice A contract that facilitates deploying a basic Revnet.
-contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
+contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC721Receiver {
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
@@ -40,6 +46,17 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
 
     /// @notice The controller that networks are made from.
     IJBController public immutable CONTROLLER;
+    
+    /// @notice The address that deploys sucker.
+    address immutable SUCKER_DEPLOYER;
+
+    //*********************************************************************//
+    // --------------------- public stored properties -------------------- //
+    //*********************************************************************//
+
+    /// @notice The data hook that returns the correct values for the buyback hook of each network.
+    /// @custom:param revnetId The ID of the revnet to which the buyback contract applies.
+    mapping(uint256 revnetId => IJBRulesetDataHook buybackHook) public buybackHookOf;
 
     //*********************************************************************//
     // ------------------- internal stored properties -------------------- //
@@ -50,9 +67,82 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     /// @dev This should only be set in the constructor.
     uint256[] internal _OPERATOR_PERMISSIONS_INDEXES;
 
+    /// @notice The pay hooks to include during payments to networks.
+    /// @custom:param revnetId The ID of the revnet to which the extensions apply.
+    mapping(uint256 revnetId => JBPayHookSpecification[] payHooks) internal _payHookSpecificationsOf;
+
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
+
+    /// @notice The pay hooks to include during payments to networks.
+    /// @param revnetId The ID of the revnet to which the extensions apply.
+    /// @return payHookSpecifications The pay hooks.
+    function payHookSpecificationsOf(uint256 revnetId) external view returns (JBPayHookSpecification[] memory) {
+        return _payHookSpecificationsOf[revnetId];
+    }
+
+    /// @notice This function gets called when the revnet receives a payment.
+    /// @dev Part of IJBFundingCycleDataSource.
+    /// @dev This implementation just sets this contract up to receive a `didPay` call.
+    /// @param context The Juicebox standard network payment context. See
+    /// @return weight The weight that network tokens should get minted relative to. This is useful for optionally
+    /// customizing how many tokens are issued per payment.
+    /// @return hookSpecifications Amount to be sent to pay hooks instead of adding to local balance. Useful for
+    /// auto-routing funds from a treasury as payment come in.
+
+    function beforePayRecordedWith(JBBeforePayRecordedContext calldata context)
+        external
+        view
+        virtual
+        returns (uint256 weight, JBPayHookSpecification[] memory hookSpecifications)
+    {
+        // Keep a reference to the hooks that the buyback hook data hook provides.
+        JBPayHookSpecification[] memory buybackHookSpecifications;
+
+        // // Set the values to be those returned by the buyback hook's data source.
+        (weight, buybackHookSpecifications) = buybackHookOf[context.projectId].beforePayRecordedWith(context);
+
+        // Check if a buyback hook is used.
+        bool usesBuybackHook = buybackHookSpecifications.length != 0;
+
+        // Cache any other pay hooks to use.
+        JBPayHookSpecification[] memory storedPayHookSpecifications = _payHookSpecificationsOf[context.projectId];
+
+        // Keep a reference to the number of pay hooks;
+        uint256 numberOfStoredPayHookSpecifications = storedPayHookSpecifications.length;
+
+        // Each hook specification must run, plus the buyback hook if provided.
+        hookSpecifications =
+            new JBPayHookSpecification[](numberOfStoredPayHookSpecifications + (usesBuybackHook ? 1 : 0));
+
+        // Add the other expected pay hooks.
+        for (uint256 i; i < numberOfStoredPayHookSpecifications; i++) {
+            hookSpecifications[i] = storedPayHookSpecifications[i];
+        }
+
+        // Add the buyback hook as the last element.
+        if (usesBuybackHook) hookSpecifications[numberOfStoredPayHookSpecifications] = buybackHookSpecifications[0];
+    }
+
+    /// @notice This function is never called, it needs to be included to adhere to the interface.
+    function beforeRedeemRecordedWith(JBBeforeRedeemRecordedContext calldata)
+        external
+        view
+        virtual
+        override
+        returns (uint256, JBRedeemHookSpecification[] memory specifications)
+    {
+        return (0, specifications);
+    }
+
+    /// @notice Required by the IJBRulesetDataHook interfaces.
+    /// @param revnetId The ID of the revnet to check permissions for.
+    /// @param addr The address to check if has permissions.
+    /// @return flag The flag indicating if the address has permissions to mint on the revnet's behalf.
+    function hasMintPermissionFor(uint256 revnetId, address addr) external view returns (bool) {
+        return addr == address(buybackHookOf[revnetId]);
+    }
 
     /// @dev Make sure only mints can be received.
     function onERC721Received(
@@ -82,11 +172,16 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
 
     /// @notice Indicates if this contract adheres to the specified interface.
     /// @dev See {IERC165-supportsInterface}.
-    /// @param _interfaceId The ID of the interface to check for adherence to.
+    /// @param interfaceId The ID of the interface to check for adherence to.
     /// @return A flag indicating if the provided interface ID is supported.
-    function supportsInterface(bytes4 _interfaceId) public view virtual override returns (bool) {
-        return _interfaceId == type(IREVBasicDeployer).interfaceId || _interfaceId == type(IERC721Receiver).interfaceId
-            || super.supportsInterface(_interfaceId);
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC165, IERC165)
+        returns (bool)
+    {
+        return interfaceId == type(IJBRulesetDataHook).interfaceId || super.supportsInterface(interfaceId);
     }
 
     //*********************************************************************//
@@ -94,8 +189,9 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
     //*********************************************************************//
 
     /// @param controller The controller that revnets are made from.
-    constructor(IJBController controller) {
+    constructor(IJBController controller, address suckerDeployer) {
         CONTROLLER = controller;
+        SUCKER_DEPLOYER = suckerDeployer;
         _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
         _OPERATOR_PERMISSIONS_INDEXES.push(JBBuybackPermissionIds.SET_POOL_PARAMS);
     }
@@ -154,13 +250,16 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         string memory projectUri,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
-        REVBuybackHookConfig memory buybackHookConfiguration
+        REVBuybackHookConfig memory buybackHookConfiguration,
+        SuckerTokenConfig[] calldata suckerTokenConfig,
+        bool isSucker,
+        bytes32 suckerSalt
     )
         public
         override
         returns (uint256 revnetId)
     {
-        return _deployRevnetWith({
+        revnetId = _deployRevnetWith({
             name: name,
             symbol: symbol,
             projectUri: projectUri,
@@ -168,7 +267,10 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
             dataHook: buybackHookConfiguration.hook,
-            extraHookMetadata: 0
+            extraHookMetadata: 0,
+            suckerTokenConfig: suckerTokenConfig,
+            isSucker: isSucker,
+            suckerSalt: suckerSalt
         });
     }
 
@@ -195,7 +297,10 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
         IJBBuybackHook dataHook,
-        uint256 extraHookMetadata
+        uint256 extraHookMetadata,
+        SuckerTokenConfig[] calldata suckerTokenConfig,
+        bool isSucker,
+        bytes32 suckerSalt
     )
         internal
         virtual
@@ -243,6 +348,57 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
                 permissionIds: _OPERATOR_PERMISSIONS_INDEXES
             })
         });
+
+        // If there's no sucker's to set up, return.
+        if (suckerSalt.length == 0) return revnetId;
+
+        // Create the sucker.
+        address sucker = BPSuckerDeployer(SUCKER_DEPLOYER).createForSender({
+            localProjectId: revnetId,
+            salt: keccak256(abi.encode(msg.sender, suckerSalt))
+        });
+
+        // Configure the tokens.
+        for(uint256 i; i < suckerTokenConfig.length; i++) {
+            // Configure the sucker.
+            BPSucker(sucker).configureToken(
+                suckerTokenConfig[i].localToken,
+                BPTokenConfig({
+                    remoteToken: suckerTokenConfig[i].remoteToken,
+                    minGas: suckerTokenConfig[i].minGas,
+                    minBridgeAmount: suckerTokenConfig[i].minBridgeAmount 
+                })
+            );
+        }
+
+        // If the deployed revnet is a sucker, configure it to suck revenues automatically.
+        if(isSucker) {
+            // Add the sucker to the payhooks.
+            JBPayHookSpecification[] memory payHookSpecifications;
+
+            payHookSpecifications = new JBPayHookSpecification[](1);
+            payHookSpecifications[0] = JBPayHookSpecification({
+                hook: IJBPayHook(sucker),
+                amount: 0,
+                metadata: bytes('')
+            });
+
+            // Store the pay hooks.
+            _storeHookSpecificationsOf(revnetId, payHookSpecifications);
+        // If the deployed revnet is not a sucker, give it permission to mint tokens sucked.
+        } else {
+            // Give the sucker mint permissions, so it can mint when receiving sucked in.
+            uint256[] memory permissions = new uint256[](1);
+            permissions[0] = JBPermissionIds.MINT_TOKENS;
+            IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
+                account: address(this),
+                permissionsData: JBPermissionsData({
+                    operator: address(sucker),
+                    projectId: revnetId,
+                    permissionIds: permissions
+                })
+            });
+        }
     }
 
     /// @notice Schedules the initial ruleset for the revnet, and queues all subsequent rulesets that define the stages.
@@ -351,6 +507,25 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
                 twapSlippageTolerance: poolConfig.twapSlippageTolerance,
                 terminalToken: poolConfig.token
             });
+        }
+    }
+
+    /// @notice Stores pay hooks for the provided revnet.
+    /// @param revnetId The ID of the revnet to which the pay hooks apply.
+    /// @param payHookSpecifications The pay hooks to store.
+    function _storeHookSpecificationsOf(
+        uint256 revnetId,
+        JBPayHookSpecification[] memory payHookSpecifications
+    )
+        internal
+    {
+        // Keep a reference to the number of pay hooks are being stored.
+        uint256 numberOfPayHookSpecifications = payHookSpecifications.length;
+
+        // Store the pay hooks.
+        for (uint256 i; i < numberOfPayHookSpecifications; i++) {
+            // Store the value.
+            _payHookSpecificationsOf[revnetId].push(payHookSpecifications[i]);
         }
     }
 }
