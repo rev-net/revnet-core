@@ -18,8 +18,8 @@ import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalCon
 import {JBSplitGroup} from "lib/juice-contracts-v4/src/structs/JBSplitGroup.sol";
 import {JBSplit} from "lib/juice-contracts-v4/src/structs/JBSplit.sol";
 import {JBPermissionsData} from "lib/juice-contracts-v4/src/structs/JBPermissionsData.sol";
-import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
-import {JBBuybackPermissionIds} from "lib/juice-buyback/src/libraries/JBBuybackPermissionIds.sol";
+import {IJBBuybackHook} from "lib/juice-buyback-hook/src/interfaces/IJBBuybackHook.sol";
+import {JBBuybackPermissionIds} from "lib/juice-buyback-hook/src/libraries/JBBuybackPermissionIds.sol";
 
 import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
