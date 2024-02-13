@@ -1,4 +1,4 @@
 lib/openzeppelin-contracts/=lib/openzeppelin-contracts/
 lib/juice-contracts-v4/=lib/juice-contracts-v4/
 lib/juice-721-hook/=lib/juice-721-hook/
-lib/v3-core/=lib/juice-buyback/lib/v3-core/
+lib/v3-core/=lib/juice-buyback-hook/lib/v3-core/
