@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {CroptopPublisher, AllowedPost} from "lib/croptop-contracts/src/CroptopPublisher.sol";
+import {CTPublisher} from "lib/croptop-contracts/src/CTPublisher.sol";
+import {CTAllowedPost} from "lib/croptop-contracts/src/structs/CTAllowedPost.sol";
 import {IJBController} from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
 import {IJBPermissioned} from "lib/juice-contracts-v4/src/interfaces/IJBPermissioned.sol";
 import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalConfig.sol";
@@ -19,7 +20,7 @@ import {REVTiered721HookDeployer, SuckerTokenConfig} from "./REVTiered721HookDep
 /// publisher.
 contract REVCroptopDeployer is REVTiered721HookDeployer {
     /// @notice The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
-    CroptopPublisher public PUBLISHER;
+    CTPublisher public PUBLISHER;
 
     /// @notice The permissions that the croptop publisher should be granted. This is set once in the constructor to
     /// contain only the ADJUST_TIERS operation.
@@ -33,7 +34,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
         IJBController controller,
         address suckerDeployer,
         IJB721TiersHookDeployer hookDeployer,
-        CroptopPublisher publisher
+        CTPublisher publisher
     )
         REVTiered721HookDeployer(controller, suckerDeployer, hookDeployer)
     {
@@ -64,7 +65,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
         REVDeploy721TiersHookConfig memory hookConfiguration,
         JBPayHookSpecification[] memory otherPayHooksSpecifications,
         uint16 extraHookMetadata,
-        AllowedPost[] memory allowedPosts,
+        CTAllowedPost[] memory allowedPosts,
         SuckerTokenConfig[] calldata suckerTokenConfig,
         bool isSucker,
         bytes32 suckerSalt

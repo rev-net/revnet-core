@@ -24,8 +24,8 @@ import {JBBeforeRedeemRecordedContext} from "lib/juice-contracts-v4/src/structs/
 import {JBBeforePayRecordedContext} from "lib/juice-contracts-v4/src/structs/JBBeforePayRecordedContext.sol";
 import {IJBRulesetDataHook} from "lib/juice-contracts-v4/src/interfaces/IJBRulesetDataHook.sol";
 import {JBRedeemHookSpecification} from "lib/juice-contracts-v4/src/structs/JBRedeemHookSpecification.sol";
-import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
-import {JBBuybackPermissionIds} from "lib/juice-buyback/src/libraries/JBBuybackPermissionIds.sol";
+import {IJBBuybackHook} from "lib/juice-buyback-hook/src/interfaces/IJBBuybackHook.sol";
+import {JBBuybackPermissionIds} from "lib/juice-buyback-hook/src/libraries/JBBuybackPermissionIds.sol";
 
 import {IREVBasicDeployer, BPSuckerDeployer, SuckerTokenConfig, BPTokenConfig, BPSucker} from "./interfaces/IREVBasicDeployer.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
@@ -456,11 +456,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
 
     /// @param operator The address to send the entire split amount to.
     /// @return splitGroups The split groups representing operator's split.
-    function _makeOperatorSplitGroupWith(address operator)
-        internal
-        pure
-        returns (JBSplitGroup[] memory splitGroups)
-    {
+    function _makeOperatorSplitGroupWith(address operator) internal pure returns (JBSplitGroup[] memory splitGroups) {
         // Package the reserved token splits.
         splitGroups = new JBSplitGroup[](1);
 

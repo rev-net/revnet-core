@@ -5,7 +5,7 @@ import {Script, stdJson} from "lib/forge-std/src/Script.sol";
 import {Strings} from "lib/openzeppelin-contracts/contracts/utils/Strings.sol";
 import {IJBController} from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
 import {IJB721TiersHookDeployer} from "lib/juice-721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
-import {CroptopPublisher} from "lib/croptop-contracts/src/CroptopPublisher.sol";
+import {CTPublisher} from "lib/croptop-contracts/src/CTPublisher.sol";
 
 import {REVBasicDeployer} from "src/REVBasicDeployer.sol";
 import {REVCroptopDeployer} from "src/REVCroptopDeployer.sol";
@@ -51,12 +51,12 @@ contract Deploy is Script {
         );
 
         vm.startBroadcast();
-        // new REVBasicDeployer(IJBController(controllerAddress));
-        // new REVCroptopDeployer(
-        //     IJBController(controllerAddress),
-        //     IJB721TiersHookDeployer(hookDeployerAddress),
-        //     CroptopPublisher(croptopPublisherAddress)
-        // );
+        new REVBasicDeployer(IJBController(controllerAddress));
+        new REVCroptopDeployer(
+            IJBController(controllerAddress),
+            IJB721TiersHookDeployer(hookDeployerAddress),
+            CTPublisher(croptopPublisherAddress)
+        );
         vm.stopBroadcast();
     }
 

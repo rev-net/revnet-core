@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {IJBController} from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
 import {JBPayHookSpecification} from "lib/juice-contracts-v4/src/structs/JBPayHookSpecification.sol";
 import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalConfig.sol";
-import {IJBBuybackHook} from "lib/juice-buyback/src/interfaces/IJBBuybackHook.sol";
+import {IJBBuybackHook} from "lib/juice-buyback-hook/src/interfaces/IJBBuybackHook.sol";
 
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
