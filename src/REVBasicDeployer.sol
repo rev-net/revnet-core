@@ -300,11 +300,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IERC721Receiver {
 
     /// @param operator The address to send the entire split amount to.
     /// @return splitGroups The split groups representing operator's split.
-    function _makeOperatorSplitGroupWith(address operator)
-        internal
-        pure
-        returns (JBSplitGroup[] memory splitGroups)
-    {
+    function _makeOperatorSplitGroupWith(address operator) internal pure returns (JBSplitGroup[] memory splitGroups) {
         // Package the reserved token splits.
         splitGroups = new JBSplitGroup[](1);
 
