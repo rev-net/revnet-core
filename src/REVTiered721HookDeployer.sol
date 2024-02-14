@@ -12,7 +12,8 @@ import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHoo
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
-import {REVPayHookDeployer, SuckerTokenConfig} from "./REVPayHookDeployer.sol";
+import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
+import {REVPayHookDeployer} from "./REVPayHookDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s.
 contract REVTiered721HookDeployer is REVPayHookDeployer {
@@ -21,7 +22,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
 
     /// @param controller The controller that revnets are made from.
     /// @param hookDeployer The 721 tiers hook deployer.
-    constructor(IJBController controller, address suckerDeployer, IJB721TiersHookDeployer hookDeployer) REVPayHookDeployer(controller, suckerDeployer) {
+    constructor(IJBController controller, IJB721TiersHookDeployer hookDeployer) REVPayHookDeployer(controller) {
         HOOK_DEPLOYER = hookDeployer;
     }
 
@@ -47,8 +48,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
         REVDeploy721TiersHookConfig memory hookConfiguration,
         JBPayHookSpecification[] memory otherPayHooksSpecifications,
         uint16 extraHookMetadata,
-        SuckerTokenConfig[] memory suckerTokenConfig,
-        bytes32 suckerSalt
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
     )
         public
         returns (uint256 revnetId)
@@ -86,8 +86,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
             buybackHookConfiguration: buybackHookConfiguration,
             payHookSpecifications: payHookSpecifications,
             extraHookMetadata: extraHookMetadata,
-            suckerTokenConfig: suckerTokenConfig,
-            suckerSalt: suckerSalt
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
     }
 }

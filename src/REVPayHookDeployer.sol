@@ -8,13 +8,14 @@ import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackH
 
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
-import {REVBasicDeployer, SuckerTokenConfig} from "./REVBasicDeployer.sol";
+import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
+import {REVBasicDeployer} from "./REVBasicDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also calls other hooks when paid.
 contract REVPayHookDeployer is REVBasicDeployer {
 
     /// @param controller The controller that revnets are made from.
-    constructor(IJBController controller, address suckerDeployer) REVBasicDeployer(controller, suckerDeployer) {
+    constructor(IJBController controller) REVBasicDeployer(controller) {
     }
     
     //*********************************************************************//
@@ -41,8 +42,7 @@ contract REVPayHookDeployer is REVBasicDeployer {
         REVBuybackHookConfig memory buybackHookConfiguration,
         JBPayHookSpecification[] memory payHookSpecifications,
         uint16 extraHookMetadata,
-        SuckerTokenConfig[] memory suckerTokenConfig,
-        bytes32 suckerSalt
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
     )
         public
         returns (uint256 revnetId)
@@ -57,8 +57,7 @@ contract REVPayHookDeployer is REVBasicDeployer {
             buybackHookConfiguration: buybackHookConfiguration,
             dataHook: IJBBuybackHook(address(this)),
             extraHookMetadata: extraHookMetadata,
-            suckerTokenConfig: suckerTokenConfig,
-            suckerSalt: suckerSalt
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
 
         // Store the pay hooks.

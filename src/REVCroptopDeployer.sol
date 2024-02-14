@@ -14,7 +14,8 @@ import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
-import {REVTiered721HookDeployer, SuckerTokenConfig} from "./REVTiered721HookDeployer.sol";
+import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
+import {REVTiered721HookDeployer} from "./REVTiered721HookDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s via the croptop
 /// publisher.
@@ -32,11 +33,10 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     constructor(
         IJBController controller,
-        address suckerDeployer,
         IJB721TiersHookDeployer hookDeployer,
         CTPublisher publisher
     )
-        REVTiered721HookDeployer(controller, suckerDeployer, hookDeployer)
+        REVTiered721HookDeployer(controller, hookDeployer)
     {
         PUBLISHER = publisher;
         _CROPTOP_PERMISSIONS_INDEXES.push(JB721PermissionIds.ADJUST_TIERS);
@@ -66,8 +66,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
         JBPayHookSpecification[] memory otherPayHooksSpecifications,
         uint16 extraHookMetadata,
         CTAllowedPost[] memory allowedPosts,
-        SuckerTokenConfig[] memory suckerTokenConfig,
-        bytes32 suckerSalt
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
     )
         public
         returns (uint256 revnetId)
@@ -83,8 +82,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
             hookConfiguration: hookConfiguration,
             otherPayHooksSpecifications: otherPayHooksSpecifications,
             extraHookMetadata: extraHookMetadata,
-            suckerTokenConfig: suckerTokenConfig,
-            suckerSalt: suckerSalt
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
 
         // Configure allowed posts.

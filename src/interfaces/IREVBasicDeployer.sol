@@ -12,33 +12,28 @@ interface IREVBasicDeployer {
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
-        SuckerTokenConfig[] memory suckerTokenConfig,
-        bytes32 suckerSalt
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
     )
         external
         returns (uint256 revnetId);
 }
 
-interface BPSuckerDeployer {
-    function createForSender(
-        uint256 localProjectId,
-        bytes32 salt
-    ) external returns (address);
-}
+// interface BPSuckerDeployer {
+//     function createForSender(
+//         uint256 localProjectId,
+//         bytes32 salt
+//     ) external returns (address);
+// }
 
-struct SuckerTokenConfig {
-    address localToken;
-    address remoteToken;
-    uint32 minGas;
-    uint256 minBridgeAmount;
-}
+// struct SuckerTokenConfig {
+//     address localToken;
+//     address remoteToken;
+//     uint32 minGas;
+//     uint256 minBridgeAmount;
+// }
 
-struct BPTokenConfig {
-    uint32 minGas;
-    address remoteToken;
-    uint256 minBridgeAmount;
-}
 
-interface BPSucker {
-    function configureToken(address token, BPTokenConfig calldata config) external;
-}
+
+// interface BPSucker {
+//     function configureToken(address token, BPTokenConfig calldata config) external;
+// }
