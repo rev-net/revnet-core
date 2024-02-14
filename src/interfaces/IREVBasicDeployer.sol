@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalConfig.sol";
+import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {REVBuybackHookConfig} from "../structs/REVBuybackHookConfig.sol";
 import {REVConfig} from "../structs/REVConfig.sol";
 

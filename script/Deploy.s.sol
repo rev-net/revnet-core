@@ -2,13 +2,13 @@
 pragma solidity ^0.8.23;
 
 import {Script, stdJson} from "lib/forge-std/src/Script.sol";
-import {Strings} from "lib/openzeppelin-contracts/contracts/utils/Strings.sol";
-import {IJBController} from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
-import {IJB721TiersHookDeployer} from "lib/juice-721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
-import {CTPublisher} from "lib/croptop-contracts/src/CTPublisher.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
+import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
+import {CTPublisher} from "@croptop/core/src/CTPublisher.sol";
 
-import {REVBasicDeployer} from "src/REVBasicDeployer.sol";
-import {REVCroptopDeployer} from "src/REVCroptopDeployer.sol";
+import {REVBasicDeployer} from "./../src/REVBasicDeployer.sol";
+import {REVCroptopDeployer} from "./../src/REVCroptopDeployer.sol";
 
 contract Deploy is Script {
     function run() public {
@@ -37,16 +37,16 @@ contract Deploy is Script {
         }
 
         address controllerAddress = _getDeploymentAddress(
-            string.concat("lib/juice-contracts-v4/broadcast/Deploy.s.sol/", chain, "/run-latest.json"), "JBController"
+            string.concat("node_modules/@bananapus/core/broadcast/Deploy.s.sol/", chain, "/run-latest.json"), "JBController"
         );
 
         address hookDeployerAddress = _getDeploymentAddress(
-            string.concat("lib/juice-721-hook/broadcast/Deploy.s.sol/", chain, "/run-latest.json"),
+            string.concat("node_modules/@bananapus/721-hook/broadcast/Deploy.s.sol/", chain, "/run-latest.json"),
             "JB721TiersHookDeployer"
         );
 
         address croptopPublisherAddress = _getDeploymentAddress(
-            string.concat("lib/croptop-contracts/broadcast/Deploy.s.sol/", chain, "/run-latest.json"),
+            string.concat("node_modules/@bananapus/core/broadcast/Deploy.s.sol/", chain, "/run-latest.json"),
             "CroptopPublisher"
         );
 
