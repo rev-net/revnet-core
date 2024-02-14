@@ -41,8 +41,7 @@ contract REVPayHookDeployer is REVBasicDeployer {
         REVBuybackHookConfig memory buybackHookConfiguration,
         JBPayHookSpecification[] memory payHookSpecifications,
         uint16 extraHookMetadata,
-        SuckerTokenConfig[] calldata suckerTokenConfig,
-        bool isSucker,
+        SuckerTokenConfig[] memory suckerTokenConfig,
         bytes32 suckerSalt
     )
         public
@@ -59,7 +58,6 @@ contract REVPayHookDeployer is REVBasicDeployer {
             dataHook: IJBBuybackHook(address(this)),
             extraHookMetadata: extraHookMetadata,
             suckerTokenConfig: suckerTokenConfig,
-            isSucker: isSucker,
             suckerSalt: suckerSalt
         });
 

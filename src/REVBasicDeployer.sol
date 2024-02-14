@@ -252,7 +252,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
         SuckerTokenConfig[] calldata suckerTokenConfig,
-        bool isSucker,
         bytes32 suckerSalt
     )
         public
@@ -269,7 +268,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             dataHook: buybackHookConfiguration.hook,
             extraHookMetadata: 0,
             suckerTokenConfig: suckerTokenConfig,
-            isSucker: isSucker,
             suckerSalt: suckerSalt
         });
     }
@@ -298,8 +296,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         REVBuybackHookConfig memory buybackHookConfiguration,
         IJBBuybackHook dataHook,
         uint256 extraHookMetadata,
-        SuckerTokenConfig[] calldata suckerTokenConfig,
-        bool isSucker,
+        SuckerTokenConfig[] memory suckerTokenConfig,
         bytes32 suckerSalt
     )
         internal
@@ -371,34 +368,30 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             );
         }
 
-        // If the deployed revnet is a sucker, configure it to suck revenues automatically.
-        if(isSucker) {
-            // Add the sucker to the payhooks.
-            JBPayHookSpecification[] memory payHookSpecifications;
+        // Add the sucker to the payhooks.
+        JBPayHookSpecification[] memory payHookSpecifications;
 
-            payHookSpecifications = new JBPayHookSpecification[](1);
-            payHookSpecifications[0] = JBPayHookSpecification({
-                hook: IJBPayHook(sucker),
-                amount: 0,
-                metadata: bytes('')
-            });
+        payHookSpecifications = new JBPayHookSpecification[](1);
+        payHookSpecifications[0] = JBPayHookSpecification({
+            hook: IJBPayHook(sucker),
+            amount: 0,
+            metadata: bytes('')
+        });
 
-            // Store the pay hooks.
-            _storeHookSpecificationsOf(revnetId, payHookSpecifications);
-        // If the deployed revnet is not a sucker, give it permission to mint tokens sucked.
-        } else {
-            // Give the sucker mint permissions, so it can mint when receiving sucked in.
-            uint256[] memory permissions = new uint256[](1);
-            permissions[0] = JBPermissionIds.MINT_TOKENS;
-            IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
-                account: address(this),
-                permissionsData: JBPermissionsData({
-                    operator: address(sucker),
-                    projectId: revnetId,
-                    permissionIds: permissions
-                })
-            });
-        }
+        // Store the pay hooks.
+        _storeHookSpecificationsOf(revnetId, payHookSpecifications);
+
+        // Give the sucker mint permissions, so it can mint when receiving sucked in.
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = JBPermissionIds.MINT_TOKENS;
+        IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
+            account: address(this),
+            permissionsData: JBPermissionsData({
+                operator: address(sucker),
+                projectId: revnetId,
+                permissionIds: permissions
+            })
+        });
     }
 
     /// @notice Schedules the initial ruleset for the revnet, and queues all subsequent rulesets that define the stages.

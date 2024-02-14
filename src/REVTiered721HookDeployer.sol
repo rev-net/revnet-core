@@ -47,8 +47,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
         REVDeploy721TiersHookConfig memory hookConfiguration,
         JBPayHookSpecification[] memory otherPayHooksSpecifications,
         uint16 extraHookMetadata,
-        SuckerTokenConfig[] calldata suckerTokenConfig,
-        bool isSucker,
+        SuckerTokenConfig[] memory suckerTokenConfig,
         bytes32 suckerSalt
     )
         public
@@ -88,7 +87,6 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
             payHookSpecifications: payHookSpecifications,
             extraHookMetadata: extraHookMetadata,
             suckerTokenConfig: suckerTokenConfig,
-            isSucker: isSucker,
             suckerSalt: suckerSalt
         });
     }

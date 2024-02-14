@@ -66,8 +66,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
         JBPayHookSpecification[] memory otherPayHooksSpecifications,
         uint16 extraHookMetadata,
         CTAllowedPost[] memory allowedPosts,
-        SuckerTokenConfig[] calldata suckerTokenConfig,
-        bool isSucker,
+        SuckerTokenConfig[] memory suckerTokenConfig,
         bytes32 suckerSalt
     )
         public
@@ -85,7 +84,6 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
             otherPayHooksSpecifications: otherPayHooksSpecifications,
             extraHookMetadata: extraHookMetadata,
             suckerTokenConfig: suckerTokenConfig,
-            isSucker: isSucker,
             suckerSalt: suckerSalt
         });
 

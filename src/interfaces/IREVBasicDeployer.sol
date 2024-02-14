@@ -12,8 +12,7 @@ interface IREVBasicDeployer {
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
-        SuckerTokenConfig[] calldata suckerTokenConfig,
-        bool isSucker,
+        SuckerTokenConfig[] memory suckerTokenConfig,
         bytes32 suckerSalt
     )
         external
