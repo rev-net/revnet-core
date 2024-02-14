@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity 0.8.23;
 
-import {CTPublisher} from "lib/croptop-contracts/src/CTPublisher.sol";
-import {CTAllowedPost} from "lib/croptop-contracts/src/structs/CTAllowedPost.sol";
-import {IJBController} from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
-import {IJBPermissioned} from "lib/juice-contracts-v4/src/interfaces/IJBPermissioned.sol";
-import {JBTerminalConfig} from "lib/juice-contracts-v4/src/structs/JBTerminalConfig.sol";
-import {JBPayHookSpecification} from "lib/juice-contracts-v4/src/structs/JBPayHookSpecification.sol";
-import {JBPermissionsData} from "lib/juice-contracts-v4/src/structs/JBPermissionsData.sol";
-import {JB721PermissionIds} from "lib/juice-721-hook/src/libraries/JB721PermissionIds.sol";
-import {IJB721TiersHookDeployer} from "lib/juice-721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
+import {CTPublisher} from "@croptop/core/src/CTPublisher.sol";
+import {CTAllowedPost} from "@croptop/core/src/structs/CTAllowedPost.sol";
+import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
+import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
+import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
+import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
+import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.sol";
+import {JB721PermissionIds} from "@bananapus/721-hook/src/libraries/JB721PermissionIds.sol";
+import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
 
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
-import {REVTiered721HookDeployer} from "./REVTiered721HookDeployer.sol";
+import {REVTiered721HookDeployer, SuckerTokenConfig} from "./REVTiered721HookDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s via the croptop
 /// publisher.
@@ -32,10 +32,11 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     constructor(
         IJBController controller,
+        address suckerDeployer,
         IJB721TiersHookDeployer hookDeployer,
         CTPublisher publisher
     )
-        REVTiered721HookDeployer(controller, hookDeployer)
+        REVTiered721HookDeployer(controller, suckerDeployer, hookDeployer)
     {
         PUBLISHER = publisher;
         _CROPTOP_PERMISSIONS_INDEXES.push(JB721PermissionIds.ADJUST_TIERS);
@@ -64,7 +65,9 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
         REVDeploy721TiersHookConfig memory hookConfiguration,
         JBPayHookSpecification[] memory otherPayHooksSpecifications,
         uint16 extraHookMetadata,
-        CTAllowedPost[] memory allowedPosts
+        CTAllowedPost[] memory allowedPosts,
+        SuckerTokenConfig[] memory suckerTokenConfig,
+        bytes32 suckerSalt
     )
         public
         returns (uint256 revnetId)
@@ -79,7 +82,9 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
             buybackHookConfiguration: buybackHookConfiguration,
             hookConfiguration: hookConfiguration,
             otherPayHooksSpecifications: otherPayHooksSpecifications,
-            extraHookMetadata: extraHookMetadata
+            extraHookMetadata: extraHookMetadata,
+            suckerTokenConfig: suckerTokenConfig,
+            suckerSalt: suckerSalt
         });
 
         // Configure allowed posts.
