@@ -95,7 +95,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// customizing how many tokens are issued per payment.
     /// @return hookSpecifications Amount to be sent to pay hooks instead of adding to local balance. Useful for
     /// auto-routing funds from a treasury as payment come in.
-
     function beforePayRecordedWith(JBBeforePayRecordedContext calldata context)
         external
         view
@@ -161,13 +160,21 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @param addr The address to check if has permissions.
     /// @return flag The flag indicating if the address has permissions to mint on the revnet's behalf.
     function hasMintPermissionFor(uint256 revnetId, address addr) external view returns (bool) {
+        // The buyback hook is allowed to mint on the project's behalf.
         if (addr == address(buybackHookOf[revnetId])) return true;
 
+        // Get a reference to the revnet's suckers.
         IBPSucker[] memory suckers = suckersOf[revnetId];
+
+        // Keep a reference to the number of suckers there are.
         uint256 numberOfSuckers = suckers.length;
+
+        // The suckers are allowed to mint on the project's behalf.
         for (uint256 i; i < numberOfSuckers; i++) {
             if (addr == address(suckers[i])) return true;
         }
+
+        // No other contract has minting permissions.
         return false;
     }
 
@@ -269,6 +276,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
     /// for new participants.
+    /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
     /// @return revnetId The ID of the newly created revnet.
     function deployRevnetWith(
         string memory name,
@@ -290,7 +298,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
-            dataHook: buybackHookConfiguration.hook,
+            dataHook: IJBBuybackHook(address(this)),
             extraHookMetadata: 0,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
@@ -310,6 +318,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// for new participants.
     /// @param dataHook The address of the data hook.
     /// @param extraHookMetadata Extra info to send to the hook.
+    /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
     /// @return revnetId The ID of the newly created revnet.
     function _deployRevnetWith(
         string memory name,
@@ -379,6 +388,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         REVSuckerDeployerConfig memory deployerConfiguration;
 
         for (uint256 i; i < numberOfSuckerDeployers; i++) {
+            //  Get the configuration being iterated on.
             deployerConfiguration = suckerDeploymentConfiguration.deployerConfigurations[i];
             
             // Create the sucker.
@@ -390,15 +400,17 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             // Store the sucker.
             suckersOf[revnetId].push(sucker);
 
-            // Keep a reference to the number of token configurations.
+            // Keep a reference to the number of token configurations for the sucker.
             uint256 numberOfTokenConfigurations = deployerConfiguration.tokenConfigurations.length;
 
             // Keep a reference to the token configurations being iterated on.
             BPTokenConfig memory tokenConfiguration;
 
-            // Configure the tokens.
+            // Configure the tokens for the sucker.
             for(uint256 j; j < numberOfTokenConfigurations; j++) {
+                // Get a reference to the configuration being iterated on.
                 tokenConfiguration = deployerConfiguration.tokenConfigurations[j];
+
                 // Configure the sucker.
                 sucker.configureToken(
                     BPTokenConfig({

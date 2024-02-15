@@ -30,6 +30,7 @@ contract REVPayHookDeployer is REVBasicDeployer {
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
     /// for new participants.
+    /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
     /// @param payHookSpecifications Any hooks that should run when the revnet is paid.
     /// @param extraHookMetadata Extra metadata to attach to the cycle for the delegates to use.
     /// @return revnetId The ID of the newly created revnet.
@@ -40,9 +41,9 @@ contract REVPayHookDeployer is REVBasicDeployer {
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration,
         JBPayHookSpecification[] memory payHookSpecifications,
-        uint16 extraHookMetadata,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+        uint16 extraHookMetadata
     )
         public
         returns (uint256 revnetId)
