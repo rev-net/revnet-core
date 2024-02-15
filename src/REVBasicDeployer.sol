@@ -58,7 +58,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @notice The data hook that returns the correct values for the buyback hook of each network.
     /// @custom:param revnetId The ID of the revnet to which the buyback contract applies.
     mapping(uint256 revnetId => IJBRulesetDataHook buybackHook) public buybackHookOf;
-    
+
     /// @notice The suckers that are used to move tokens between chains.
     /// @custom:param revnetId The ID of the revnet to which the sucker contracts apply.
     mapping(uint256 revnetId => IBPSucker[] suckers) public suckersOf;
@@ -123,8 +123,9 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         uint256 numberOfSuckers = suckers.length;
 
         // Each hook specification must run, plus the buyback hook if provided.
-        hookSpecifications =
-            new JBPayHookSpecification[](numberOfStoredPayHookSpecifications + numberOfSuckers + (usesBuybackHook ? 1 : 0));
+        hookSpecifications = new JBPayHookSpecification[](
+            numberOfStoredPayHookSpecifications + numberOfSuckers + (usesBuybackHook ? 1 : 0)
+        );
 
         // Add the other expected pay hooks.
         for (uint256 i; i < numberOfStoredPayHookSpecifications; i++) {
@@ -133,11 +134,8 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
 
         // Add the suckers.
         for (uint256 i; i < numberOfSuckers; i++) {
-            hookSpecifications[numberOfStoredPayHookSpecifications + i] = JBPayHookSpecification({
-                hook:  IJBPayHook(address(suckers[i])),
-                amount: 0,
-                metadata: bytes('')
-            });
+            hookSpecifications[numberOfStoredPayHookSpecifications + i] =
+                JBPayHookSpecification({hook: IJBPayHook(address(suckers[i])), amount: 0, metadata: bytes("")});
         }
 
         // Add the buyback hook as the last element.
@@ -208,13 +206,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @dev See {IERC165-supportsInterface}.
     /// @param interfaceId The ID of the interface to check for adherence to.
     /// @return A flag indicating if the provided interface ID is supported.
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(ERC165, IERC165)
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
         return interfaceId == type(IJBRulesetDataHook).interfaceId || super.supportsInterface(interfaceId);
     }
 
@@ -390,7 +382,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         for (uint256 i; i < numberOfSuckerDeployers; i++) {
             //  Get the configuration being iterated on.
             deployerConfiguration = suckerDeploymentConfiguration.deployerConfigurations[i];
-            
+
             // Create the sucker.
             IBPSucker sucker = deployerConfiguration.deployer.createForSender({
                 _localProjectId: revnetId,
@@ -407,7 +399,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             BPTokenConfig memory tokenConfiguration;
 
             // Configure the tokens for the sucker.
-            for(uint256 j; j < numberOfTokenConfigurations; j++) {
+            for (uint256 j; j < numberOfTokenConfigurations; j++) {
                 // Get a reference to the configuration being iterated on.
                 tokenConfiguration = deployerConfiguration.tokenConfigurations[j];
 
@@ -417,7 +409,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                         localToken: tokenConfiguration.localToken,
                         remoteToken: tokenConfiguration.remoteToken,
                         minGas: tokenConfiguration.minGas,
-                        minBridgeAmount: tokenConfiguration.minBridgeAmount 
+                        minBridgeAmount: tokenConfiguration.minBridgeAmount
                     })
                 );
             }

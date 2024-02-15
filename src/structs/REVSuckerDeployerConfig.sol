@@ -5,7 +5,7 @@ import {IBPSuckerDeployer} from "@bananapus/suckers/src/interfaces/IBPSuckerDepl
 import {BPTokenConfig} from "@bananapus/suckers/src/structs/BPTokenConfig.sol";
 
 /// @custom:member deployer The address to deploy a sucker from for a particular chain pair.
-/// @custom:member tokenConfigurations Information about how the chains will connect. 
+/// @custom:member tokenConfigurations Information about how the chains will connect.
 struct REVSuckerDeployerConfig {
     IBPSuckerDeployer deployer;
     BPTokenConfig[] tokenConfigurations;

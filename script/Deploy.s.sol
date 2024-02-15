@@ -37,7 +37,8 @@ contract Deploy is Script {
         }
 
         address controllerAddress = _getDeploymentAddress(
-            string.concat("node_modules/@bananapus/core/broadcast/Deploy.s.sol/", chain, "/run-latest.json"), "JBController"
+            string.concat("node_modules/@bananapus/core/broadcast/Deploy.s.sol/", chain, "/run-latest.json"),
+            "JBController"
         );
 
         address hookDeployerAddress = _getDeploymentAddress(

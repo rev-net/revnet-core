@@ -13,11 +13,9 @@ import {REVBasicDeployer} from "./REVBasicDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also calls other hooks when paid.
 contract REVPayHookDeployer is REVBasicDeployer {
-
     /// @param controller The controller that revnets are made from.
-    constructor(IJBController controller) REVBasicDeployer(controller) {
-    }
-    
+    constructor(IJBController controller) REVBasicDeployer(controller) {}
+
     //*********************************************************************//
     // ---------------------- public transactions ------------------------ //
     //*********************************************************************//
