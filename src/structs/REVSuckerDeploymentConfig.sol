@@ -5,5 +5,5 @@ import {REVSuckerDeployerConfig} from "./REVSuckerDeployerConfig.sol";
 
 struct REVSuckerDeploymentConfig {
     REVSuckerDeployerConfig[] deployerConfigurations;
-    uint256 salt;
+    bytes32 salt;
 }

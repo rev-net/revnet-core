@@ -51,10 +51,9 @@ contract Deploy is Script {
         );
 
         vm.startBroadcast();
-        new REVBasicDeployer(IJBController(controllerAddress), address(0));
+        new REVBasicDeployer(IJBController(controllerAddress));
         new REVCroptopDeployer(
             IJBController(controllerAddress),
-            address(0),
             IJB721TiersHookDeployer(hookDeployerAddress),
             CTPublisher(croptopPublisherAddress)
         );

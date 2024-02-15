@@ -27,9 +27,11 @@ import {JBRedeemHookSpecification} from "@bananapus/core/src/structs/JBRedeemHoo
 import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackHook.sol";
 import {JBBuybackPermissionIds} from "@bananapus/buyback-hook/src/libraries/JBBuybackPermissionIds.sol";
 import {BPTokenConfig} from "@bananapus/suckers/src/structs/BPTokenConfig.sol";
+import {IBPSucker} from "@bananapus/suckers/src/interfaces/IBPSucker.sol";
 
-import {IREVBasicDeployer, BPSuckerDeployer, SuckerTokenConfig, BPTokenConfig, BPSucker} from "./interfaces/IREVBasicDeployer.sol";
+import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
+import {REVSuckerDeployerConfig} from "./structs/REVSuckerDeployerConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
 import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
@@ -133,14 +135,14 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         // Add the suckers.
         for (uint256 i; i < numberOfSuckers; i++) {
             hookSpecifications[numberOfStoredPayHookSpecifications + i] = JBPayHookSpecification({
-                hook:  suckers[i],
+                hook:  IJBPayHook(address(suckers[i])),
                 amount: 0,
                 metadata: bytes('')
             });
         }
 
         // Add the buyback hook as the last element.
-        if (usesBuybackHook) hookSpecifications[numberOfStoredPayHookSpecifications] = suckers[0];
+        if (usesBuybackHook) hookSpecifications[numberOfStoredPayHookSpecifications] = buybackHookSpecifications[0];
     }
 
     /// @notice This function is never called, it needs to be included to adhere to the interface.
@@ -368,21 +370,21 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         });
 
         // If there's no sucker's to set up, return.
-        if (suckerDeploymentConfiguration.salt.length == 0) return revnetId;
+        if (suckerDeploymentConfiguration.salt == bytes32(0)) return revnetId;
 
         // Keep a reference to the number of sucker deployers.
         uint256 numberOfSuckerDeployers = suckerDeploymentConfiguration.deployerConfigurations.length;
 
         // Keep a reference to the sucker deploy being iterated on.
-        REVSuckerDeployerConfig deployerConfiguration;
+        REVSuckerDeployerConfig memory deployerConfiguration;
 
         for (uint256 i; i < numberOfSuckerDeployers; i++) {
             deployerConfiguration = suckerDeploymentConfiguration.deployerConfigurations[i];
             
             // Create the sucker.
             IBPSucker sucker = deployerConfiguration.deployer.createForSender({
-                localProjectId: revnetId,
-                salt: suckerDeploymentConfiguration.salt
+                _localProjectId: revnetId,
+                _salt: suckerDeploymentConfiguration.salt
             });
 
             // Store the sucker.
@@ -392,20 +394,20 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             uint256 numberOfTokenConfigurations = deployerConfiguration.tokenConfigurations.length;
 
             // Keep a reference to the token configurations being iterated on.
-            SuckerTokenConfig memory tokenConfiguration;
+            BPTokenConfig memory tokenConfiguration;
 
             // Configure the tokens.
             for(uint256 j; j < numberOfTokenConfigurations; j++) {
                 tokenConfiguration = deployerConfiguration.tokenConfigurations[j];
                 // Configure the sucker.
-                sucker.configureToken({
-                    token: tokenConfiguration.localToken,
-                    config: BPTokenConfig({
+                sucker.configureToken(
+                    BPTokenConfig({
+                        localToken: tokenConfiguration.localToken,
                         remoteToken: tokenConfiguration.remoteToken,
                         minGas: tokenConfiguration.minGas,
                         minBridgeAmount: tokenConfiguration.minBridgeAmount 
                     })
-                });
+                );
             }
         }
     }
