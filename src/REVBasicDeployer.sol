@@ -283,6 +283,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         override
         returns (uint256 revnetId)
     {
+        // Deploy main revnet.
         revnetId = _deployRevnetWith({
             name: name,
             symbol: symbol,
@@ -360,6 +361,11 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             });
         }
 
+        // Deploy the suckers if needed.
+        if (suckerDeploymentConfiguration.salt != bytes32(0)) {
+            _deploySuckersOf(revnetId, suckerDeploymentConfiguration);
+        }
+
         // Give the operator permission to change the recipients of the operator's split.
         IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
             account: address(this),
@@ -369,51 +375,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                 permissionIds: _OPERATOR_PERMISSIONS_INDEXES
             })
         });
-
-        // If there's no sucker's to set up, return.
-        if (suckerDeploymentConfiguration.salt == bytes32(0)) return revnetId;
-
-        // Keep a reference to the number of sucker deployers.
-        uint256 numberOfSuckerDeployers = suckerDeploymentConfiguration.deployerConfigurations.length;
-
-        // Keep a reference to the sucker deploy being iterated on.
-        REVSuckerDeployerConfig memory deployerConfiguration;
-
-        for (uint256 i; i < numberOfSuckerDeployers; i++) {
-            //  Get the configuration being iterated on.
-            deployerConfiguration = suckerDeploymentConfiguration.deployerConfigurations[i];
-
-            // Create the sucker.
-            IBPSucker sucker = deployerConfiguration.deployer.createForSender({
-                _localProjectId: revnetId,
-                _salt: suckerDeploymentConfiguration.salt
-            });
-
-            // Store the sucker.
-            suckersOf[revnetId].push(sucker);
-
-            // Keep a reference to the number of token configurations for the sucker.
-            uint256 numberOfTokenConfigurations = deployerConfiguration.tokenConfigurations.length;
-
-            // Keep a reference to the token configurations being iterated on.
-            BPTokenConfig memory tokenConfiguration;
-
-            // Configure the tokens for the sucker.
-            for (uint256 j; j < numberOfTokenConfigurations; j++) {
-                // Get a reference to the configuration being iterated on.
-                tokenConfiguration = deployerConfiguration.tokenConfigurations[j];
-
-                // Configure the sucker.
-                sucker.configureToken(
-                    BPTokenConfig({
-                        localToken: tokenConfiguration.localToken,
-                        remoteToken: tokenConfiguration.remoteToken,
-                        minGas: tokenConfiguration.minGas,
-                        minBridgeAmount: tokenConfiguration.minBridgeAmount
-                    })
-                );
-            }
-        }
     }
 
     /// @notice Schedules the initial ruleset for the revnet, and queues all subsequent rulesets that define the stages.
@@ -537,6 +498,53 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         for (uint256 i; i < numberOfPayHookSpecifications; i++) {
             // Store the value.
             _payHookSpecificationsOf[revnetId].push(payHookSpecifications[i]);
+        }
+    }
+    
+    /// @notice Deploys suckers that allows a revnet to communicate across chains. 
+    /// @param revnetId The ID of the revnet to deploy the suckers for.
+    /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
+    function _deploySuckersOf(uint256 revnetId, REVSuckerDeploymentConfig memory suckerDeploymentConfiguration) internal virtual {
+        // Keep a reference to the number of sucker deployers.
+        uint256 numberOfSuckerDeployers = suckerDeploymentConfiguration.deployerConfigurations.length;
+
+        // Keep a reference to the sucker deploy being iterated on.
+        REVSuckerDeployerConfig memory deployerConfiguration;
+
+        for (uint256 i; i < numberOfSuckerDeployers; i++) {
+            //  Get the configuration being iterated on.
+            deployerConfiguration = suckerDeploymentConfiguration.deployerConfigurations[i];
+
+            // Create the sucker.
+            IBPSucker sucker = deployerConfiguration.deployer.createForSender({
+                _localProjectId: revnetId,
+                _salt: suckerDeploymentConfiguration.salt
+            });
+
+            // Store the sucker.
+            suckersOf[revnetId].push(sucker);
+
+            // Keep a reference to the number of token configurations for the sucker.
+            uint256 numberOfTokenConfigurations = deployerConfiguration.tokenConfigurations.length;
+
+            // Keep a reference to the token configurations being iterated on.
+            BPTokenConfig memory tokenConfiguration;
+
+            // Configure the tokens for the sucker.
+            for (uint256 j; j < numberOfTokenConfigurations; j++) {
+                // Get a reference to the configuration being iterated on.
+                tokenConfiguration = deployerConfiguration.tokenConfigurations[j];
+
+                // Configure the sucker.
+                sucker.configureToken(
+                    BPTokenConfig({
+                        localToken: tokenConfiguration.localToken,
+                        remoteToken: tokenConfiguration.remoteToken,
+                        minGas: tokenConfiguration.minGas,
+                        minBridgeAmount: tokenConfiguration.minBridgeAmount
+                    })
+                );
+            }
         }
     }
 }
