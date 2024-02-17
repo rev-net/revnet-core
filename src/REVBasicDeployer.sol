@@ -329,11 +329,14 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         virtual
         returns (uint256 revnetId)
     {
+        (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration) =
+            _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata);
+
         // Deploy a juicebox for the revnet.
         revnetId = CONTROLLER.launchProjectFor({
             owner: address(this),
             projectUri: projectUri,
-            rulesetConfigurations: _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata),
+            rulesetConfigurations: rulesetConfigurations,
             terminalConfigurations: terminalConfigurations,
             memo: string.concat("$", symbol, " revnet deployed")
         });
@@ -366,7 +369,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
             _deploySuckersOf({
                 revnetId: revnetId,
-                configuration: configuration,
+                encodedConfiguration: encodedConfiguration,
                 suckerDeploymentConfiguration: suckerDeploymentConfiguration
             });
         }
@@ -392,9 +395,9 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         uint256 extraMetadataData
     )
         internal
-        pure
+        view
         virtual
-        returns (JBRulesetConfig[] memory rulesetConfigurations)
+        returns (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration)
     {
         // Keep a reference to the number of stages to schedule.
         uint256 numberOfStages = configuration.stageConfigurations.length;
@@ -402,19 +405,32 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         // Each stage is modeled as a ruleset reconfiguration.
         rulesetConfigurations = new JBRulesetConfig[](numberOfStages);
 
+        // Store the base currency in the encoding.
+        encodedConfiguration = abi.encode(configuration.baseCurrency);
+
+        // Keep a reference to teh stage configuration being iterated on.
+        REVStageConfig memory stageConfiguration;
+
         // Loop through each stage to set up its ruleset configuration.
         for (uint256 i; i < numberOfStages; i++) {
-            rulesetConfigurations[i].mustStartAtOrAfter = configuration.stageConfigurations[i].startsAtOrAfter;
-            rulesetConfigurations[i].duration = configuration.stageConfigurations[i].priceCeilingIncreaseFrequency;
+            // Set the stage configuration being iterated on.
+            stageConfiguration = configuration.stageConfigurations[i];
+
+            // Make sure the start timestamps reflect when the stages actually start and aren't a past timestamp.
+            if (stageConfiguration.startsAtOrAfter < block.timestamp) {
+                stageConfiguration.startsAtOrAfter = uint40(block.timestamp);
+            }
+
+            rulesetConfigurations[i].mustStartAtOrAfter = stageConfiguration.startsAtOrAfter;
+            rulesetConfigurations[i].duration = stageConfiguration.priceCeilingIncreaseFrequency;
             // Set the initial issuance for the first ruleset, otherwise pass 0 to inherit from the previous
             // ruleset.
-            rulesetConfigurations[i].weight = configuration.stageConfigurations[i].initialIssuanceRate;
-            rulesetConfigurations[i].decayRate = configuration.stageConfigurations[i].priceCeilingIncreasePercentage;
+            rulesetConfigurations[i].weight = stageConfiguration.initialIssuanceRate;
+            rulesetConfigurations[i].decayRate = stageConfiguration.priceCeilingIncreasePercentage;
             rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
             rulesetConfigurations[i].metadata = JBRulesetMetadata({
-                reservedRate: configuration.stageConfigurations[i].operatorSplitRate,
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE
-                    - configuration.stageConfigurations[i].priceFloorTaxIntensity,
+                reservedRate: stageConfiguration.operatorSplitRate,
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.priceFloorTaxIntensity,
                 baseCurrency: configuration.baseCurrency,
                 pausePay: false,
                 pauseCreditTransfers: false,
@@ -430,6 +446,19 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                 dataHook: dataHook,
                 metadata: extraMetadataData
             });
+
+            // Encode each child struct and append it
+            encodedConfiguration = abi.encodePacked(
+                encodedConfiguration,
+                abi.encode(
+                    stageConfiguration.startsAtOrAfter,
+                    stageConfiguration.operatorSplitRate,
+                    stageConfiguration.initialIssuanceRate,
+                    stageConfiguration.priceCeilingIncreaseFrequency,
+                    stageConfiguration.priceCeilingIncreasePercentage,
+                    stageConfiguration.priceFloorTaxIntensity
+                )
+            );
         }
     }
 
@@ -511,7 +540,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
     function _deploySuckersOf(
         uint256 revnetId,
-        REVConfig memory configuration,
+        bytes memory encodedConfiguration,
         REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
     )
         internal
@@ -530,9 +559,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             // Create the sucker.
             IBPSucker sucker = deployerConfiguration.deployer.createForSender({
                 _localProjectId: revnetId,
-                _salt: keccak256(
-                    abi.encodePacked(msg.sender, _encodeConfiguration(configuration), suckerDeploymentConfiguration.salt)
-                    )
+                _salt: keccak256(abi.encodePacked(msg.sender, encodedConfiguration, suckerDeploymentConfiguration.salt))
             });
 
             // Store the sucker.
@@ -559,28 +586,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                     })
                 );
             }
-        }
-    }
-
-    function _encodeConfiguration(REVConfig memory configuration) internal pure returns (bytes memory encodedData) {
-        encodedData = abi.encode(configuration.baseCurrency);
-
-        uint256 numberOfStageConfigurations = configuration.stageConfigurations.length;
-        REVStageConfig memory stageConfiguration;
-        for (uint256 i; i < numberOfStageConfigurations; i++) {
-            stageConfiguration = configuration.stageConfigurations[i];
-            // Encode each child struct and append it
-            encodedData = abi.encodePacked(
-                encodedData,
-                abi.encode(
-                    stageConfiguration.startsAtOrAfter,
-                    stageConfiguration.operatorSplitRate,
-                    stageConfiguration.initialIssuanceRate,
-                    stageConfiguration.priceCeilingIncreaseFrequency,
-                    stageConfiguration.priceCeilingIncreasePercentage,
-                    stageConfiguration.priceFloorTaxIntensity
-                )
-            );
         }
     }
 }
