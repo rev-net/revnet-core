@@ -215,8 +215,9 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     //*********************************************************************//
 
     /// @param controller The controller that revnets are made from.
-    constructor(IJBController controller) {
+    constructor(IJBController controller) { // IBPSuckerRegistry suckerRegistry) {
         CONTROLLER = controller;
+        // SUCKER_REGISTRY = suckerRegistry;
         _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
         _OPERATOR_PERMISSIONS_INDEXES.push(JBBuybackPermissionIds.SET_POOL_PARAMS);
     }
