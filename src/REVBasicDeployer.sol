@@ -363,7 +363,18 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
 
         // Deploy the suckers if needed.
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
-            _deploySuckersOf(revnetId, suckerDeploymentConfiguration);
+            _deploySuckersOf({
+                revnetId: revnetId,
+                name: name,
+                symbol: symbol,
+                projectUri: projectUri,
+                configuration: configuration,
+                terminalConfigurations: terminalConfigurations,
+                buybackHookConfiguration: buybackHookConfiguration,
+                dataHook: dataHook,
+                extraHookMetadata: extraHookMetadata,
+                suckerDeploymentConfiguration: suckerDeploymentConfiguration
+            });
         }
 
         // Give the operator permission to change the recipients of the operator's split.
@@ -500,11 +511,25 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             _payHookSpecificationsOf[revnetId].push(payHookSpecifications[i]);
         }
     }
-    
-    /// @notice Deploys suckers that allows a revnet to communicate across chains. 
+
+    /// @notice Deploys suckers that allows a revnet to communicate across chains.
     /// @param revnetId The ID of the revnet to deploy the suckers for.
     /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
-    function _deploySuckersOf(uint256 revnetId, REVSuckerDeploymentConfig memory suckerDeploymentConfiguration) internal virtual {
+    function _deploySuckersOf(
+        uint256 revnetId,
+        string memory name,
+        string memory symbol,
+        string memory projectUri,
+        REVConfig memory configuration,
+        JBTerminalConfig[] memory terminalConfigurations,
+        REVBuybackHookConfig memory buybackHookConfiguration,
+        IJBBuybackHook dataHook,
+        uint256 extraHookMetadata,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+    )
+        internal
+        virtual
+    {
         // Keep a reference to the number of sucker deployers.
         uint256 numberOfSuckerDeployers = suckerDeploymentConfiguration.deployerConfigurations.length;
 
@@ -530,6 +555,10 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             // Keep a reference to the token configurations being iterated on.
             BPTokenConfig memory tokenConfiguration;
 
+            BPTokenConfig memory remoteTokenConfig = new BPTokenConfig[](numberOfTokenConfigurations);
+
+            BPTokenConfig memory config;
+
             // Configure the tokens for the sucker.
             for (uint256 j; j < numberOfTokenConfigurations; j++) {
                 // Get a reference to the configuration being iterated on.
@@ -544,7 +573,67 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                         minBridgeAmount: tokenConfiguration.minBridgeAmount
                     })
                 );
+
+                // Set the remote token config with the inverse token values.
+                remoteTokenConfig[i] = BPTokenConfig({
+                    localToken: tokenConfiguration.remoteToken,
+                    remoteToken: tokenConfiguration.localToken,
+                    minGas: tokenConfiguration.minGas,
+                    minBridgeAmount: tokenConfiguration.minBridgeAmount
+                });
             }
         }
+
+        if (suckerDeploymentConfiguration) {
+            // TODO: make this recognize the context of the chain it's deploying in.
+            _deployOnChain({
+                name: name,
+                symbol: symbol,
+                projectUri: projectUri,
+                configuration: configuration,
+                terminalConfigurations: terminalConfigurations,
+                buybackHookConfiguration: buybackHookConfiguration,
+                dataHook: dataHook,
+                extraHookMetadata: extraHookMetadata,
+                suckerDeploymentConfiguration: REVSuckerDeploymentConfig({
+                    deployer: deployerConfiguration.deployer,
+                    tokenConfigurations: remoteTokenConfig,
+                    deployProject: false
+                })
+            });
+        }
+    }
+
+    /// @notice uses the OPMESSENGER to send the root and assets over the bridge to the peer.
+    function _deployOnChain(
+        string memory name,
+        string memory symbol,
+        string memory projectUri,
+        REVConfig memory configuration,
+        JBTerminalConfig[] memory terminalConfigurations,
+        REVBuybackHookConfig memory buybackHookConfiguration,
+        IJBBuybackHook dataHook,
+        uint256 extraHookMetadata,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+    )
+        internal
+        virtual
+    {
+        // Send the messenger to the peer with the redeemed ETH.
+        OPMESSENGER.sendMessage(
+            address(this), // PEER
+            abi.encodeCall(
+                REVBasicDeployer.deployRevnetWith,
+                name,
+                symbol,
+                projectUri,
+                configuration,
+                terminalConfigurations,
+                buybackHookConfiguration,
+                dataHook,
+                extraHookMetadata
+            ),
+            200_000 // BASE GAS
+        );
     }
 }
