@@ -438,7 +438,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                 metadata: extraMetadataData
             });
 
-            // Encode each child struct and append it
+            // Append the encoded stage properties.
             encodedConfiguration = abi.encodePacked(
                 encodedConfiguration,
                 abi.encode(
