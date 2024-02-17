@@ -30,6 +30,7 @@ import {BPTokenConfig} from "@bananapus/suckers/src/structs/BPTokenConfig.sol";
 import {IBPSucker} from "@bananapus/suckers/src/interfaces/IBPSucker.sol";
 
 import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
+import {REVDescription} from "./structs/REVDescription.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVStageConfig} from "./structs/REVStageConfig.sol";
 import {REVSuckerDeployerConfig} from "./structs/REVSuckerDeployerConfig.sol";
@@ -262,9 +263,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     //*********************************************************************//
 
     /// @notice Deploy a basic revnet.
-    /// @param name The name of the ERC-20 token being create for the revnet.
-    /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param projectUri The metadata URI containing revnet's info.
+    /// @param description The description of the revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -272,9 +271,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
     /// @return revnetId The ID of the newly created revnet.
     function deployRevnetWith(
-        string memory name,
-        string memory symbol,
-        string memory projectUri,
+        REVDescription memory description,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -286,9 +283,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     {
         // Deploy main revnet.
         revnetId = _deployRevnetWith({
-            name: name,
-            symbol: symbol,
-            projectUri: projectUri,
+            description: description,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
@@ -303,9 +298,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     //*********************************************************************//
 
     /// @notice Deploys a revnet with the specified hook information.
-    /// @param name The name of the ERC-20 token being create for the revnet.
-    /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param projectUri The metadata URI containing revnet's info.
+    /// @param description The description of the revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -315,9 +308,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
     /// @return revnetId The ID of the newly created revnet.
     function _deployRevnetWith(
-        string memory name,
-        string memory symbol,
-        string memory projectUri,
+        REVDescription memory description,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -335,14 +326,14 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         // Deploy a juicebox for the revnet.
         revnetId = CONTROLLER.launchProjectFor({
             owner: address(this),
-            projectUri: projectUri,
+            projectUri: description.uri,
             rulesetConfigurations: rulesetConfigurations,
             terminalConfigurations: terminalConfigurations,
-            memo: string.concat("$", symbol, " revnet deployed")
+            memo: string.concat("$", description.symbol, " revnet deployed")
         });
 
         // Issue the network's ERC-20 token.
-        CONTROLLER.deployERC20For({projectId: revnetId, name: name, symbol: symbol});
+        CONTROLLER.deployERC20For({projectId: revnetId, name: description.name, symbol: description.symbol});
 
         // Setup the buyback hook.
         _setupBuybackHookOf(revnetId, buybackHookConfiguration);
@@ -360,7 +351,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                 projectId: revnetId,
                 tokenCount: configuration.premintTokenAmount,
                 beneficiary: configuration.initialOperator,
-                memo: string.concat("$", symbol, " preminted"),
+                memo: string.concat("$", description.symbol, " preminted"),
                 useReservedRate: false
             });
         }

@@ -12,6 +12,7 @@ import {JB721PermissionIds} from "@bananapus/721-hook/src/libraries/JB721Permiss
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
 
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
+import {REVDescription} from "./structs/REVDescription.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
@@ -43,9 +44,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
     }
 
     /// @notice Deploy a revnet that supports 721 sales.
-    /// @param name The name of the ERC-20 token being create for the revnet.
-    /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param projectUri The metadata URI containing revnet's info.
+    /// @param description The description of the revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -57,9 +56,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
     /// @param allowedPosts The type of posts that the network should allow.
     /// @return revnetId The ID of the newly created revnet.
     function deployCroptopRevnetFor(
-        string memory name,
-        string memory symbol,
-        string memory projectUri,
+        REVDescription memory description,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -74,9 +71,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
     {
         // Deploy the revnet with tiered 721 hooks.
         revnetId = super.deployTiered721RevnetFor({
-            name: name,
-            symbol: symbol,
-            projectUri: projectUri,
+            description: description,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
