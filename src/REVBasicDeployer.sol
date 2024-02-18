@@ -257,6 +257,39 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             })
         });
     }
+    
+    /// @notice Allows a revnet's operator to deploy new suckers to the revnet after it's deployed.
+    /// @param revnetId The ID of the revnet having new suckers deployed.
+    /// @param encodedConfiguration A bytes representation of the revnet's configuration.
+    /// @param suckerDeploymentConfiguration The specifics about the suckers being deployed.
+    function deploySuckersFor(
+        uint256 revnetId,
+        bytes memory encodedConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+    )
+        public
+        override
+    {
+        /// Make sure the message sender is the current operator.
+        if (
+            !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
+                operator: msg.sender,
+                account: address(this),
+                projectId: revnetId,
+                permissionIds: _OPERATOR_PERMISSIONS_INDEXES
+            })
+        ) revert REVBasicDeployer_Unauthorized();
+
+        // Compose the salt.
+        bytes32 salt = keccak256(abi.encodePacked(msg.sender, encodedConfiguration, suckerDeploymentConfiguration.salt));
+
+        // Deploy the suckers.
+        SUCKER_REGISTRY.deploySuckersFor({
+            projectId: revnetId,
+            salt: salt,
+            configurations: suckerDeploymentConfiguration.deployerConfigurations
+        });
+    }
 
     //*********************************************************************//
     // ---------------------- public transactions ------------------------ //
@@ -290,27 +323,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             dataHook: IJBBuybackHook(address(this)),
             extraHookMetadata: 0,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration
-        });
-    }
-
-    function deploySuckersFor(
-        uint256 revnetId,
-        bytes memory encodedConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
-    )
-        public
-        override
-    {
-        // TODO require permission from revnet operator, can reuse a permission already used for operators, such a SET_SPLITS.
-
-        // Compose the salt.
-        bytes32 salt = keccak256(abi.encodePacked(msg.sender, encodedConfiguration, suckerDeploymentConfiguration.salt));
-
-        // Deploy the suckers.
-        SUCKER_REGISTRY.deploySuckersFor({
-            projectId: revnetId,
-            salt: salt,
-            configurations: suckerDeploymentConfiguration.deployerConfigurations
         });
     }
 
