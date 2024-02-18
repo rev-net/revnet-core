@@ -215,7 +215,8 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     //*********************************************************************//
 
     /// @param controller The controller that revnets are made from.
-    constructor(IJBController controller) { // IBPSuckerRegistry suckerRegistry) {
+    constructor(IJBController controller) {
+        // IBPSuckerRegistry suckerRegistry) {
         CONTROLLER = controller;
         // SUCKER_REGISTRY = suckerRegistry;
         _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
@@ -289,6 +290,27 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             dataHook: IJBBuybackHook(address(this)),
             extraHookMetadata: 0,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration
+        });
+    }
+
+    function deploySuckersFor(
+        uint256 revnetId,
+        bytes memory encodedConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+    )
+        public
+        override
+    {
+        // TODO require permission from revnet operator, can reuse a permission already used for operators, such a SET_SPLITS.
+
+        // Compose the salt.
+        bytes32 salt = keccak256(abi.encodePacked(msg.sender, encodedConfiguration, suckerDeploymentConfiguration.salt));
+
+        // Deploy the suckers.
+        SUCKER_REGISTRY.deploySuckersFor({
+            projectId: revnetId,
+            salt: salt,
+            configurations: suckerDeploymentConfiguration.deployerConfigurations
         });
     }
 
@@ -437,7 +459,9 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                 encodedConfiguration,
                 abi.encode(
                     // If no start time is provided for the first stage, use the current block timestamp.
-                    (i == 0 && stageConfiguration.startsAtOrAfter == 0) ? block.timestamp : stageConfiguration.startsAtOrAfter,
+                    (i == 0 && stageConfiguration.startsAtOrAfter == 0)
+                        ? block.timestamp
+                        : stageConfiguration.startsAtOrAfter,
                     stageConfiguration.operatorSplitRate,
                     stageConfiguration.initialIssuanceRate,
                     stageConfiguration.priceCeilingIncreaseFrequency,
@@ -523,20 +547,25 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
 }
 
 import {IBPSuckerDeployer} from "@bananapus/suckers/src/interfaces/IBPSuckerDeployer.sol";
-  
+
 /// @custom:member deployer The address to deploy a sucker from for a particular chain pair.
 /// @custom:member tokenConfigurations Information about how the chains will connect.
 struct BPSuckerDeployerConfig {
     IBPSuckerDeployer deployer;
     BPTokenConfig[] tokenConfigurations;
 }
-  
+
 interface IBPSuckerRegistry {
     function suckersOf(uint256 projectId) external view returns (IBPSucker[] memory);
     function suckerDeployerIsAllowed(address deployer) external view returns (bool);
-    
-    function allowSuckerDeployer(address deployer) external; 
-    function deploySuckersFor(uint256 projectId, bytes32 salt, REVSuckerDeployerConfig[] memory configurations) external;
+
+    function allowSuckerDeployer(address deployer) external;
+    function deploySuckersFor(
+        uint256 projectId,
+        bytes32 salt,
+        REVSuckerDeployerConfig[] memory configurations
+    )
+        external;
 }
 
 contract BPSuckerRegistry is IBPSuckerRegistry {
@@ -553,8 +582,15 @@ contract BPSuckerRegistry is IBPSuckerRegistry {
         suckerDeployerIsAllowed[deployer] = true;
     }
 
-    function deploySuckersFor(uint256 projectId, bytes32 salt, REVSuckerDeployerConfig[] memory configurations) public override { 
-        // TODO requirePermissions
+    function deploySuckersFor(
+        uint256 projectId,
+        bytes32 salt,
+        REVSuckerDeployerConfig[] memory configurations
+    )
+        public
+        override
+    {
+        // TODO requirePermissions from owner of projectId or Operator of a new DEPLOY_SUCKERS permission.
 
         // Keep a reference to the number of sucker deployers.
         uint256 numberOfSuckerDeployers = configurations.length;
@@ -565,15 +601,12 @@ contract BPSuckerRegistry is IBPSuckerRegistry {
         for (uint256 i; i < numberOfSuckerDeployers; i++) {
             // Get the configuration being iterated on.
             configuration = configurations[i];
-            
+
             // Make sure the deployer is allowed.
             if (!suckerDeployerIsAllowed[address(configuration.deployer)]) revert();
 
             // Create the sucker.
-            IBPSucker sucker = configuration.deployer.createForSender({
-                _localProjectId: projectId,
-                _salt: salt
-            });
+            IBPSucker sucker = configuration.deployer.createForSender({_localProjectId: projectId, _salt: salt});
 
             // Keep a reference to the number of token configurations for the sucker.
             uint256 numberOfTokenConfigurations = configuration.tokenConfigurations.length;
@@ -596,6 +629,6 @@ contract BPSuckerRegistry is IBPSuckerRegistry {
                     })
                 );
             }
-        } 
-    } 
+        }
+    }
 }

@@ -16,4 +16,11 @@ interface IREVBasicDeployer {
     )
         external
         returns (uint256 revnetId);
+
+    function deploySuckersFor(
+        uint256 projectId,
+        bytes memory encodedConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+    )
+        external;
 }
