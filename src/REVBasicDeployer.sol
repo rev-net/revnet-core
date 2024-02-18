@@ -257,7 +257,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             })
         });
     }
-    
+
     /// @notice Allows a revnet's operator to deploy new suckers to the revnet after it's deployed.
     /// @param revnetId The ID of the revnet having new suckers deployed.
     /// @param encodedConfiguration A bytes representation of the revnet's configuration.
