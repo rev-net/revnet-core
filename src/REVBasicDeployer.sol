@@ -406,12 +406,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             // Set the stage configuration being iterated on.
             stageConfiguration = configuration.stageConfigurations[i];
 
-            // Make sure the start timestamps reflect when the stages actually start and aren't a past timestamp.
-            // TODO if the deploy is happening after the first startsAtOrAfter, adjust the stages to match.
-            if (stageConfiguration.startsAtOrAfter < block.timestamp) {
-                stageConfiguration.startsAtOrAfter = uint40(block.timestamp);
-            }
-
             rulesetConfigurations[i].mustStartAtOrAfter = stageConfiguration.startsAtOrAfter;
             rulesetConfigurations[i].duration = stageConfiguration.priceCeilingIncreaseFrequency;
             // Set the initial issuance for the first ruleset, otherwise pass 0 to inherit from the previous
@@ -442,7 +436,8 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             encodedConfiguration = abi.encodePacked(
                 encodedConfiguration,
                 abi.encode(
-                    stageConfiguration.startsAtOrAfter,
+                    // If no start time is provided for the first stage, use the current block timestamp.
+                    (i == 0 && stageConfiguration.startsAtOrAfter == 0) ? block.timestamp : stageConfiguration.startsAtOrAfter,
                     stageConfiguration.operatorSplitRate,
                     stageConfiguration.initialIssuanceRate,
                     stageConfiguration.priceCeilingIncreaseFrequency,
