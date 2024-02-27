@@ -48,8 +48,8 @@ contract Deploy is Script {
         );
 
         address croptopPublisherAddress = _getDeploymentAddress(
-            string.concat("node_modules/@bananapus/core/broadcast/Deploy.s.sol/", chain, "/run-latest.json"),
-            "CroptopPublisher"
+            string.concat("node_modules/@croptop/core/broadcast/Deploy.s.sol/", chain, "/run-latest.json"),
+            "CTPublisher"
         );
 
         IBPSuckerRegistry suckerRegistry = IBPSuckerRegistry(0x419EfdfB497Bb33d931972C8A554324768cB510f);
