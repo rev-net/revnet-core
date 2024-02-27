@@ -398,6 +398,20 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             });
         }
 
+        // Give the sucker registry permission to map tokens.
+        uint256[] memory registryPermissions = new uint256[](1);
+        registryPermissions[0] = JBPermissionIds.MAP_SUCKER_TOKEN;
+
+        // Give the operator permission to change the recipients of the operator's split.
+        IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
+            account: address(this),
+            permissionsData: JBPermissionsData({
+                operator: address(SUCKER_REGISTRY),
+                projectId: revnetId,
+                permissionIds: registryPermissions
+            })
+        });
+
         // Deploy the suckers if needed.
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
             SUCKER_REGISTRY.deploySuckersFor({
