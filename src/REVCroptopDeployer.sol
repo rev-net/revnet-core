@@ -10,11 +10,13 @@ import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpeci
 import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
+import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
 
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
 import {REVDescription} from "./structs/REVDescription.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
+import {REVCroptopAllowedPost} from "./structs/REVCroptopAllowedPost.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
 import {REVTiered721HookDeployer} from "./REVTiered721HookDeployer.sol";
@@ -58,7 +60,8 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
     /// @param extraHookMetadata Extra metadata to attach to the cycle for the delegates to use.
     /// @param allowedPosts The type of posts that the network should allow.
     /// @return revnetId The ID of the newly created revnet.
-    function deployCroptopRevnetFor(
+    /// @return hook The address of the 721 hook that was deployed on the revnet.
+    function deployCroptopRevnetWith(
         REVDescription memory description,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
@@ -67,13 +70,13 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
         REVDeploy721TiersHookConfig memory hookConfiguration,
         JBPayHookSpecification[] memory otherPayHooksSpecifications,
         uint16 extraHookMetadata,
-        CTAllowedPost[] memory allowedPosts
+        REVCroptopAllowedPost[] memory allowedPosts
     )
         public
-        returns (uint256 revnetId)
+        returns (uint256 revnetId, IJB721TiersHook hook)
     {
         // Deploy the revnet with tiered 721 hooks.
-        revnetId = super.deployTiered721RevnetFor({
+        (revnetId, hook) = super.deployTiered721RevnetWith({
             description: description,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
@@ -84,9 +87,34 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
             suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
 
+        // Keep a reference to the number of allowed posts.
+        uint256 numberOfAllowedPosts = allowedPosts.length;
+
+        // Keep a reference to the formatted allowed posts.
+        CTAllowedPost[] memory formattedAllowedPosts = new CTAllowedPost[](numberOfAllowedPosts);
+
+        // Keep a reference to the post being iterated on.
+        REVCroptopAllowedPost memory post;
+
+        // Specify the hook for each allowed post.
+        for (uint256 i; i < numberOfAllowedPosts; i++) {
+            // Set the post being iterated on.
+            post = allowedPosts[i];
+
+            // Set the formated post. 
+            formattedAllowedPosts[i] = CTAllowedPost({
+                nft: address(hook),
+                category: post.category,
+                minimumPrice: post.minimumPrice,
+                minimumTotalSupply: post.minimumTotalSupply,
+                maximumTotalSupply: post.maximumTotalSupply,
+                allowedAddresses: post.allowedAddresses
+            });
+        }
+
         // Configure allowed posts.
         if (allowedPosts.length != 0) {
-            PUBLISHER.configurePostingCriteriaFor(revnetId, allowedPosts);
+            PUBLISHER.configurePostingCriteriaFor({ projectId: revnetId, allowedPosts: formattedAllowedPosts});
         }
 
         // Give the croptop publisher permission to post on this contract's behalf.

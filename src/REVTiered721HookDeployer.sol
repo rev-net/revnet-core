@@ -46,7 +46,8 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
     /// @param otherPayHooksSpecifications Any hooks that should run when the revnet is paid alongside the 721 hook.
     /// @param extraHookMetadata Extra metadata to attach to the cycle for the delegates to use.
     /// @return revnetId The ID of the newly created revnet.
-    function deployTiered721RevnetFor(
+    /// @return hook The address of the 721 hook that was deployed on the revnet.
+    function deployTiered721RevnetWith(
         REVDescription memory description,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
@@ -57,7 +58,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
         uint16 extraHookMetadata
     )
         public
-        returns (uint256 revnetId)
+        returns (uint256 revnetId, IJB721TiersHook hook)
     {
         // Get the revnet ID, optimistically knowing it will be one greater than the current count.
         revnetId = CONTROLLER.PROJECTS().count() + 1;
@@ -74,7 +75,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
         }
 
         // Deploy the tiered 721 hook contract.
-        IJB721TiersHook hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration.baseline721HookConfiguration);
+        hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration.baseline721HookConfiguration);
 
         // Transfer the hook's ownership to the address that called this function.
         if (hookConfiguration.owner != address(0)) JBOwnable(address(hook)).transferOwnership(hookConfiguration.owner);
