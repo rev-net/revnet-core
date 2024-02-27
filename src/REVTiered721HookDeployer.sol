@@ -8,6 +8,7 @@ import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpeci
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
+import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
 
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
 import {REVDescription} from "./structs/REVDescription.sol";
@@ -23,7 +24,14 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
 
     /// @param controller The controller that revnets are made from.
     /// @param hookDeployer The 721 tiers hook deployer.
-    constructor(IJBController controller, IJB721TiersHookDeployer hookDeployer) REVPayHookDeployer(controller) {
+    /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
+    constructor(
+        IJBController controller,
+        IJB721TiersHookDeployer hookDeployer,
+        IBPSuckerRegistry suckerRegistry
+    )
+        REVPayHookDeployer(controller, suckerRegistry)
+    {
         HOOK_DEPLOYER = hookDeployer;
     }
 

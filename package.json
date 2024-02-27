@@ -15,12 +15,13 @@
       "deploy:optimism-sepolia": "source .env && forge script Deploy --chain-id 11155420 --rpc-url $RPC_OPTIMISM_SEPOLIA --broadcast --verify --etherscan-api-key $OPTIMISTIC_ETHERSCAN_API_KEY --interactives 1 --sender $SENDER_OPTIMISM_SEPOLIA -vvv"
     },
     "dependencies": {
-      "@bananapus/core": "^0.0.3",
-      "@bananapus/721-hook": "^0.0.1",
-      "@bananapus/buyback-hook": "^0.0.1",
-      "@bananapus/ownable": "^0.0.2",
-      "@bananapus/suckers": "^0.0.2",
-      "@croptop/core": "^0.0.1",
+      "@bananapus/core": "^0.0.6",
+      "@bananapus/721-hook": "^0.0.3",
+      "@bananapus/buyback-hook": "^0.0.3",
+      "@bananapus/ownable": "^0.0.3",
+      "@bananapus/suckers": "^0.0.4",
+      "@bananapus/permission-ids": "^0.0.2",
+      "@croptop/core": "^0.0.2",
       "@openzeppelin/contracts": "^5.0.1"
     }
   }

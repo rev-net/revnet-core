@@ -5,6 +5,7 @@ import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackHook.sol";
+import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
 
 import {REVDescription} from "./structs/REVDescription.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
@@ -15,7 +16,13 @@ import {REVBasicDeployer} from "./REVBasicDeployer.sol";
 /// @notice A contract that facilitates deploying a basic revnet that also calls other hooks when paid.
 contract REVPayHookDeployer is REVBasicDeployer {
     /// @param controller The controller that revnets are made from.
-    constructor(IJBController controller) REVBasicDeployer(controller) {}
+    /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
+    constructor(
+        IJBController controller,
+        IBPSuckerRegistry suckerRegistry
+    )
+        REVBasicDeployer(controller, suckerRegistry)
+    {}
 
     //*********************************************************************//
     // ---------------------- public transactions ------------------------ //

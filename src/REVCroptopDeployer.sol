@@ -8,8 +8,9 @@ import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.so
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
 import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.sol";
-import {JB721PermissionIds} from "@bananapus/721-hook/src/libraries/JB721PermissionIds.sol";
+import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
+import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
 
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
 import {REVDescription} from "./structs/REVDescription.sol";
@@ -32,15 +33,17 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
     /// @param controller The controller that revnets are made from.
     /// @param hookDeployer The 721 tiers hook deployer.
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
+    /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     constructor(
         IJBController controller,
         IJB721TiersHookDeployer hookDeployer,
-        CTPublisher publisher
+        CTPublisher publisher,
+        IBPSuckerRegistry suckerRegistry
     )
-        REVTiered721HookDeployer(controller, hookDeployer)
+        REVTiered721HookDeployer(controller, hookDeployer, suckerRegistry)
     {
         PUBLISHER = publisher;
-        _CROPTOP_PERMISSIONS_INDEXES.push(JB721PermissionIds.ADJUST_TIERS);
+        _CROPTOP_PERMISSIONS_INDEXES.push(JBPermissionIds.ADJUST_721_TIERS);
     }
 
     /// @notice Deploy a revnet that supports 721 sales.
