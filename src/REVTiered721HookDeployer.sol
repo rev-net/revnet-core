@@ -9,6 +9,7 @@ import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
+import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
 
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
 import {REVDescription} from "./structs/REVDescription.sol";
@@ -77,8 +78,8 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
         // Deploy the tiered 721 hook contract.
         hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration.baseline721HookConfiguration);
 
-        // Transfer the hook's ownership to the address that called this function.
-        if (hookConfiguration.owner != address(0)) JBOwnable(address(hook)).transferOwnership(hookConfiguration.owner);
+        // If needed, give the operator permission to add and remove tiers.
+        if (hookConfiguration.operatorCanAdjustTiers) _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.ADJUST_721_TIERS);
 
         // Add the tiered 721 hook at the end.
         payHookSpecifications[numberOfOtherPayHooks] =
@@ -94,4 +95,6 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
             suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
     }
+
+    // TODO add function that allows an operator to add more ADJUST_TIERS operators if it has the permission.
 }
