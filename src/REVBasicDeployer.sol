@@ -33,7 +33,6 @@ import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
 import {REVDescription} from "./structs/REVDescription.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVStageConfig} from "./structs/REVStageConfig.sol";
-import {REVSuckerDeployerConfig} from "./structs/REVSuckerDeployerConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
 import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
