@@ -5,6 +5,7 @@ import {Script, stdJson} from "lib/forge-std/src/Script.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
+import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
 import {CTPublisher} from "@croptop/core/src/CTPublisher.sol";
 
 import {REVBasicDeployer} from "./../src/REVBasicDeployer.sol";
@@ -51,12 +52,15 @@ contract Deploy is Script {
             "CroptopPublisher"
         );
 
+        IBPSuckerRegistry suckerRegistry = IBPSuckerRegistry(0x419EfdfB497Bb33d931972C8A554324768cB510f);
+
         vm.startBroadcast();
-        new REVBasicDeployer(IJBController(controllerAddress));
+        new REVBasicDeployer(IJBController(controllerAddress), suckerRegistry);
         new REVCroptopDeployer(
             IJBController(controllerAddress),
             IJB721TiersHookDeployer(hookDeployerAddress),
-            CTPublisher(croptopPublisherAddress)
+            CTPublisher(croptopPublisherAddress),
+            suckerRegistry
         );
         vm.stopBroadcast();
     }

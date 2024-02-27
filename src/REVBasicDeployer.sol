@@ -10,7 +10,6 @@ import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.so
 import {IJBSplitHook} from "@bananapus/core/src/interfaces/IJBSplitHook.sol";
 import {IJBToken} from "@bananapus/core/src/interfaces/IJBToken.sol";
 import {IJBPayHook} from "@bananapus/core/src/interfaces/IJBPayHook.sol";
-import {JBPermissionIds} from "@bananapus/core/src/libraries/JBPermissionIds.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBSplitGroupIds} from "@bananapus/core/src/libraries/JBSplitGroupIds.sol";
 import {JBRulesetMetadata} from "@bananapus/core/src/structs/JBRulesetMetadata.sol";
@@ -24,13 +23,16 @@ import {JBBeforeRedeemRecordedContext} from "@bananapus/core/src/structs/JBBefor
 import {JBBeforePayRecordedContext} from "@bananapus/core/src/structs/JBBeforePayRecordedContext.sol";
 import {IJBRulesetDataHook} from "@bananapus/core/src/interfaces/IJBRulesetDataHook.sol";
 import {JBRedeemHookSpecification} from "@bananapus/core/src/structs/JBRedeemHookSpecification.sol";
+import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
 import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackHook.sol";
-import {JBBuybackPermissionIds} from "@bananapus/buyback-hook/src/libraries/JBBuybackPermissionIds.sol";
-import {BPTokenConfig} from "@bananapus/suckers/src/structs/BPTokenConfig.sol";
+import {BPTokenMapping} from "@bananapus/suckers/src/structs/BPTokenMapping.sol";
 import {IBPSucker} from "@bananapus/suckers/src/interfaces/IBPSucker.sol";
+import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
 
 import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
+import {REVDescription} from "./structs/REVDescription.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
+import {REVStageConfig} from "./structs/REVStageConfig.sol";
 import {REVSuckerDeployerConfig} from "./structs/REVSuckerDeployerConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
@@ -51,6 +53,9 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @notice The controller that networks are made from.
     IJBController public immutable CONTROLLER;
 
+    /// @notice The registry that deploys and tracks each project's suckers.
+    IBPSuckerRegistry public immutable SUCKER_REGISTRY;
+
     //*********************************************************************//
     // --------------------- public stored properties -------------------- //
     //*********************************************************************//
@@ -58,10 +63,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @notice The data hook that returns the correct values for the buyback hook of each network.
     /// @custom:param revnetId The ID of the revnet to which the buyback contract applies.
     mapping(uint256 revnetId => IJBRulesetDataHook buybackHook) public buybackHookOf;
-
-    /// @notice The suckers that are used to move tokens between chains.
-    /// @custom:param revnetId The ID of the revnet to which the sucker contracts apply.
-    mapping(uint256 revnetId => IBPSucker[] suckers) public suckersOf;
 
     //*********************************************************************//
     // ------------------- internal stored properties -------------------- //
@@ -114,7 +115,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         JBPayHookSpecification[] memory storedPayHookSpecifications = _payHookSpecificationsOf[context.projectId];
 
         // Cache any suckers to use.
-        IBPSucker[] memory suckers = suckersOf[context.projectId];
+        address[] memory suckers = SUCKER_REGISTRY.suckersOf(context.projectId);
 
         // Keep a reference to the number of pay hooks.
         uint256 numberOfStoredPayHookSpecifications = storedPayHookSpecifications.length;
@@ -135,7 +136,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         // Add the suckers.
         for (uint256 i; i < numberOfSuckers; i++) {
             hookSpecifications[numberOfStoredPayHookSpecifications + i] =
-                JBPayHookSpecification({hook: IJBPayHook(address(suckers[i])), amount: 0, metadata: bytes("")});
+                JBPayHookSpecification({hook: IJBPayHook(suckers[i]), amount: 0, metadata: bytes("")});
         }
 
         // Add the buyback hook as the last element.
@@ -143,14 +144,18 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     }
 
     /// @notice This function is never called, it needs to be included to adhere to the interface.
-    function beforeRedeemRecordedWith(JBBeforeRedeemRecordedContext calldata)
+    function beforeRedeemRecordedWith(JBBeforeRedeemRecordedContext calldata context)
         external
         view
         virtual
         override
-        returns (uint256, JBRedeemHookSpecification[] memory specifications)
+        returns (uint256, uint256, uint256, JBRedeemHookSpecification[] memory specifications)
     {
-        return (0, specifications);
+        if (SUCKER_REGISTRY.isSuckerOf({projectId: context.projectId, suckerAddress: context.holder})) {
+            return (JBConstants.MAX_REDEMPTION_RATE, context.redeemCount, context.totalSupply, specifications);
+        }
+
+        return (context.redemptionRate, context.redeemCount, context.totalSupply, specifications);
     }
 
     /// @notice Required by the IJBRulesetDataHook interfaces.
@@ -162,14 +167,14 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         if (addr == address(buybackHookOf[revnetId])) return true;
 
         // Get a reference to the revnet's suckers.
-        IBPSucker[] memory suckers = suckersOf[revnetId];
+        address[] memory suckers = SUCKER_REGISTRY.suckersOf(revnetId);
 
         // Keep a reference to the number of suckers there are.
         uint256 numberOfSuckers = suckers.length;
 
         // The suckers are allowed to mint on the project's behalf.
         for (uint256 i; i < numberOfSuckers; i++) {
-            if (addr == address(suckers[i])) return true;
+            if (addr == suckers[i]) return true;
         }
 
         // No other contract has minting permissions.
@@ -215,10 +220,12 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     //*********************************************************************//
 
     /// @param controller The controller that revnets are made from.
-    constructor(IJBController controller) {
+    /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
+    constructor(IJBController controller, IBPSuckerRegistry suckerRegistry) {
         CONTROLLER = controller;
+        SUCKER_REGISTRY = suckerRegistry;
         _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
-        _OPERATOR_PERMISSIONS_INDEXES.push(JBBuybackPermissionIds.SET_POOL_PARAMS);
+        _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL_PARAMS);
     }
 
     //*********************************************************************//
@@ -256,14 +263,45 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         });
     }
 
+    /// @notice Allows a revnet's operator to deploy new suckers to the revnet after it's deployed.
+    /// @param revnetId The ID of the revnet having new suckers deployed.
+    /// @param encodedConfiguration A bytes representation of the revnet's configuration.
+    /// @param suckerDeploymentConfiguration The specifics about the suckers being deployed.
+    function deploySuckersFor(
+        uint256 revnetId,
+        bytes memory encodedConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+    )
+        public
+        override
+    {
+        /// Make sure the message sender is the current operator.
+        if (
+            !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
+                operator: msg.sender,
+                account: address(this),
+                projectId: revnetId,
+                permissionIds: _OPERATOR_PERMISSIONS_INDEXES
+            })
+        ) revert REVBasicDeployer_Unauthorized();
+
+        // Compose the salt.
+        bytes32 salt = keccak256(abi.encodePacked(msg.sender, encodedConfiguration, suckerDeploymentConfiguration.salt));
+
+        // Deploy the suckers.
+        SUCKER_REGISTRY.deploySuckersFor({
+            projectId: revnetId,
+            salt: salt,
+            configurations: suckerDeploymentConfiguration.deployerConfigurations
+        });
+    }
+
     //*********************************************************************//
     // ---------------------- public transactions ------------------------ //
     //*********************************************************************//
 
     /// @notice Deploy a basic revnet.
-    /// @param name The name of the ERC-20 token being create for the revnet.
-    /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param projectUri The metadata URI containing revnet's info.
+    /// @param description The description of the revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -271,9 +309,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
     /// @return revnetId The ID of the newly created revnet.
     function deployRevnetWith(
-        string memory name,
-        string memory symbol,
-        string memory projectUri,
+        REVDescription memory description,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -285,9 +321,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     {
         // Deploy main revnet.
         revnetId = _deployRevnetWith({
-            name: name,
-            symbol: symbol,
-            projectUri: projectUri,
+            description: description,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
@@ -302,9 +336,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     //*********************************************************************//
 
     /// @notice Deploys a revnet with the specified hook information.
-    /// @param name The name of the ERC-20 token being create for the revnet.
-    /// @param symbol The symbol of the ERC-20 token being created for the revnet.
-    /// @param projectUri The metadata URI containing revnet's info.
+    /// @param description The description of the revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -314,9 +346,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
     /// @return revnetId The ID of the newly created revnet.
     function _deployRevnetWith(
-        string memory name,
-        string memory symbol,
-        string memory projectUri,
+        REVDescription memory description,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -328,17 +358,25 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         virtual
         returns (uint256 revnetId)
     {
+        (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration) =
+            _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata);
+
         // Deploy a juicebox for the revnet.
         revnetId = CONTROLLER.launchProjectFor({
             owner: address(this),
-            projectUri: projectUri,
-            rulesetConfigurations: _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata),
+            projectUri: description.uri,
+            rulesetConfigurations: rulesetConfigurations,
             terminalConfigurations: terminalConfigurations,
-            memo: string.concat("$", symbol, " revnet deployed")
+            memo: string.concat("$", description.symbol, " revnet deployed")
         });
 
         // Issue the network's ERC-20 token.
-        CONTROLLER.deployERC20For({projectId: revnetId, name: name, symbol: symbol});
+        CONTROLLER.deployERC20For({
+            projectId: revnetId,
+            name: description.name,
+            symbol: description.symbol,
+            salt: description.salt
+        });
 
         // Setup the buyback hook.
         _setupBuybackHookOf(revnetId, buybackHookConfiguration);
@@ -356,14 +394,18 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                 projectId: revnetId,
                 tokenCount: configuration.premintTokenAmount,
                 beneficiary: configuration.initialOperator,
-                memo: string.concat("$", symbol, " preminted"),
+                memo: string.concat("$", description.symbol, " preminted"),
                 useReservedRate: false
             });
         }
 
         // Deploy the suckers if needed.
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
-            _deploySuckersOf(revnetId, suckerDeploymentConfiguration);
+            SUCKER_REGISTRY.deploySuckersFor({
+                projectId: revnetId,
+                salt: keccak256(abi.encodePacked(msg.sender, encodedConfiguration, suckerDeploymentConfiguration.salt)),
+                configurations: suckerDeploymentConfiguration.deployerConfigurations
+            });
         }
 
         // Give the operator permission to change the recipients of the operator's split.
@@ -387,9 +429,9 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         uint256 extraMetadataData
     )
         internal
-        pure
+        view
         virtual
-        returns (JBRulesetConfig[] memory rulesetConfigurations)
+        returns (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration)
     {
         // Keep a reference to the number of stages to schedule.
         uint256 numberOfStages = configuration.stageConfigurations.length;
@@ -397,19 +439,27 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         // Each stage is modeled as a ruleset reconfiguration.
         rulesetConfigurations = new JBRulesetConfig[](numberOfStages);
 
+        // Store the base currency in the encoding.
+        encodedConfiguration = abi.encode(configuration.baseCurrency);
+
+        // Keep a reference to teh stage configuration being iterated on.
+        REVStageConfig memory stageConfiguration;
+
         // Loop through each stage to set up its ruleset configuration.
         for (uint256 i; i < numberOfStages; i++) {
-            rulesetConfigurations[i].mustStartAtOrAfter = configuration.stageConfigurations[i].startsAtOrAfter;
-            rulesetConfigurations[i].duration = configuration.stageConfigurations[i].priceCeilingIncreaseFrequency;
+            // Set the stage configuration being iterated on.
+            stageConfiguration = configuration.stageConfigurations[i];
+
+            rulesetConfigurations[i].mustStartAtOrAfter = stageConfiguration.startsAtOrAfter;
+            rulesetConfigurations[i].duration = stageConfiguration.priceCeilingIncreaseFrequency;
             // Set the initial issuance for the first ruleset, otherwise pass 0 to inherit from the previous
             // ruleset.
-            rulesetConfigurations[i].weight = configuration.stageConfigurations[i].initialIssuanceRate;
-            rulesetConfigurations[i].decayRate = configuration.stageConfigurations[i].priceCeilingIncreasePercentage;
+            rulesetConfigurations[i].weight = stageConfiguration.initialIssuanceRate;
+            rulesetConfigurations[i].decayRate = stageConfiguration.priceCeilingIncreasePercentage;
             rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
             rulesetConfigurations[i].metadata = JBRulesetMetadata({
-                reservedRate: configuration.stageConfigurations[i].operatorSplitRate,
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE
-                    - configuration.stageConfigurations[i].priceFloorTaxIntensity,
+                reservedRate: stageConfiguration.operatorSplitRate,
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.priceFloorTaxIntensity,
                 baseCurrency: configuration.baseCurrency,
                 pausePay: false,
                 pauseCreditTransfers: false,
@@ -425,6 +475,22 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                 dataHook: dataHook,
                 metadata: extraMetadataData
             });
+
+            // Append the encoded stage properties.
+            encodedConfiguration = abi.encodePacked(
+                encodedConfiguration,
+                abi.encode(
+                    // If no start time is provided for the first stage, use the current block timestamp.
+                    (i == 0 && stageConfiguration.startsAtOrAfter == 0)
+                        ? block.timestamp
+                        : stageConfiguration.startsAtOrAfter,
+                    stageConfiguration.operatorSplitRate,
+                    stageConfiguration.initialIssuanceRate,
+                    stageConfiguration.priceCeilingIncreaseFrequency,
+                    stageConfiguration.priceCeilingIncreasePercentage,
+                    stageConfiguration.priceFloorTaxIntensity
+                )
+            );
         }
     }
 
@@ -498,53 +564,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         for (uint256 i; i < numberOfPayHookSpecifications; i++) {
             // Store the value.
             _payHookSpecificationsOf[revnetId].push(payHookSpecifications[i]);
-        }
-    }
-    
-    /// @notice Deploys suckers that allows a revnet to communicate across chains. 
-    /// @param revnetId The ID of the revnet to deploy the suckers for.
-    /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
-    function _deploySuckersOf(uint256 revnetId, REVSuckerDeploymentConfig memory suckerDeploymentConfiguration) internal virtual {
-        // Keep a reference to the number of sucker deployers.
-        uint256 numberOfSuckerDeployers = suckerDeploymentConfiguration.deployerConfigurations.length;
-
-        // Keep a reference to the sucker deploy being iterated on.
-        REVSuckerDeployerConfig memory deployerConfiguration;
-
-        for (uint256 i; i < numberOfSuckerDeployers; i++) {
-            //  Get the configuration being iterated on.
-            deployerConfiguration = suckerDeploymentConfiguration.deployerConfigurations[i];
-
-            // Create the sucker.
-            IBPSucker sucker = deployerConfiguration.deployer.createForSender({
-                _localProjectId: revnetId,
-                _salt: suckerDeploymentConfiguration.salt
-            });
-
-            // Store the sucker.
-            suckersOf[revnetId].push(sucker);
-
-            // Keep a reference to the number of token configurations for the sucker.
-            uint256 numberOfTokenConfigurations = deployerConfiguration.tokenConfigurations.length;
-
-            // Keep a reference to the token configurations being iterated on.
-            BPTokenConfig memory tokenConfiguration;
-
-            // Configure the tokens for the sucker.
-            for (uint256 j; j < numberOfTokenConfigurations; j++) {
-                // Get a reference to the configuration being iterated on.
-                tokenConfiguration = deployerConfiguration.tokenConfigurations[j];
-
-                // Configure the sucker.
-                sucker.configureToken(
-                    BPTokenConfig({
-                        localToken: tokenConfiguration.localToken,
-                        remoteToken: tokenConfiguration.remoteToken,
-                        minGas: tokenConfiguration.minGas,
-                        minBridgeAmount: tokenConfiguration.minBridgeAmount
-                    })
-                );
-            }
         }
     }
 }
