@@ -7,7 +7,6 @@ import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol
 import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackHook.sol";
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
 
-import {REVDescription} from "./structs/REVDescription.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
@@ -29,7 +28,6 @@ contract REVPayHookDeployer is REVBasicDeployer {
     //*********************************************************************//
 
     /// @notice Deploy a basic revnet that also calls other specified pay hooks.
-    /// @param description The description of the revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -39,7 +37,6 @@ contract REVPayHookDeployer is REVBasicDeployer {
     /// @param extraHookMetadata Extra metadata to attach to the cycle for the delegates to use.
     /// @return revnetId The ID of the newly created revnet.
     function deployPayHookRevnetWith(
-        REVDescription memory description,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -52,7 +49,6 @@ contract REVPayHookDeployer is REVBasicDeployer {
     {
         // Deploy the revnet
         revnetId = _deployRevnetWith({
-            description: description,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,

@@ -12,7 +12,6 @@ import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegi
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
 
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
-import {REVDescription} from "./structs/REVDescription.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
@@ -37,7 +36,6 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
     }
 
     /// @notice Deploy a revnet that supports 721 sales.
-    /// @param description The description of the revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -49,7 +47,6 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
     /// @return revnetId The ID of the newly created revnet.
     /// @return hook The address of the 721 hook that was deployed on the revnet.
     function deployTiered721RevnetWith(
-        REVDescription memory description,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -98,7 +95,6 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
             JBPayHookSpecification({hook: IJBPayHook(address(hook)), amount: 0, metadata: bytes("")});
 
         super.deployPayHookRevnetWith({
-            description: description,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,

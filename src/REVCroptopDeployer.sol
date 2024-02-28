@@ -14,7 +14,6 @@ import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHoo
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
 
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
-import {REVDescription} from "./structs/REVDescription.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVCroptopAllowedPost} from "./structs/REVCroptopAllowedPost.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
@@ -49,7 +48,6 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
     }
 
     /// @notice Deploy a revnet that supports 721 sales.
-    /// @param description The description of the revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -62,7 +60,6 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
     /// @return revnetId The ID of the newly created revnet.
     /// @return hook The address of the 721 hook that was deployed on the revnet.
     function deployCroptopRevnetWith(
-        REVDescription memory description,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -77,7 +74,6 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
     {
         // Deploy the revnet with tiered 721 hooks.
         (revnetId, hook) = super.deployTiered721RevnetWith({
-            description: description,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,

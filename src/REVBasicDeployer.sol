@@ -30,7 +30,6 @@ import {IBPSucker} from "@bananapus/suckers/src/interfaces/IBPSucker.sol";
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
 
 import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
-import {REVDescription} from "./structs/REVDescription.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVStageConfig} from "./structs/REVStageConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
@@ -44,7 +43,16 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     //*********************************************************************//
 
     error REVBasicDeployer_Unauthorized();
+    error REVBasicDeployer_ExitDelayInEffect();
 
+    //*********************************************************************//
+    // ------------------------- public constants ------------------------ //
+    //*********************************************************************//
+    
+    /// @notice The amount of time from a sucker being deployed to when it can facilitate exits. 
+    /// @dev 90 days.
+    uint256 public constant EXIT_DELAY = 7_776_000;
+    
     //*********************************************************************//
     // --------------- public immutable stored properties ---------------- //
     //*********************************************************************//
@@ -62,6 +70,10 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @notice The data hook that returns the correct values for the buyback hook of each network.
     /// @custom:param revnetId The ID of the revnet to which the buyback contract applies.
     mapping(uint256 revnetId => IJBRulesetDataHook buybackHook) public buybackHookOf;
+    
+    /// @notice The time at which exits from a revnet become allowed.
+    /// @custom:param revnetId The ID of the revnet to which the delay applies.
+    mapping(uint256 revnetId => uint256 exitDelay) public exitDelayOf;
 
     //*********************************************************************//
     // ------------------- internal stored properties -------------------- //
@@ -150,8 +162,14 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         override
         returns (uint256, uint256, uint256, JBRedeemHookSpecification[] memory specifications)
     {
+        // If the holder is a sucker, do not impose a tax.
         if (SUCKER_REGISTRY.isSuckerOf({projectId: context.projectId, suckerAddress: context.holder})) {
             return (JBConstants.MAX_REDEMPTION_RATE, context.redeemCount, context.totalSupply, specifications);
+        }
+
+        // If there's an exit delay, do not allow exits until the delay has passed.
+        if (exitDelayOf[context.projectId] > block.timestamp) {
+            revert REVBasicDeployer_ExitDelayInEffect();
         }
 
         return (context.redemptionRate, context.redeemCount, context.totalSupply, specifications);
@@ -300,7 +318,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     //*********************************************************************//
 
     /// @notice Deploy a basic revnet.
-    /// @param description The description of the revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -308,7 +325,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
     /// @return revnetId The ID of the newly created revnet.
     function deployRevnetWith(
-        REVDescription memory description,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -320,7 +336,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     {
         // Deploy main revnet.
         revnetId = _deployRevnetWith({
-            description: description,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
@@ -335,7 +350,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     //*********************************************************************//
 
     /// @notice Deploys a revnet with the specified hook information.
-    /// @param description The description of the revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -345,7 +359,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
     /// @return revnetId The ID of the newly created revnet.
     function _deployRevnetWith(
-        REVDescription memory description,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -357,24 +370,29 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         virtual
         returns (uint256 revnetId)
     {
-        (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration) =
+        (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration, bool isInProgress) =
             _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata);
 
         // Deploy a juicebox for the revnet.
         revnetId = CONTROLLER.launchProjectFor({
             owner: address(this),
-            projectUri: description.uri,
+            projectUri: configuration.description.uri,
             rulesetConfigurations: rulesetConfigurations,
             terminalConfigurations: terminalConfigurations,
-            memo: string.concat("$", description.symbol, " revnet deployed")
+            memo: string.concat("$", configuration.description.symbol, " revnet deployed")
         });
+
+        // Store the exit delay of the revnet if it is in progess. This prevents exits from the revnet until the delay is up.
+        if (isInProgress) {
+            exitDelayOf[revnetId] = block.timestamp + EXIT_DELAY;
+        }
 
         // Issue the network's ERC-20 token.
         CONTROLLER.deployERC20For({
             projectId: revnetId,
-            name: description.name,
-            symbol: description.symbol,
-            salt: description.salt
+            name: configuration.description.name,
+            symbol: configuration.description.symbol,
+            salt: configuration.description.salt
         });
 
         // Setup the buyback hook.
@@ -387,13 +405,23 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             splitGroups: _makeOperatorSplitGroupWith(configuration.initialOperator)
         });
 
+        // Give the operator its permissions.
+        IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
+            account: address(this),
+            permissionsData: JBPermissionsData({
+                operator: configuration.initialOperator,
+                projectId: revnetId,
+                permissionIds: _OPERATOR_PERMISSIONS_INDEXES
+            })
+        });
+
         // Premint tokens to the operator if needed.
         if (configuration.premintTokenAmount > 0) {
             CONTROLLER.mintTokensOf({
                 projectId: revnetId,
                 tokenCount: configuration.premintTokenAmount,
                 beneficiary: configuration.initialOperator,
-                memo: string.concat("$", description.symbol, " preminted"),
+                memo: string.concat("$", configuration.description.symbol, " preminted"),
                 useReservedRate: false
             });
         }
@@ -420,31 +448,24 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                 configurations: suckerDeploymentConfiguration.deployerConfigurations
             });
         }
-
-        // Give the operator permission to change the recipients of the operator's split.
-        IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
-            account: address(this),
-            permissionsData: JBPermissionsData({
-                operator: configuration.initialOperator,
-                projectId: revnetId,
-                permissionIds: _OPERATOR_PERMISSIONS_INDEXES
-            })
-        });
     }
 
     /// @notice Schedules the initial ruleset for the revnet, and queues all subsequent rulesets that define the stages.
     /// @notice configuration The data that defines the revnet's characteristics.
     /// @notice dataHook The address of the data hook.
     /// @notice extraMetadata Extra info to send to the hook.
+    /// @return rulesetConfigurations The ruleset configurations that define the revnet's stages.
+    /// @return encodedConfiguration The encoded configuration of the revnet.
+    /// @return isInProgress Whether the revnet is in progress or not.
     function _makeRulesetConfigurations(
         REVConfig memory configuration,
         address dataHook,
-        uint256 extraMetadataData
+        uint256 extraMetadata
     )
         internal
         view
         virtual
-        returns (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration)
+        returns (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration, bool isInProgress)
     {
         // Keep a reference to the number of stages to schedule.
         uint256 numberOfStages = configuration.stageConfigurations.length;
@@ -486,8 +507,13 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                 useDataHookForPay: true, // Use the buyback hook data source.
                 useDataHookForRedeem: false,
                 dataHook: dataHook,
-                metadata: extraMetadataData
+                metadata: extraMetadata
             });
+
+            // If the first stage has a start time in the past, mark the revnet as being in progress.
+            if (i == 0 && stageConfiguration.startsAtOrAfter != 0 && stageConfiguration.startsAtOrAfter < block.timestamp) {
+                isInProgress = true;
+            }
 
             // Append the encoded stage properties.
             encodedConfiguration = abi.encodePacked(
