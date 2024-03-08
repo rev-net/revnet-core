@@ -585,6 +585,9 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                 terminalToken: poolConfig.token
             });
         }
+
+        // Store the hook.
+        buybackHookOf[revnetId] = buybackHookConfiguration.hook;
     }
 
     /// @notice Stores pay hooks for the provided revnet.
