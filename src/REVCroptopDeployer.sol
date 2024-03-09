@@ -97,7 +97,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
             // Set the post being iterated on.
             post = allowedPosts[i];
 
-            // Set the formated post. 
+            // Set the formated post.
             formattedAllowedPosts[i] = CTAllowedPost({
                 nft: address(hook),
                 category: post.category,
@@ -110,7 +110,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
 
         // Configure allowed posts.
         if (allowedPosts.length != 0) {
-            PUBLISHER.configurePostingCriteriaFor({ projectId: revnetId, allowedPosts: formattedAllowedPosts});
+            PUBLISHER.configurePostingCriteriaFor({projectId: revnetId, allowedPosts: formattedAllowedPosts});
         }
 
         // Give the croptop publisher permission to post on this contract's behalf.

@@ -48,11 +48,11 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
     //*********************************************************************//
-    
-    /// @notice The amount of time from a sucker being deployed to when it can facilitate exits. 
+
+    /// @notice The amount of time from a sucker being deployed to when it can facilitate exits.
     /// @dev 90 days.
     uint256 public constant EXIT_DELAY = 7_776_000;
-    
+
     //*********************************************************************//
     // --------------- public immutable stored properties ---------------- //
     //*********************************************************************//
@@ -70,7 +70,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @notice The data hook that returns the correct values for the buyback hook of each network.
     /// @custom:param revnetId The ID of the revnet to which the buyback contract applies.
     mapping(uint256 revnetId => IJBRulesetDataHook buybackHook) public buybackHookOf;
-    
+
     /// @notice The time at which exits from a revnet become allowed.
     /// @custom:param revnetId The ID of the revnet to which the delay applies.
     mapping(uint256 revnetId => uint256 exitDelay) public exitDelayOf;
@@ -116,8 +116,13 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         // Keep a reference to the hooks that the buyback hook data hook provides.
         JBPayHookSpecification[] memory buybackHookSpecifications;
 
+        // Keep a reference to the buyback hook.
+        IJBBuybackHook buybackHook = buybackHookOf[context.projectId];
+
         // // Set the values to be those returned by the buyback hook's data source.
-        (weight, buybackHookSpecifications) = buybackHookOf[context.projectId].beforePayRecordedWith(context);
+        if (buybackHook != IJBBuybackHook(address(0))) {
+            (weight, buybackHookSpecifications) = buybackHook.beforePayRecordedWith(context);
+        }
 
         // Check if a buyback hook is used.
         bool usesBuybackHook = buybackHookSpecifications.length != 0;
@@ -382,7 +387,8 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             memo: string.concat("$", configuration.description.symbol, " revnet deployed")
         });
 
-        // Store the exit delay of the revnet if it is in progess. This prevents exits from the revnet until the delay is up.
+        // Store the exit delay of the revnet if it is in progess. This prevents exits from the revnet until the delay
+        // is up.
         if (isInProgress) {
             exitDelayOf[revnetId] = block.timestamp + EXIT_DELAY;
         }
@@ -395,8 +401,10 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             salt: configuration.description.salt
         });
 
-        // Setup the buyback hook.
-        _setupBuybackHookOf(revnetId, buybackHookConfiguration);
+        // Setup the buyback hook if needed.
+        if (buybackHookConfiguration.hook != IJBBuybackHook(address(0))) {
+            _setupBuybackHookOf(revnetId, buybackHookConfiguration);
+        }
 
         // Set the operator splits at the default ruleset of 0.
         CONTROLLER.setSplitGroupsOf({
@@ -511,7 +519,10 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             });
 
             // If the first stage has a start time in the past, mark the revnet as being in progress.
-            if (i == 0 && stageConfiguration.startsAtOrAfter != 0 && stageConfiguration.startsAtOrAfter < block.timestamp) {
+            if (
+                i == 0 && stageConfiguration.startsAtOrAfter != 0
+                    && stageConfiguration.startsAtOrAfter < block.timestamp
+            ) {
                 isInProgress = true;
             }
 

@@ -84,7 +84,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
         if (hookConfiguration.operatorCanUpdateMetadata) {
             _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.UPDATE_721_METADATA);
         }
-    
+
         // If needed, give the operator permission to mint 721's from tiers that allow it.
         if (hookConfiguration.operatorCanMint) {
             _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.MINT_721);
