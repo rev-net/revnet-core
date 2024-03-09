@@ -117,10 +117,10 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         JBPayHookSpecification[] memory buybackHookSpecifications;
 
         // Keep a reference to the buyback hook.
-        IJBBuybackHook buybackHook = buybackHookOf[context.projectId];
+        IJBRulesetDataHook buybackHook = buybackHookOf[context.projectId];
 
         // // Set the values to be those returned by the buyback hook's data source.
-        if (buybackHook != IJBBuybackHook(address(0))) {
+        if (buybackHook != IJBRulesetDataHook(address(0))) {
             (weight, buybackHookSpecifications) = buybackHook.beforePayRecordedWith(context);
         }
 
