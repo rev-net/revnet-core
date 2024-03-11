@@ -82,7 +82,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @notice The permissions that the provided operator should be granted. This is set once in the constructor
     /// to contain only the SET_SPLITS operation.
     /// @dev This should only be set in the constructor.
-    uint256[] internal _OPERATOR_PERMISSIONS_INDEXES;
+    uint256[] internal _SPLIT_OPERATOR_PERMISSIONS_INDEXES;
 
     /// @notice The pay hooks to include during payments to networks.
     /// @custom:param revnetId The ID of the revnet to which the extensions apply.
@@ -234,8 +234,8 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     constructor(IJBController controller, IBPSuckerRegistry suckerRegistry) {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
-        _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
-        _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL_PARAMS);
+        _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
+        _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL_PARAMS);
     }
 
     //*********************************************************************//
@@ -244,36 +244,36 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
 
     /// @notice A revnet's operator can replace itself.
     /// @param revnetId The ID of the revnet having its operator replaced.
-    /// @param newOperator The address of the new operator.
-    function replaceOperatorOf(uint256 revnetId, address newOperator) external {
-        /// Make sure the message sender is the current operator.
+    /// @param newSplitOperator The address of the new split operator.
+    function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external {
+        /// Make sure the message sender is the current split operator.
         if (
             !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
                 operator: msg.sender,
                 account: address(this),
                 projectId: revnetId,
-                permissionIds: _OPERATOR_PERMISSIONS_INDEXES
+                permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
             })
         ) revert REVBasicDeployer_Unauthorized();
 
-        // Remove operator permission from the old operator.
+        // Remove operator permission from the old split operator.
         IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({operator: msg.sender, projectId: revnetId, permissionIds: new uint256[](0)})
         });
 
-        // Give the new operator permission to change the recipients of the operator's split.
+        // Give the new split operator permission to change the recipients of the operator's split.
         IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: newOperator,
+                operator: newSplitOperator,
                 projectId: revnetId,
-                permissionIds: _OPERATOR_PERMISSIONS_INDEXES
+                permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
             })
         });
     }
 
-    /// @notice Allows a revnet's operator to deploy new suckers to the revnet after it's deployed.
+    /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
     /// @param revnetId The ID of the revnet having new suckers deployed.
     /// @param encodedConfiguration A bytes representation of the revnet's configuration.
     /// @param suckerDeploymentConfiguration The specifics about the suckers being deployed.
@@ -285,13 +285,13 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         public
         override
     {
-        /// Make sure the message sender is the current operator.
+        /// Make sure the message sender is the current split operator.
         if (
             !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
                 operator: msg.sender,
                 account: address(this),
                 projectId: revnetId,
-                permissionIds: _OPERATOR_PERMISSIONS_INDEXES
+                permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
             })
         ) revert REVBasicDeployer_Unauthorized();
 
@@ -398,25 +398,25 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         CONTROLLER.setSplitGroupsOf({
             projectId: revnetId,
             rulesetId: 0,
-            splitGroups: _makeOperatorSplitGroupWith(configuration.initialOperator)
+            splitGroups: _makeOperatorSplitGroupWith(configuration.initialSplitOperator)
         });
 
         // Give the operator its permissions.
         IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: configuration.initialOperator,
+                operator: configuration.initialSplitOperator,
                 projectId: revnetId,
-                permissionIds: _OPERATOR_PERMISSIONS_INDEXES
+                permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
             })
         });
 
-        // Premint tokens to the operator if needed.
+        // Premint tokens to the split operator if needed.
         if (configuration.premintTokenAmount > 0 && configuration.premintChainId == block.chainid) {
             CONTROLLER.mintTokensOf({
                 projectId: revnetId,
                 tokenCount: configuration.premintTokenAmount,
-                beneficiary: configuration.initialOperator,
+                beneficiary: configuration.initialSplitOperator,
                 memo: string.concat("$", configuration.description.symbol, " preminted"),
                 useReservedRate: false
             });
@@ -488,7 +488,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             rulesetConfigurations[i].decayRate = stageConfiguration.priceCeilingIncreasePercentage;
             rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
             rulesetConfigurations[i].metadata = JBRulesetMetadata({
-                reservedRate: stageConfiguration.operatorSplitRate,
+                reservedRate: stageConfiguration.splitRate,
                 redemptionRate: JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.priceFloorTaxIntensity,
                 baseCurrency: configuration.baseCurrency,
                 pausePay: false,
@@ -522,7 +522,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                     (i == 0 && stageConfiguration.startsAtOrAfter == 0)
                         ? block.timestamp
                         : stageConfiguration.startsAtOrAfter,
-                    stageConfiguration.operatorSplitRate,
+                    stageConfiguration.splitRate,
                     stageConfiguration.initialIssuanceRate,
                     stageConfiguration.priceCeilingIncreaseFrequency,
                     stageConfiguration.priceCeilingIncreasePercentage,
@@ -533,11 +533,11 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         }
     }
 
-    /// @notice Creates a group of splits that goes entirely to the provided operator.
+    /// @notice Creates a group of splits that goes entirely to the provided split operator.
 
-    /// @param operator The address to send the entire split amount to.
+    /// @param splitOperator The address to send the entire split amount to.
     /// @return splitGroups The split groups representing operator's split.
-    function _makeOperatorSplitGroupWith(address operator) internal pure returns (JBSplitGroup[] memory splitGroups) {
+    function _makeOperatorSplitGroupWith(address splitOperator) internal pure returns (JBSplitGroup[] memory splitGroups) {
         // Package the reserved token splits.
         splitGroups = new JBSplitGroup[](1);
 
@@ -551,7 +551,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             preferAddToBalance: false,
             percent: JBConstants.SPLITS_TOTAL_PERCENT,
             projectId: 0,
-            beneficiary: payable(operator),
+            beneficiary: payable(splitOperator),
             lockedUntil: 0,
             hook: IJBSplitHook(address(0))
         });
