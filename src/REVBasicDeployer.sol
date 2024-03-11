@@ -130,29 +130,17 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         // Cache any other pay hooks to use.
         JBPayHookSpecification[] memory storedPayHookSpecifications = _payHookSpecificationsOf[context.projectId];
 
-        // Cache any suckers to use.
-        address[] memory suckers = SUCKER_REGISTRY.suckersOf(context.projectId);
-
         // Keep a reference to the number of pay hooks.
         uint256 numberOfStoredPayHookSpecifications = storedPayHookSpecifications.length;
 
-        // Keep a reference to the number of suckers.
-        uint256 numberOfSuckers = suckers.length;
-
         // Each hook specification must run, plus the buyback hook if provided.
         hookSpecifications = new JBPayHookSpecification[](
-            numberOfStoredPayHookSpecifications + numberOfSuckers + (usesBuybackHook ? 1 : 0)
+            numberOfStoredPayHookSpecifications + (usesBuybackHook ? 1 : 0)
         );
 
         // Add the other expected pay hooks.
         for (uint256 i; i < numberOfStoredPayHookSpecifications; i++) {
             hookSpecifications[i] = storedPayHookSpecifications[i];
-        }
-
-        // Add the suckers.
-        for (uint256 i; i < numberOfSuckers; i++) {
-            hookSpecifications[numberOfStoredPayHookSpecifications + i] =
-                JBPayHookSpecification({hook: IJBPayHook(suckers[i]), amount: 0, metadata: bytes("")});
         }
 
         // Add the buyback hook as the last element.
@@ -424,7 +412,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         });
 
         // Premint tokens to the operator if needed.
-        if (configuration.premintTokenAmount > 0) {
+        if (configuration.premintTokenAmount > 0 && configuration.premintChainId == block.chainid) {
             CONTROLLER.mintTokensOf({
                 projectId: revnetId,
                 tokenCount: configuration.premintTokenAmount,
@@ -538,7 +526,8 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                     stageConfiguration.initialIssuanceRate,
                     stageConfiguration.priceCeilingIncreaseFrequency,
                     stageConfiguration.priceCeilingIncreasePercentage,
-                    stageConfiguration.priceFloorTaxIntensity
+                    stageConfiguration.priceFloorTaxIntensity,
+                    configuration.premintChainId
                 )
             );
         }
