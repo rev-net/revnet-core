@@ -134,9 +134,8 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         uint256 numberOfStoredPayHookSpecifications = storedPayHookSpecifications.length;
 
         // Each hook specification must run, plus the buyback hook if provided.
-        hookSpecifications = new JBPayHookSpecification[](
-            numberOfStoredPayHookSpecifications + (usesBuybackHook ? 1 : 0)
-        );
+        hookSpecifications =
+            new JBPayHookSpecification[](numberOfStoredPayHookSpecifications + (usesBuybackHook ? 1 : 0));
 
         // Add the other expected pay hooks.
         for (uint256 i; i < numberOfStoredPayHookSpecifications; i++) {
@@ -537,7 +536,11 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
 
     /// @param splitOperator The address to send the entire split amount to.
     /// @return splitGroups The split groups representing operator's split.
-    function _makeOperatorSplitGroupWith(address splitOperator) internal pure returns (JBSplitGroup[] memory splitGroups) {
+    function _makeOperatorSplitGroupWith(address splitOperator)
+        internal
+        pure
+        returns (JBSplitGroup[] memory splitGroups)
+    {
         // Package the reserved token splits.
         splitGroups = new JBSplitGroup[](1);
 
