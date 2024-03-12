@@ -3,25 +3,25 @@
     "version": "0.0.11",
     "license": "MIT",
     "repository": {
-      "type": "git",
-      "url": "git+https://github.com/rev-net/revnet-core"
+        "type": "git",
+        "url": "git+https://github.com/rev-net/revnet-core"
     },
     "scripts": {
-      "test": "forge test",
-      "coverage:integration": "forge coverage --match-path \"./src/*.sol\" --report lcov --report summary",
-      "deploy:ethereum-mainnet": "source .env && forge script Deploy --chain-id 1 --rpc-url $RPC_ETHEREUM_MAINNET --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY --interactives 1 --sender $SENDER_ETHEREUM_MAINNET -vvv",
-      "deploy:ethereum-sepolia": "source .env && forge script Deploy --chain-id 11155111 --rpc-url $RPC_ETHEREUM_SEPOLIA --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY --interactives 1 --sender $SENDER_ETHEREUM_SEPOLIA -vvv",
-      "deploy:optimism-mainnet": "source .env && forge script Deploy --chain-id 420 --rpc-url $RPC_OPTIMISM_MAINNET --broadcast --verify --etherscan-api-key $OPTIMISTIC_ETHERSCAN_API_KEY --interactives 1 --sender $SENDER_OPTIMISM_MAINNET -vvv",
-      "deploy:optimism-sepolia": "source .env && forge script Deploy --chain-id 11155420 --rpc-url $RPC_OPTIMISM_SEPOLIA --broadcast --verify --etherscan-api-key $OPTIMISTIC_ETHERSCAN_API_KEY --interactives 1 --sender $SENDER_OPTIMISM_SEPOLIA -vvv"
+        "test": "forge test",
+        "coverage:integration": "forge coverage --match-path \"./src/*.sol\" --report lcov --report summary",
+        "deploy:mainnets": "source ./.env && npx sphinx propose ./script/Deploy.s.sol --networks mainnets",
+        "deploy:testnets": "source ./.env && npx sphinx propose ./script/Deploy.s.sol --networks testnets",
+        "artifacts": "source ./.env && npx sphinx artifacts --org-id 'cltepuu9u0003j58rjtbd0hvu' --project-name 'revnet-core'"
     },
     "dependencies": {
-      "@bananapus/core": "^0.0.6",
-      "@bananapus/721-hook": "^0.0.3",
-      "@bananapus/buyback-hook": "^0.0.3",
-      "@bananapus/ownable": "^0.0.4",
-      "@bananapus/suckers": "^0.0.4",
-      "@bananapus/permission-ids": "^0.0.2",
-      "@croptop/core": "^0.0.2",
-      "@openzeppelin/contracts": "^5.0.1"
+        "@bananapus/721-hook": "github:Bananapus/nana-721-hook#feat/sphinx",
+        "@bananapus/buyback-hook": "^0.0.3",
+        "@bananapus/core": "github:Bananapus/nana-core#feat/sphinx",
+        "@bananapus/ownable": "^0.0.4",
+        "@bananapus/permission-ids": "^0.0.4",
+        "@bananapus/suckers": "github:Bananapus/nana-suckers#feat/sphinx",
+        "@croptop/core": "github:xBA5ED/croptop-core#feat/sphinx",
+        "@openzeppelin/contracts": "^5.0.1",
+        "@sphinx-labs/plugins": "^0.30.4"
     }
-  }
+}

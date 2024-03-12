@@ -1,0 +1,1 @@
+@sphinx-labs/contracts/=node_modules/@sphinx-labs/contracts/contracts/foundry
