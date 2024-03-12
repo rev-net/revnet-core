@@ -27,7 +27,7 @@ contract DeployScript is Script, Sphinx {
     bytes32 CROPTOP_DEPLOYER = "REVCroptopDeployer";
 
     function configureSphinx() public override {
-        // TODO: Update to contain croptop devs.
+        // TODO: Update to contain revnet devs.
         sphinxConfig.owners = [0x26416423d530b1931A2a7a6b7D435Fac65eED27d];
         sphinxConfig.orgId = "cltepuu9u0003j58rjtbd0hvu";
         sphinxConfig.projectName = "revnet-core";
