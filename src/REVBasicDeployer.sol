@@ -371,7 +371,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             projectUri: configuration.description.uri,
             rulesetConfigurations: rulesetConfigurations,
             terminalConfigurations: terminalConfigurations,
-            memo: string.concat("$", configuration.description.symbol, " revnet deployed")
+            memo: string.concat("$", configuration.description.ticker, " revnet deployed")
         });
 
         // Store the exit delay of the revnet if it is in progess. This prevents exits from the revnet until the delay
@@ -384,7 +384,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         CONTROLLER.deployERC20For({
             projectId: revnetId,
             name: configuration.description.name,
-            symbol: configuration.description.symbol,
+            symbol: configuration.description.ticker,
             salt: configuration.description.salt
         });
 
@@ -416,7 +416,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                 projectId: revnetId,
                 tokenCount: configuration.premintTokenAmount,
                 beneficiary: configuration.initialSplitOperator,
-                memo: string.concat("$", configuration.description.symbol, " preminted"),
+                memo: string.concat("$", configuration.description.ticker, " preminted"),
                 useReservedRate: false
             });
         }
@@ -469,7 +469,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         rulesetConfigurations = new JBRulesetConfig[](numberOfStages);
 
         // Store the base currency in the encoding.
-        encodedConfiguration = abi.encode(configuration.baseCurrency);
+        encodedConfiguration = _encodedConfig(configuration);
 
         // Keep a reference to teh stage configuration being iterated on.
         REVStageConfig memory stageConfiguration;
@@ -514,25 +514,10 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             }
 
             // Append the encoded stage properties.
-            encodedConfiguration = abi.encodePacked(
-                encodedConfiguration,
-                abi.encode(
-                    // If no start time is provided for the first stage, use the current block timestamp.
-                    (i == 0 && stageConfiguration.startsAtOrAfter == 0)
-                        ? block.timestamp
-                        : stageConfiguration.startsAtOrAfter,
-                    stageConfiguration.splitRate,
-                    stageConfiguration.initialIssuanceRate,
-                    stageConfiguration.priceCeilingIncreaseFrequency,
-                    stageConfiguration.priceCeilingIncreasePercentage,
-                    stageConfiguration.priceFloorTaxIntensity,
-                    configuration.premintChainId,
-                    configuration.description.name,
-                    configuration.description.symbol,
-                    configuration.description.uri,
-                    configuration.description.salt
-                )
-            );
+            encodedConfiguration = abi.encodePacked(encodedConfiguration, _encodedStageConfig({
+                stageConfiguration: stageConfiguration,
+                stageNumber: i
+            }));
         }
     }
 
@@ -614,5 +599,50 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             // Store the value.
             _payHookSpecificationsOf[revnetId].push(payHookSpecifications[i]);
         }
+    }
+    
+    /// @notice Encodes a configuration into a hash.
+    /// @notice configuration The data that defines the revnet's characteristics.
+    /// @return encodedConfiguration The encoded config.
+    function _encodedConfig(
+        REVConfig memory configuration
+    )
+        internal 
+        pure
+        returns (bytes memory)
+    {
+        return abi.encode(
+            configuration.baseCurrency,
+            configuration.premintChainId,
+            configuration.description.name,
+            configuration.description.ticker,
+            configuration.description.uri,
+            configuration.description.salt
+        );
+    }
+
+    /// @notice Encodes a stage configuration into a hash.
+    /// @notice stageConfiguration The data that defines a revnet's stage characteristics.
+    /// @notice stageNumber The number of the stage being encoded.
+    /// @return encodedConfiguration The encoded config.
+    function _encodedStageConfig(
+        REVStageConfig memory stageConfiguration,
+        uint256 stageNumber
+    )
+        internal 
+        view
+        returns (bytes memory)
+    {
+        return abi.encode(
+            // If no start time is provided for the first stage, use the current block timestamp.
+            (stageNumber == 0 && stageConfiguration.startsAtOrAfter == 0)
+                ? block.timestamp
+                : stageConfiguration.startsAtOrAfter,
+            stageConfiguration.splitRate,
+            stageConfiguration.initialIssuanceRate,
+            stageConfiguration.priceCeilingIncreaseFrequency,
+            stageConfiguration.priceCeilingIncreasePercentage,
+            stageConfiguration.priceFloorTaxIntensity
+        );
     }
 }

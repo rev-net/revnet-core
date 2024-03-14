@@ -28,7 +28,7 @@ contract REVBasicDeployerTest is Test {
 //     public
 // {
 //     string memory name = "token name";
-//     string memory symbol = "token symbol";
+//     string memory ticker = "token ticker";
 //     string memory metadata = "im a revnet";
 //     REVBoostConfig[] memory boosts = new REVBoostConfig[](1);
 //     boosts[0] = REVBoostConfig({
@@ -62,7 +62,7 @@ contract REVBasicDeployerTest is Test {
 
 //     revnetId = deployRevnetFor({
 //         name: tokenName,
-//         symbol: symbol,
+//         ticker: ticker,
 //         metadata: revnetMetadata,
 //         deployConfig: deployConfig,
 //         boostOperator: boostOperator,
