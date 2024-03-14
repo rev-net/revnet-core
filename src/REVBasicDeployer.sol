@@ -526,7 +526,11 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                     stageConfiguration.priceCeilingIncreaseFrequency,
                     stageConfiguration.priceCeilingIncreasePercentage,
                     stageConfiguration.priceFloorTaxIntensity,
-                    configuration.premintChainId
+                    configuration.premintChainId,
+                    configuration.description.name,
+                    configuration.description.symbol,
+                    configuration.description.uri,
+                    configuration.description.salt
                 )
             );
         }
