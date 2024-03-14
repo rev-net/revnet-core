@@ -235,6 +235,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         SUCKER_REGISTRY = suckerRegistry;
         _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
         _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL_PARAMS);
+        _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_PROJECT_METADATA);
     }
 
     //*********************************************************************//
@@ -616,7 +617,6 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             configuration.premintChainId,
             configuration.description.name,
             configuration.description.ticker,
-            configuration.description.uri,
             configuration.description.salt
         );
     }
