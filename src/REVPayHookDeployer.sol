@@ -7,13 +7,14 @@ import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol
 import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackHook.sol";
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
 
+import {IREVPayHookDeployer} from "./interfaces/IREVPayHookDeployer.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
 import {REVBasicDeployer} from "./REVBasicDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also calls other hooks when paid.
-contract REVPayHookDeployer is REVBasicDeployer {
+contract REVPayHookDeployer is REVBasicDeployer, IREVPayHookDeployer {
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     constructor(
@@ -45,6 +46,7 @@ contract REVPayHookDeployer is REVBasicDeployer {
         uint16 extraHookMetadata
     )
         public
+        override
         returns (uint256 revnetId)
     {
         // Deploy the revnet
@@ -58,6 +60,15 @@ contract REVPayHookDeployer is REVBasicDeployer {
         });
 
         // Store the pay hooks.
-        _storeHookSpecificationsOf(revnetId, payHookSpecifications);
+        // Keep a reference to the number of pay hooks are being stored.
+        uint256 numberOfPayHookSpecifications = payHookSpecifications.length;
+
+        // Store the pay hooks.
+        for (uint256 i; i < numberOfPayHookSpecifications; i++) {
+            // Store the value.
+            _payHookSpecificationsOf[revnetId].push(payHookSpecifications[i]);
+        }
+
+        emit StoredPayHookSpecifications(revnetId, payHookSpecifications, msg.sender);
     }
 }
