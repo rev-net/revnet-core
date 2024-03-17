@@ -375,9 +375,9 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             memo: string.concat("$", configuration.description.ticker, " revnet deployed")
         });
 
-        // Store the exit delay of the revnet if it is in progess. This prevents exits from the revnet until the delay
+        // Store the exit delay of the revnet if it is in progess or if premint isn't on this chain. This prevents exits from the revnet until the delay
         // is up.
-        if (isInProgress) {
+        if (isInProgress || configuration.premintChainId != block.chainid) {
             exitDelayOf[revnetId] = block.timestamp + EXIT_DELAY;
         }
 
