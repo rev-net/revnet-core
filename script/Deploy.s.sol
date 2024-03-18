@@ -60,12 +60,37 @@ contract DeployScript is Script, Sphinx {
     }
 
     function deploy() public sphinx {
-        new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry);
-        new REVCroptopDeployer{salt: CROPTOP_DEPLOYER}(
+        // Check if the contracts are already deployed or if there are any changes.
+        if(!_isDeployed(
+            BASIC_DEPLOYER,
+            type(REVBasicDeployer).creationCode,
+            abi.encode(core.controller, suckers.registry)
+        )) new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry);
+
+        if(!_isDeployed(
+            CROPTOP_DEPLOYER,
+            type(REVCroptopDeployer).creationCode,
+            abi.encode(core.controller, hook.hook_deployer, croptop.publisher, suckers.registry)
+        )) new REVCroptopDeployer{salt: CROPTOP_DEPLOYER}(
             core.controller,
             hook.hook_deployer,
             croptop.publisher,
             suckers.registry
         );
+    }
+
+    function _isDeployed(bytes32 salt, bytes memory creationCode, bytes memory arguments) internal view returns (bool) {
+        address _deployedTo = vm.computeCreate2Address({
+            salt: salt,
+            initCodeHash: keccak256(abi.encodePacked(
+                creationCode,
+                arguments
+            )),
+            // Arachnid/deterministic-deployment-proxy address.
+            deployer: address(0x4e59b44847b379578588920cA78FbF26c0B4956C)
+        });
+
+        // Return if code is already present at this address. 
+        return address(_deployedTo).code.length != 0;
     }
 }
