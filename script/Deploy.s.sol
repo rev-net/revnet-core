@@ -1,89 +1,96 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity 0.8.23;
 
-import {Script, stdJson} from "lib/forge-std/src/Script.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
-import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
-import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
-import {CTPublisher} from "@croptop/core/src/CTPublisher.sol";
+import "@bananapus/core/script/helpers/CoreDeploymentLib.sol";
+import "@bananapus/721-hook/script/helpers/Hook721DeploymentLib.sol";
+import "@bananapus/suckers/script/helpers/SuckerDeploymentLib.sol";
+import "@croptop/core/script/helpers/CroptopDeploymentLib.sol";
+
+import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
+import {Script} from "forge-std/Script.sol";
 
 import {REVBasicDeployer} from "./../src/REVBasicDeployer.sol";
 import {REVCroptopDeployer} from "./../src/REVCroptopDeployer.sol";
 
-contract Deploy is Script {
-    function run() public {
-        uint256 chainId = block.chainid;
-        string memory chain;
-        // Ethereun Mainnet
-        if (chainId == 1) {
-            chain = "1";
-            // Ethereum Sepolia
-        } else if (chainId == 11_155_111) {
-            chain = "11155111";
-            // Optimism Mainnet
-        } else if (chainId == 420) {
-            chain = "420";
-            // Optimism Sepolia
-        } else if (chainId == 11_155_420) {
-            chain = "11155420";
-            // Polygon Mainnet
-        } else if (chainId == 137) {
-            chain = "137";
-            // Polygon Mumbai
-        } else if (chainId == 80_001) {
-            chain = "80001";
-        } else {
-            revert("Invalid RPC / no juice contracts deployed on this network");
-        }
+contract DeployScript is Script, Sphinx {
+    /// @notice tracks the deployment of the core contracts for the chain we are deploying to.
+    CoreDeployment core;
+    /// @notice tracks the deployment of the sucker contracts for the chain we are deploying to.
+    SuckerDeployment suckers;
+    /// @notice tracks the deployment of the croptop contracts for the chain we are deploying to.
+    CroptopDeployment croptop;
+    /// @notice tracks the deployment of the 721 hook contracts for the chain we are deploying to.
+    Hook721Deployment hook;
 
-        address controllerAddress = _getDeploymentAddress(
-            string.concat("node_modules/@bananapus/core/broadcast/Deploy.s.sol/", chain, "/run-latest.json"),
-            "JBController"
-        );
+    /// @notice the salts that are used to deploy the contracts.
+    bytes32 BASIC_DEPLOYER = "REVBasicDeployer";
+    bytes32 CROPTOP_DEPLOYER = "REVCroptopDeployer";
 
-        address hookDeployerAddress = _getDeploymentAddress(
-            string.concat("node_modules/@bananapus/721-hook/broadcast/Deploy.s.sol/", chain, "/run-latest.json"),
-            "JB721TiersHookDeployer"
-        );
-
-        address croptopPublisherAddress = _getDeploymentAddress(
-            string.concat("node_modules/@croptop/core/broadcast/Deploy.s.sol/", chain, "/run-latest.json"),
-            "CTPublisher"
-        );
-
-        IBPSuckerRegistry suckerRegistry = IBPSuckerRegistry(0x419EfdfB497Bb33d931972C8A554324768cB510f);
-
-        vm.startBroadcast();
-        new REVBasicDeployer(IJBController(controllerAddress), suckerRegistry);
-        new REVCroptopDeployer(
-            IJBController(controllerAddress),
-            IJB721TiersHookDeployer(hookDeployerAddress),
-            CTPublisher(croptopPublisherAddress),
-            suckerRegistry
-        );
-        vm.stopBroadcast();
+    function configureSphinx() public override {
+        // TODO: Update to contain revnet devs.
+        sphinxConfig.owners = [0x26416423d530b1931A2a7a6b7D435Fac65eED27d];
+        sphinxConfig.orgId = "cltepuu9u0003j58rjtbd0hvu";
+        sphinxConfig.projectName = "revnet-core";
+        sphinxConfig.threshold = 1;
+        sphinxConfig.mainnets = ["ethereum", "optimism"];
+        sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia"];
+        sphinxConfig.saltNonce = 5;
     }
 
-    /// @notice Get the address of a contract that was deployed by the Deploy script.
-    /// @dev Reverts if the contract was not found.
-    /// @param path The path to the deployment file.
-    /// @param contractName The name of the contract to get the address of.
-    /// @return The address of the contract.
-    function _getDeploymentAddress(string memory path, string memory contractName) internal view returns (address) {
-        string memory deploymentJson = vm.readFile(path);
-        uint256 nOfTransactions = stdJson.readStringArray(deploymentJson, ".transactions").length;
+    function run() public {
+        // Get the deployment addresses for the nana CORE for this chain.
+        // We want to do this outside of the `sphinx` modifier.
+        core = CoreDeploymentLib.getDeployment(
+            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core/deployments/"))
+        );
+        // Get the deployment addresses for the suckers contracts for this chain.
+        suckers = SuckerDeploymentLib.getDeployment(
+            vm.envOr("NANA_SUCKERS_DEPLOYMENT_PATH", string("node_modules/@bananapus/suckers/deployments/"))
+        );
+        // Get the deployment addresses for the 721 hook contracts for this chain.
+        croptop = CroptopDeploymentLib.getDeployment(
+            vm.envOr("CROPTOP_CORE_DEPLOYMENT_PATH", string("node_modules/@croptop/core/deployments/"))
+        );
+        // Get the deployment addresses for the 721 hook contracts for this chain.
+        hook = Hook721DeploymentLib.getDeployment(
+            vm.envOr("NANA_721_DEPLOYMENT_PATH", string("node_modules/@bananapus/721-hook/deployments/"))
+        );
+        // Perform the deployment transactions.
+        deploy();
+    }
 
-        for (uint256 i = 0; i < nOfTransactions; i++) {
-            string memory currentKey = string.concat(".transactions", "[", Strings.toString(i), "]");
-            string memory currentContractName =
-                stdJson.readString(deploymentJson, string.concat(currentKey, ".contractName"));
+    function deploy() public sphinx {
+        // Check if the contracts are already deployed or if there are any changes.
+        if(!_isDeployed(
+            BASIC_DEPLOYER,
+            type(REVBasicDeployer).creationCode,
+            abi.encode(core.controller, suckers.registry)
+        )) new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry);
 
-            if (keccak256(abi.encodePacked(currentContractName)) == keccak256(abi.encodePacked(contractName))) {
-                return stdJson.readAddress(deploymentJson, string.concat(currentKey, ".contractAddress"));
-            }
-        }
+        if(!_isDeployed(
+            CROPTOP_DEPLOYER,
+            type(REVCroptopDeployer).creationCode,
+            abi.encode(core.controller, hook.hook_deployer, croptop.publisher, suckers.registry)
+        )) new REVCroptopDeployer{salt: CROPTOP_DEPLOYER}(
+            core.controller,
+            hook.hook_deployer,
+            croptop.publisher,
+            suckers.registry
+        );
+    }
 
-        revert(string.concat("Could not find contract with name '", contractName, "' in deployment file '", path, "'"));
+    function _isDeployed(bytes32 salt, bytes memory creationCode, bytes memory arguments) internal view returns (bool) {
+        address _deployedTo = vm.computeCreate2Address({
+            salt: salt,
+            initCodeHash: keccak256(abi.encodePacked(
+                creationCode,
+                arguments
+            )),
+            // Arachnid/deterministic-deployment-proxy address.
+            deployer: address(0x4e59b44847b379578588920cA78FbF26c0B4956C)
+        });
+
+        // Return if code is already present at this address. 
+        return address(_deployedTo).code.length != 0;
     }
 }

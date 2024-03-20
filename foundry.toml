@@ -7,7 +7,17 @@ optimizer_runs = 100000000
 block_number = 14126430
 block_timestamp = 1643802347
 runs = 4096
-fs_permissions = [{ access = "read", path = "node_modules/@bananapus/core/broadcast/Deploy.s.sol" }, { access = "read", path = "node_modules/@bananapus/721-hook/broadcast/Deploy.s.sol" }, { access = "read", path = "node_modules/@croptop/core/broadcast/Deploy.s.sol" }] # Get the deployment addresses to base the revnets on.
+build_info = true
+extra_output = ['storageLayout']
+fs_permissions = [{ access = "read-write", path = "./"}]
+
+[rpc_endpoints]
+ethereum ="${RPC_ETHEREUM_MAINNET}"
+optimism = "${RPC_OPTIMISM_MAINNET}"
+polygon = "${RPC_POLYGON_MUMBAI}"
+ethereum_sepolia ="${RPC_ETHEREUM_SEPOLIA}"
+optimism_sepolia = "${RPC_OPTIMISM_SEPOLIA}"
+polygon_mumbai = "${RPC_POLYGON_MUMBAI}"
 
 [profile.ci_sizes]
 optimizer_runs = 200
