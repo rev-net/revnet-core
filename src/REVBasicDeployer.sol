@@ -58,10 +58,10 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     //*********************************************************************//
 
     /// @notice The controller that networks are made from.
-    IJBController public immutable CONTROLLER;
+    IJBController public immutable override CONTROLLER;
 
     /// @notice The registry that deploys and tracks each project's suckers.
-    IBPSuckerRegistry public immutable SUCKER_REGISTRY;
+    IBPSuckerRegistry public immutable override SUCKER_REGISTRY;
 
     //*********************************************************************//
     // --------------------- public stored properties -------------------- //
@@ -69,11 +69,11 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
 
     /// @notice The data hook that returns the correct values for the buyback hook of each network.
     /// @custom:param revnetId The ID of the revnet to which the buyback contract applies.
-    mapping(uint256 revnetId => IJBRulesetDataHook buybackHook) public buybackHookOf;
+    mapping(uint256 revnetId => IJBRulesetDataHook buybackHook) public override buybackHookOf;
 
     /// @notice The time at which exits from a revnet become allowed.
     /// @custom:param revnetId The ID of the revnet to which the delay applies.
-    mapping(uint256 revnetId => uint256 exitDelay) public exitDelayOf;
+    mapping(uint256 revnetId => uint256 exitDelay) public override exitDelayOf;
 
     //*********************************************************************//
     // ------------------- internal stored properties -------------------- //
@@ -82,7 +82,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @notice The permissions that the provided operator should be granted. This is set once in the constructor
     /// to contain only the SET_SPLITS operation.
     /// @dev This should only be set in the constructor.
-    uint256[] internal _OPERATOR_PERMISSIONS_INDEXES;
+    uint256[] internal _SPLIT_OPERATOR_PERMISSIONS_INDEXES;
 
     /// @notice The pay hooks to include during payments to networks.
     /// @custom:param revnetId The ID of the revnet to which the extensions apply.
@@ -95,7 +95,12 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @notice The pay hooks to include during payments to networks.
     /// @param revnetId The ID of the revnet to which the extensions apply.
     /// @return payHookSpecifications The pay hooks.
-    function payHookSpecificationsOf(uint256 revnetId) external view returns (JBPayHookSpecification[] memory) {
+    function payHookSpecificationsOf(uint256 revnetId)
+        external
+        view
+        override
+        returns (JBPayHookSpecification[] memory)
+    {
         return _payHookSpecificationsOf[revnetId];
     }
 
@@ -111,6 +116,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         external
         view
         virtual
+        override
         returns (uint256 weight, JBPayHookSpecification[] memory hookSpecifications)
     {
         // Keep a reference to the hooks that the buyback hook data hook provides.
@@ -130,29 +136,16 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         // Cache any other pay hooks to use.
         JBPayHookSpecification[] memory storedPayHookSpecifications = _payHookSpecificationsOf[context.projectId];
 
-        // Cache any suckers to use.
-        address[] memory suckers = SUCKER_REGISTRY.suckersOf(context.projectId);
-
         // Keep a reference to the number of pay hooks.
         uint256 numberOfStoredPayHookSpecifications = storedPayHookSpecifications.length;
 
-        // Keep a reference to the number of suckers.
-        uint256 numberOfSuckers = suckers.length;
-
         // Each hook specification must run, plus the buyback hook if provided.
-        hookSpecifications = new JBPayHookSpecification[](
-            numberOfStoredPayHookSpecifications + numberOfSuckers + (usesBuybackHook ? 1 : 0)
-        );
+        hookSpecifications =
+            new JBPayHookSpecification[](numberOfStoredPayHookSpecifications + (usesBuybackHook ? 1 : 0));
 
         // Add the other expected pay hooks.
         for (uint256 i; i < numberOfStoredPayHookSpecifications; i++) {
             hookSpecifications[i] = storedPayHookSpecifications[i];
-        }
-
-        // Add the suckers.
-        for (uint256 i; i < numberOfSuckers; i++) {
-            hookSpecifications[numberOfStoredPayHookSpecifications + i] =
-                JBPayHookSpecification({hook: IJBPayHook(suckers[i]), amount: 0, metadata: bytes("")});
         }
 
         // Add the buyback hook as the last element.
@@ -184,7 +177,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     /// @param revnetId The ID of the revnet to check permissions for.
     /// @param addr The address to check if has permissions.
     /// @return flag The flag indicating if the address has permissions to mint on the revnet's behalf.
-    function hasMintPermissionFor(uint256 revnetId, address addr) external view returns (bool) {
+    function hasMintPermissionFor(uint256 revnetId, address addr) external view override returns (bool) {
         // The buyback hook is allowed to mint on the project's behalf.
         if (addr == address(buybackHookOf[revnetId])) return true;
 
@@ -246,8 +239,9 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
     constructor(IJBController controller, IBPSuckerRegistry suckerRegistry) {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
-        _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
-        _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL_PARAMS);
+        _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
+        _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL_PARAMS);
+        _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_PROJECT_METADATA);
     }
 
     //*********************************************************************//
@@ -256,36 +250,38 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
 
     /// @notice A revnet's operator can replace itself.
     /// @param revnetId The ID of the revnet having its operator replaced.
-    /// @param newOperator The address of the new operator.
-    function replaceOperatorOf(uint256 revnetId, address newOperator) external {
-        /// Make sure the message sender is the current operator.
+    /// @param newSplitOperator The address of the new split operator.
+    function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external {
+        /// Make sure the message sender is the current split operator.
         if (
             !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
                 operator: msg.sender,
                 account: address(this),
                 projectId: revnetId,
-                permissionIds: _OPERATOR_PERMISSIONS_INDEXES
+                permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
             })
         ) revert REVBasicDeployer_Unauthorized();
 
-        // Remove operator permission from the old operator.
+        // Remove operator permission from the old split operator.
         IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({operator: msg.sender, projectId: revnetId, permissionIds: new uint256[](0)})
         });
 
-        // Give the new operator permission to change the recipients of the operator's split.
+        // Give the new split operator permission to change the recipients of the operator's split.
         IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: newOperator,
+                operator: newSplitOperator,
                 projectId: revnetId,
-                permissionIds: _OPERATOR_PERMISSIONS_INDEXES
+                permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
             })
         });
+
+        emit ReplaceSplitOperator(revnetId, newSplitOperator, msg.sender);
     }
 
-    /// @notice Allows a revnet's operator to deploy new suckers to the revnet after it's deployed.
+    /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
     /// @param revnetId The ID of the revnet having new suckers deployed.
     /// @param encodedConfiguration A bytes representation of the revnet's configuration.
     /// @param suckerDeploymentConfiguration The specifics about the suckers being deployed.
@@ -297,13 +293,13 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         public
         override
     {
-        /// Make sure the message sender is the current operator.
+        /// Make sure the message sender is the current split operator.
         if (
             !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
                 operator: msg.sender,
                 account: address(this),
                 projectId: revnetId,
-                permissionIds: _OPERATOR_PERMISSIONS_INDEXES
+                permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
             })
         ) revert REVBasicDeployer_Unauthorized();
 
@@ -316,6 +312,8 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             salt: salt,
             configurations: suckerDeploymentConfiguration.deployerConfigurations
         });
+
+        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, msg.sender);
     }
 
     //*********************************************************************//
@@ -384,12 +382,13 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             projectUri: configuration.description.uri,
             rulesetConfigurations: rulesetConfigurations,
             terminalConfigurations: terminalConfigurations,
-            memo: string.concat("$", configuration.description.symbol, " revnet deployed")
+            memo: string.concat("$", configuration.description.ticker, " revnet deployed")
         });
 
-        // Store the exit delay of the revnet if it is in progess. This prevents exits from the revnet until the delay
+        // Store the exit delay of the revnet if it is in progess or if premint isn't on this chain. This prevents exits
+        // from the revnet until the delay
         // is up.
-        if (isInProgress) {
+        if (isInProgress || configuration.premintChainId != block.chainid) {
             exitDelayOf[revnetId] = block.timestamp + EXIT_DELAY;
         }
 
@@ -397,7 +396,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         CONTROLLER.deployERC20For({
             projectId: revnetId,
             name: configuration.description.name,
-            symbol: configuration.description.symbol,
+            symbol: configuration.description.ticker,
             salt: configuration.description.salt
         });
 
@@ -410,26 +409,26 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         CONTROLLER.setSplitGroupsOf({
             projectId: revnetId,
             rulesetId: 0,
-            splitGroups: _makeOperatorSplitGroupWith(configuration.initialOperator)
+            splitGroups: _makeOperatorSplitGroupWith(configuration.initialSplitOperator)
         });
 
         // Give the operator its permissions.
         IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
-                operator: configuration.initialOperator,
+                operator: configuration.initialSplitOperator,
                 projectId: revnetId,
-                permissionIds: _OPERATOR_PERMISSIONS_INDEXES
+                permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
             })
         });
 
-        // Premint tokens to the operator if needed.
-        if (configuration.premintTokenAmount > 0) {
+        // Premint tokens to the split operator if needed.
+        if (configuration.premintTokenAmount > 0 && configuration.premintChainId == block.chainid) {
             CONTROLLER.mintTokensOf({
                 projectId: revnetId,
                 tokenCount: configuration.premintTokenAmount,
-                beneficiary: configuration.initialOperator,
-                memo: string.concat("$", configuration.description.symbol, " preminted"),
+                beneficiary: configuration.initialSplitOperator,
+                memo: string.concat("$", configuration.description.ticker, " preminted"),
                 useReservedRate: false
             });
         }
@@ -456,6 +455,18 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
                 configurations: suckerDeploymentConfiguration.deployerConfigurations
             });
         }
+
+        emit DeployRevnet(
+            revnetId,
+            configuration,
+            terminalConfigurations,
+            buybackHookConfiguration,
+            suckerDeploymentConfiguration,
+            rulesetConfigurations,
+            encodedConfiguration,
+            isInProgress,
+            msg.sender
+        );
     }
 
     /// @notice Schedules the initial ruleset for the revnet, and queues all subsequent rulesets that define the stages.
@@ -482,7 +493,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         rulesetConfigurations = new JBRulesetConfig[](numberOfStages);
 
         // Store the base currency in the encoding.
-        encodedConfiguration = abi.encode(configuration.baseCurrency);
+        encodedConfiguration = _encodedConfig(configuration);
 
         // Keep a reference to teh stage configuration being iterated on.
         REVStageConfig memory stageConfiguration;
@@ -500,7 +511,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             rulesetConfigurations[i].decayRate = stageConfiguration.priceCeilingIncreasePercentage;
             rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
             rulesetConfigurations[i].metadata = JBRulesetMetadata({
-                reservedRate: stageConfiguration.operatorSplitRate,
+                reservedRate: stageConfiguration.splitRate,
                 redemptionRate: JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.priceFloorTaxIntensity,
                 baseCurrency: configuration.baseCurrency,
                 pausePay: false,
@@ -528,27 +539,20 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
 
             // Append the encoded stage properties.
             encodedConfiguration = abi.encodePacked(
-                encodedConfiguration,
-                abi.encode(
-                    // If no start time is provided for the first stage, use the current block timestamp.
-                    (i == 0 && stageConfiguration.startsAtOrAfter == 0)
-                        ? block.timestamp
-                        : stageConfiguration.startsAtOrAfter,
-                    stageConfiguration.operatorSplitRate,
-                    stageConfiguration.initialIssuanceRate,
-                    stageConfiguration.priceCeilingIncreaseFrequency,
-                    stageConfiguration.priceCeilingIncreasePercentage,
-                    stageConfiguration.priceFloorTaxIntensity
-                )
+                encodedConfiguration, _encodedStageConfig({stageConfiguration: stageConfiguration, stageNumber: i})
             );
         }
     }
 
-    /// @notice Creates a group of splits that goes entirely to the provided operator.
+    /// @notice Creates a group of splits that goes entirely to the provided split operator.
 
-    /// @param operator The address to send the entire split amount to.
+    /// @param splitOperator The address to send the entire split amount to.
     /// @return splitGroups The split groups representing operator's split.
-    function _makeOperatorSplitGroupWith(address operator) internal pure returns (JBSplitGroup[] memory splitGroups) {
+    function _makeOperatorSplitGroupWith(address splitOperator)
+        internal
+        pure
+        returns (JBSplitGroup[] memory splitGroups)
+    {
         // Package the reserved token splits.
         splitGroups = new JBSplitGroup[](1);
 
@@ -562,7 +566,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             preferAddToBalance: false,
             percent: JBConstants.SPLITS_TOTAL_PERCENT,
             projectId: 0,
-            beneficiary: payable(operator),
+            beneficiary: payable(splitOperator),
             lockedUntil: 0,
             hook: IJBSplitHook(address(0))
         });
@@ -601,22 +605,41 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         buybackHookOf[revnetId] = buybackHookConfiguration.hook;
     }
 
-    /// @notice Stores pay hooks for the provided revnet.
-    /// @param revnetId The ID of the revnet to which the pay hooks apply.
-    /// @param payHookSpecifications The pay hooks to store.
-    function _storeHookSpecificationsOf(
-        uint256 revnetId,
-        JBPayHookSpecification[] memory payHookSpecifications
+    /// @notice Encodes a configuration into a hash.
+    /// @notice configuration The data that defines the revnet's characteristics.
+    /// @return encodedConfiguration The encoded config.
+    function _encodedConfig(REVConfig memory configuration) internal pure returns (bytes memory) {
+        return abi.encode(
+            configuration.baseCurrency,
+            configuration.premintChainId,
+            configuration.description.name,
+            configuration.description.ticker,
+            configuration.description.salt
+        );
+    }
+
+    /// @notice Encodes a stage configuration into a hash.
+    /// @notice stageConfiguration The data that defines a revnet's stage characteristics.
+    /// @notice stageNumber The number of the stage being encoded.
+    /// @return encodedConfiguration The encoded config.
+    function _encodedStageConfig(
+        REVStageConfig memory stageConfiguration,
+        uint256 stageNumber
     )
         internal
+        view
+        returns (bytes memory)
     {
-        // Keep a reference to the number of pay hooks are being stored.
-        uint256 numberOfPayHookSpecifications = payHookSpecifications.length;
-
-        // Store the pay hooks.
-        for (uint256 i; i < numberOfPayHookSpecifications; i++) {
-            // Store the value.
-            _payHookSpecificationsOf[revnetId].push(payHookSpecifications[i]);
-        }
+        return abi.encode(
+            // If no start time is provided for the first stage, use the current block timestamp.
+            (stageNumber == 0 && stageConfiguration.startsAtOrAfter == 0)
+                ? block.timestamp
+                : stageConfiguration.startsAtOrAfter,
+            stageConfiguration.splitRate,
+            stageConfiguration.initialIssuanceRate,
+            stageConfiguration.priceCeilingIncreaseFrequency,
+            stageConfiguration.priceCeilingIncreasePercentage,
+            stageConfiguration.priceFloorTaxIntensity
+        );
     }
 }

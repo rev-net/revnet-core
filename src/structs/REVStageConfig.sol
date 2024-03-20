@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 /// @custom:member startsAtOrAfter The timestamp to start a stage at the given rate at or after.
-/// @custom:member operatorSplitRate The percentage of newly issued tokens that should be split with the operator, out
+/// @custom:member splitRate The percentage of newly issued tokens that should be split with the operator, out
 /// of
 /// 10_000 (JBConstants.MAX_RESERVED_RATE).
 /// @custom:member initialIssuanceRate The number of tokens that should be minted initially per 1 unit of the base
@@ -19,7 +19,7 @@ pragma solidity ^0.8.0;
 /// redemptions are made, everyone's redemptions are treated equally. The higher the intensity, the higher the tax.
 struct REVStageConfig {
     uint40 startsAtOrAfter;
-    uint16 operatorSplitRate;
+    uint16 splitRate;
     uint112 initialIssuanceRate;
     uint40 priceCeilingIncreaseFrequency;
     uint32 priceCeilingIncreasePercentage;

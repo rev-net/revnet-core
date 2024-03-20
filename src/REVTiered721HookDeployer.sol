@@ -11,6 +11,7 @@ import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHoo
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
 
+import {IREVTiered721HookDeployer} from "./interfaces/IREVTiered721HookDeployer.sol";
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
@@ -18,9 +19,9 @@ import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol
 import {REVPayHookDeployer} from "./REVPayHookDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s.
-contract REVTiered721HookDeployer is REVPayHookDeployer {
+contract REVTiered721HookDeployer is REVPayHookDeployer, IREVTiered721HookDeployer {
     /// @notice The contract responsible for deploying the tiered 721 hook.
-    IJB721TiersHookDeployer public immutable HOOK_DEPLOYER;
+    IJB721TiersHookDeployer public immutable override HOOK_DEPLOYER;
 
     /// @param controller The controller that revnets are made from.
     /// @param hookDeployer The 721 tiers hook deployer.
@@ -56,6 +57,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
         uint16 extraHookMetadata
     )
         public
+        override
         returns (uint256 revnetId, IJB721TiersHook hook)
     {
         // Get the revnet ID, optimistically knowing it will be one greater than the current count.
@@ -77,17 +79,17 @@ contract REVTiered721HookDeployer is REVPayHookDeployer {
 
         // If needed, give the operator permission to add and remove tiers.
         if (hookConfiguration.operatorCanAdjustTiers) {
-            _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.ADJUST_721_TIERS);
+            _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.ADJUST_721_TIERS);
         }
 
         // If needed, give the operator permission to set the 721's metadata.
         if (hookConfiguration.operatorCanUpdateMetadata) {
-            _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.UPDATE_721_METADATA);
+            _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.UPDATE_721_METADATA);
         }
 
         // If needed, give the operator permission to mint 721's from tiers that allow it.
         if (hookConfiguration.operatorCanMint) {
-            _OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.MINT_721);
+            _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.MINT_721);
         }
 
         // Add the tiered 721 hook at the end.

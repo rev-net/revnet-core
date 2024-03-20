@@ -13,6 +13,7 @@ import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
 
+import {IREVCroptopDeployer} from "./interfaces/IREVCroptopDeployer.sol";
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVCroptopAllowedPost} from "./structs/REVCroptopAllowedPost.sol";
@@ -22,9 +23,9 @@ import {REVTiered721HookDeployer} from "./REVTiered721HookDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s via the croptop
 /// publisher.
-contract REVCroptopDeployer is REVTiered721HookDeployer {
+contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
     /// @notice The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
-    CTPublisher public PUBLISHER;
+    CTPublisher public override PUBLISHER;
 
     /// @notice The permissions that the croptop publisher should be granted. This is set once in the constructor to
     /// contain only the ADJUST_TIERS operation.
@@ -70,6 +71,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer {
         REVCroptopAllowedPost[] memory allowedPosts
     )
         public
+        override
         returns (uint256 revnetId, IJB721TiersHook hook)
     {
         // Deploy the revnet with tiered 721 hooks.
