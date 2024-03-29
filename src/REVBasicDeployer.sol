@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -37,7 +39,7 @@ import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
 import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
 
 /// @notice A contract that facilitates deploying a basic Revnet.
-contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC721Receiver {
+contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRulesetDataHook, IERC721Receiver {
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
@@ -236,7 +238,8 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
 
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
-    constructor(IJBController controller, IBPSuckerRegistry suckerRegistry) {
+    /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
+    constructor(IJBController controller, IBPSuckerRegistry suckerRegistry, address trustedForwarder) ERC2771Context(trustedForwarder) {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
         _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
@@ -255,7 +258,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         /// Make sure the message sender is the current split operator.
         if (
             !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
-                operator: msg.sender,
+                operator: _msgSender(),
                 account: address(this),
                 projectId: revnetId,
                 permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
@@ -265,7 +268,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         // Remove operator permission from the old split operator.
         IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
             account: address(this),
-            permissionsData: JBPermissionsData({operator: msg.sender, projectId: revnetId, permissionIds: new uint256[](0)})
+            permissionsData: JBPermissionsData({operator: _msgSender(), projectId: revnetId, permissionIds: new uint256[](0)})
         });
 
         // Give the new split operator permission to change the recipients of the operator's split.
@@ -278,7 +281,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             })
         });
 
-        emit ReplaceSplitOperator(revnetId, newSplitOperator, msg.sender);
+        emit ReplaceSplitOperator(revnetId, newSplitOperator, _msgSender());
     }
 
     /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
@@ -296,7 +299,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         /// Make sure the message sender is the current split operator.
         if (
             !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
-                operator: msg.sender,
+                operator: _msgSender(),
                 account: address(this),
                 projectId: revnetId,
                 permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
@@ -304,7 +307,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         ) revert REVBasicDeployer_Unauthorized();
 
         // Compose the salt.
-        bytes32 salt = keccak256(abi.encodePacked(msg.sender, encodedConfiguration, suckerDeploymentConfiguration.salt));
+        bytes32 salt = keccak256(abi.encodePacked(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
 
         // Deploy the suckers.
         SUCKER_REGISTRY.deploySuckersFor({
@@ -313,7 +316,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             configurations: suckerDeploymentConfiguration.deployerConfigurations
         });
 
-        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, msg.sender);
+        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, _msgSender());
     }
 
     //*********************************************************************//
@@ -451,7 +454,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
             SUCKER_REGISTRY.deploySuckersFor({
                 projectId: revnetId,
-                salt: keccak256(abi.encodePacked(msg.sender, encodedConfiguration, suckerDeploymentConfiguration.salt)),
+                salt: keccak256(abi.encodePacked(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt)),
                 configurations: suckerDeploymentConfiguration.deployerConfigurations
             });
         }
@@ -465,7 +468,7 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             rulesetConfigurations,
             encodedConfiguration,
             isInProgress,
-            msg.sender
+            _msgSender()
         );
     }
 
@@ -641,5 +644,22 @@ contract REVBasicDeployer is ERC165, IREVBasicDeployer, IJBRulesetDataHook, IERC
             stageConfiguration.priceCeilingIncreasePercentage,
             stageConfiguration.priceFloorTaxIntensity
         );
+    }
+
+    /// @notice Returns the sender, prefered to use over `msg.sender`
+    /// @return sender the sender address of this call.
+    function _msgSender() internal view override returns (address sender) {
+        return ERC2771Context._msgSender();
+    }
+
+    /// @notice Returns the calldata, prefered to use over `msg.data`
+    /// @return calldata the `msg.data` of this call
+    function _msgData() internal view override returns (bytes calldata) {
+        return ERC2771Context._msgData();
+    }
+
+    /// @dev ERC-2771 specifies the context as being a single address (20 bytes).
+    function _contextSuffixLength() internal view virtual override returns (uint256) {
+        return super._contextSuffixLength();
     }
 }

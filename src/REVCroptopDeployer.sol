@@ -33,16 +33,18 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
     uint256[] internal _CROPTOP_PERMISSIONS_INDEXES;
 
     /// @param controller The controller that revnets are made from.
+    /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
+    /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     /// @param hookDeployer The 721 tiers hook deployer.
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
-    /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     constructor(
         IJBController controller,
+        IBPSuckerRegistry suckerRegistry,
+        address trustedForwarder,
         IJB721TiersHookDeployer hookDeployer,
-        CTPublisher publisher,
-        IBPSuckerRegistry suckerRegistry
+        CTPublisher publisher
     )
-        REVTiered721HookDeployer(controller, hookDeployer, suckerRegistry)
+        REVTiered721HookDeployer(controller, suckerRegistry, trustedForwarder, hookDeployer)
     {
         PUBLISHER = publisher;
         _CROPTOP_PERMISSIONS_INDEXES.push(JBPermissionIds.ADJUST_721_TIERS);

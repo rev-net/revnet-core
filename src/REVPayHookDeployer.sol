@@ -17,11 +17,13 @@ import {REVBasicDeployer} from "./REVBasicDeployer.sol";
 contract REVPayHookDeployer is REVBasicDeployer, IREVPayHookDeployer {
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
+    /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     constructor(
         IJBController controller,
-        IBPSuckerRegistry suckerRegistry
+        IBPSuckerRegistry suckerRegistry,
+        address trustedForwarder
     )
-        REVBasicDeployer(controller, suckerRegistry)
+        REVBasicDeployer(controller, suckerRegistry, trustedForwarder)
     {}
 
     //*********************************************************************//
@@ -69,6 +71,6 @@ contract REVPayHookDeployer is REVBasicDeployer, IREVPayHookDeployer {
             _payHookSpecificationsOf[revnetId].push(payHookSpecifications[i]);
         }
 
-        emit StoredPayHookSpecifications(revnetId, payHookSpecifications, msg.sender);
+        emit StoredPayHookSpecifications(revnetId, payHookSpecifications, _msgSender());
     }
 }

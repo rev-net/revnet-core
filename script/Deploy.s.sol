@@ -22,6 +22,9 @@ contract DeployScript is Script, Sphinx {
     /// @notice tracks the deployment of the 721 hook contracts for the chain we are deploying to.
     Hook721Deployment hook;
 
+    /// @notice The address that is allowed to forward calls to the terminal and controller on a users behalf.
+    address private constant TRUSTED_FORWARDER = 0xB2b5841DBeF766d4b521221732F9B618fCf34A87;
+
     /// @notice the salts that are used to deploy the contracts.
     bytes32 BASIC_DEPLOYER = "REVBasicDeployer";
     bytes32 CROPTOP_DEPLOYER = "REVCroptopDeployer";
