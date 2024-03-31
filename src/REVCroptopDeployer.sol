@@ -51,6 +51,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
     }
 
     /// @notice Deploy a revnet that supports 721 sales.
+    /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -59,10 +60,11 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
     /// @param hookConfiguration Data used for setting up the 721 tiers.
     /// @param otherPayHooksSpecifications Any hooks that should run when the revnet is paid alongside the 721 hook.
     /// @param extraHookMetadata Extra metadata to attach to the cycle for the delegates to use.
-    /// @param allowedPosts The type of posts that the network should allow.
+    /// @param allowedPosts The type of posts that the revent should allow.
     /// @return revnetId The ID of the newly created revnet.
     /// @return hook The address of the 721 hook that was deployed on the revnet.
-    function deployCroptopRevnetWith(
+    function deployCroptopRevnetFor(
+        uint256 revnetId,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -74,10 +76,11 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
     )
         public
         override
-        returns (uint256 revnetId, IJB721TiersHook hook)
+        returns (uint256, IJB721TiersHook hook)
     {
         // Deploy the revnet with tiered 721 hooks.
-        (revnetId, hook) = super.deployTiered721RevnetWith({
+        (revnetId, hook) = super.deployTiered721RevnetFor({
+            revnetId: revnetId,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
@@ -87,6 +90,33 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
             suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
 
+        // Format the posts.
+        _configurePostingCriteriaFor({revnetId: revnetId, hook: address(hook), allowedPosts: allowedPosts});
+
+        // Give the croptop publisher permission to post on this contract's behalf.
+        IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
+            account: address(this),
+            permissionsData: JBPermissionsData({
+                operator: address(PUBLISHER),
+                projectId: revnetId,
+                permissionIds: _CROPTOP_PERMISSIONS_INDEXES
+            })
+        });
+
+        return (revnetId, hook);
+    }
+
+    /// @notice Configure croptop posting.
+    /// @param revnetId The ID of the revnet having posting configured.
+    /// @param hook The hook that will be posted to.
+    /// @param allowedPosts The type of posts that the revent should allow.
+    function _configurePostingCriteriaFor(
+        uint256 revnetId,
+        address hook,
+        REVCroptopAllowedPost[] memory allowedPosts
+    )
+        internal
+    {
         // Keep a reference to the number of allowed posts.
         uint256 numberOfAllowedPosts = allowedPosts.length;
 
@@ -103,7 +133,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
 
             // Set the formated post.
             formattedAllowedPosts[i] = CTAllowedPost({
-                nft: address(hook),
+                nft: hook,
                 category: post.category,
                 minimumPrice: post.minimumPrice,
                 minimumTotalSupply: post.minimumTotalSupply,
@@ -116,15 +146,5 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
         if (allowedPosts.length != 0) {
             PUBLISHER.configurePostingCriteriaFor({projectId: revnetId, allowedPosts: formattedAllowedPosts});
         }
-
-        // Give the croptop publisher permission to post on this contract's behalf.
-        IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
-            account: address(this),
-            permissionsData: JBPermissionsData({
-                operator: address(PUBLISHER),
-                projectId: revnetId,
-                permissionIds: _CROPTOP_PERMISSIONS_INDEXES
-            })
-        });
     }
 }

@@ -14,7 +14,8 @@ import {IREVPayHookDeployer} from "./IREVPayHookDeployer.sol";
 interface IREVTiered721HookDeployer is IREVPayHookDeployer {
     function HOOK_DEPLOYER() external view returns (IJB721TiersHookDeployer);
 
-    function deployTiered721RevnetWith(
+    function deployTiered721RevnetFor(
+        uint256 revnetId,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -24,5 +25,5 @@ interface IREVTiered721HookDeployer is IREVPayHookDeployer {
         uint16 extraHookMetadata
     )
         external
-        returns (uint256 revnetId, IJB721TiersHook hook);
+        returns (uint256, IJB721TiersHook hook);
 }

@@ -39,6 +39,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer, IREVTiered721HookDeploy
     }
 
     /// @notice Deploy a revnet that supports 721 sales.
+    /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -49,7 +50,8 @@ contract REVTiered721HookDeployer is REVPayHookDeployer, IREVTiered721HookDeploy
     /// @param extraHookMetadata Extra metadata to attach to the cycle for the delegates to use.
     /// @return revnetId The ID of the newly created revnet.
     /// @return hook The address of the 721 hook that was deployed on the revnet.
-    function deployTiered721RevnetWith(
+    function deployTiered721RevnetFor(
+        uint256 revnetId,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -60,10 +62,10 @@ contract REVTiered721HookDeployer is REVPayHookDeployer, IREVTiered721HookDeploy
     )
         public
         override
-        returns (uint256 revnetId, IJB721TiersHook hook)
+        returns (uint256, IJB721TiersHook hook)
     {
         // Get the revnet ID, optimistically knowing it will be one greater than the current count.
-        revnetId = CONTROLLER.PROJECTS().count() + 1;
+        if (revnetId == 0) revnetId = CONTROLLER.PROJECTS().count() + 1;
 
         // Keep a reference to the number of pay hooks passed in.
         uint256 numberOfOtherPayHooks = otherPayHooksSpecifications.length;
@@ -98,7 +100,8 @@ contract REVTiered721HookDeployer is REVPayHookDeployer, IREVTiered721HookDeploy
         payHookSpecifications[numberOfOtherPayHooks] =
             JBPayHookSpecification({hook: IJBPayHook(address(hook)), amount: 0, metadata: bytes("")});
 
-        super.deployPayHookRevnetWith({
+        super.deployPayHookRevnetFor({
+            revnetId: revnetId,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
@@ -106,5 +109,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer, IREVTiered721HookDeploy
             extraHookMetadata: extraHookMetadata,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
+
+        return (revnetId, hook);
     }
 }

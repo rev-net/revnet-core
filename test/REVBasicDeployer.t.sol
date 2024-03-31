@@ -60,7 +60,7 @@ contract REVBasicDeployerTest is Test {
 //         poolConfigurations: poolConfigurations
 //     });
 
-//     revnetId = deployRevnetFor({
+//     revnetId = launchRevnetFor({
 //         name: tokenName,
 //         ticker: ticker,
 //         metadata: revnetMetadata,

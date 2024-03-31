@@ -12,7 +12,8 @@ interface IREVPayHookDeployer is IREVBasicDeployer {
         uint256 indexed revnetId, JBPayHookSpecification[] payHookSpecifications, address caller
     );
 
-    function deployPayHookRevnetWith(
+    function deployPayHookRevnetFor(
+        uint256 revnetId,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -21,5 +22,5 @@ interface IREVPayHookDeployer is IREVBasicDeployer {
         uint16 extraHookMetadata
     )
         external
-        returns (uint256 revnetId);
+        returns (uint256);
 }

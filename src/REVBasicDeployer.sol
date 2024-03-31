@@ -239,7 +239,13 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
-    constructor(IJBController controller, IBPSuckerRegistry suckerRegistry, address trustedForwarder) ERC2771Context(trustedForwarder) {
+    constructor(
+        IJBController controller,
+        IBPSuckerRegistry suckerRegistry,
+        address trustedForwarder
+    )
+        ERC2771Context(trustedForwarder)
+    {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
         _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
@@ -268,7 +274,11 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         // Remove operator permission from the old split operator.
         IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
             account: address(this),
-            permissionsData: JBPermissionsData({operator: _msgSender(), projectId: revnetId, permissionIds: new uint256[](0)})
+            permissionsData: JBPermissionsData({
+                operator: _msgSender(),
+                projectId: revnetId,
+                permissionIds: new uint256[](0)
+            })
         });
 
         // Give the new split operator permission to change the recipients of the operator's split.
@@ -307,7 +317,8 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         ) revert REVBasicDeployer_Unauthorized();
 
         // Compose the salt.
-        bytes32 salt = keccak256(abi.encodePacked(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
+        bytes32 salt =
+            keccak256(abi.encodePacked(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
 
         // Deploy the suckers.
         SUCKER_REGISTRY.deploySuckersFor({
@@ -324,13 +335,15 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     //*********************************************************************//
 
     /// @notice Deploy a basic revnet.
+    /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
     /// for new participants.
     /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
     /// @return revnetId The ID of the newly created revnet.
-    function deployRevnetWith(
+    function launchRevnetFor(
+        uint256 revnetId,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -338,10 +351,11 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     )
         public
         override
-        returns (uint256 revnetId)
+        returns (uint256)
     {
         // Deploy main revnet.
-        revnetId = _deployRevnetWith({
+        return _launchRevnetFor({
+            revnetId: revnetId,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
@@ -356,6 +370,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     //*********************************************************************//
 
     /// @notice Deploys a revnet with the specified hook information.
+    /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
     /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
@@ -364,7 +379,8 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @param extraHookMetadata Extra info to send to the hook.
     /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
     /// @return revnetId The ID of the newly created revnet.
-    function _deployRevnetWith(
+    function _launchRevnetFor(
+        uint256 revnetId,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
@@ -374,19 +390,29 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     )
         internal
         virtual
-        returns (uint256 revnetId)
+        returns (uint256)
     {
         (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration, bool isInProgress) =
             _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata);
 
-        // Deploy a juicebox for the revnet.
-        revnetId = CONTROLLER.launchProjectFor({
-            owner: address(this),
-            projectUri: configuration.description.uri,
-            rulesetConfigurations: rulesetConfigurations,
-            terminalConfigurations: terminalConfigurations,
-            memo: string.concat("$", configuration.description.ticker, " revnet deployed")
-        });
+        if (revnetId == 0) {
+            // Deploy a juicebox for the revnet.
+            revnetId = CONTROLLER.launchProjectFor({
+                owner: address(this),
+                projectUri: configuration.description.uri,
+                rulesetConfigurations: rulesetConfigurations,
+                terminalConfigurations: terminalConfigurations,
+                memo: string.concat("$", configuration.description.ticker, " revnet deployed")
+            });
+        } else {
+            // Deploy a juicebox for the revnet.
+            CONTROLLER.launchRulesetsFor({
+                projectId: revnetId,
+                rulesetConfigurations: rulesetConfigurations,
+                terminalConfigurations: terminalConfigurations,
+                memo: string.concat("$", configuration.description.ticker, " revnet deployed")
+            });
+        }
 
         // Store the exit delay of the revnet if it is in progess or if premint isn't on this chain. This prevents exits
         // from the revnet until the delay
@@ -415,14 +441,18 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             splitGroups: _makeOperatorSplitGroupWith(configuration.initialSplitOperator)
         });
 
+        // Keep a reference to permissions being set. Give the operator permission to change the recipients of the
+        // operator's split.
+        JBPermissionsData memory permissionsData = JBPermissionsData({
+            operator: configuration.initialSplitOperator,
+            projectId: revnetId,
+            permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
+        });
+
         // Give the operator its permissions.
         IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
             account: address(this),
-            permissionsData: JBPermissionsData({
-                operator: configuration.initialSplitOperator,
-                projectId: revnetId,
-                permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
-            })
+            permissionsData: permissionsData
         });
 
         // Premint tokens to the split operator if needed.
@@ -440,14 +470,17 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         uint256[] memory registryPermissions = new uint256[](1);
         registryPermissions[0] = JBPermissionIds.MAP_SUCKER_TOKEN;
 
+        // Give the sucker registry permission to map tokens.
+        permissionsData = JBPermissionsData({
+            operator: address(SUCKER_REGISTRY),
+            projectId: revnetId,
+            permissionIds: registryPermissions
+        });
+
         // Give the operator permission to change the recipients of the operator's split.
         IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
             account: address(this),
-            permissionsData: JBPermissionsData({
-                operator: address(SUCKER_REGISTRY),
-                projectId: revnetId,
-                permissionIds: registryPermissions
-            })
+            permissionsData: permissionsData
         });
 
         // Deploy the suckers if needed.
@@ -470,6 +503,8 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             isInProgress,
             _msgSender()
         );
+
+        return revnetId;
     }
 
     /// @notice Schedules the initial ruleset for the revnet, and queues all subsequent rulesets that define the stages.

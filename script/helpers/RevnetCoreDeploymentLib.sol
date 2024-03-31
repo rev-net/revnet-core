@@ -36,24 +36,19 @@ library RevnetCoreDeploymentLib {
         revert("ChainID is not (currently) supported by Sphinx.");
     }
 
-    function getDeployment(string memory path, string memory network_name)
+    function getDeployment(
+        string memory path,
+        string memory network_name
+    )
         internal
         view
         returns (RevnetCoreDeployment memory deployment)
     {
-        deployment.basic_deployer = REVBasicDeployer(_getDeploymentAddress(
-            path,
-            "revnet-core",
-            network_name,
-            "REVBasicDeployer"
-        ));
+        deployment.basic_deployer =
+            REVBasicDeployer(_getDeploymentAddress(path, "revnet-core", network_name, "REVBasicDeployer"));
 
-        deployment.croptop_deployer = REVCroptopDeployer(_getDeploymentAddress(
-            path,
-            "revnet-core",
-            network_name,
-            "REVCroptopDeployer"
-        ));
+        deployment.croptop_deployer =
+            REVCroptopDeployer(_getDeploymentAddress(path, "revnet-core", network_name, "REVCroptopDeployer"));
     }
 
     /// @notice Get the address of a contract that was deployed by the Deploy script.
@@ -66,7 +61,11 @@ library RevnetCoreDeploymentLib {
         string memory project_name,
         string memory network_name,
         string memory contractName
-    ) internal view returns (address) {
+    )
+        internal
+        view
+        returns (address)
+    {
         string memory deploymentJson =
             vm.readFile(string.concat(path, project_name, "/", network_name, "/", contractName, ".json"));
         return stdJson.readAddress(deploymentJson, ".address");
