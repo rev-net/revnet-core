@@ -40,6 +40,15 @@ interface IREVBasicDeployer {
     function exitDelayOf(uint256 revnetId) external view returns (uint256);
     function payHookSpecificationsOf(uint256 revnetId) external view returns (JBPayHookSpecification[] memory);
 
+    function deployRevnetWith(
+        REVConfig memory configuration,
+        JBTerminalConfig[] memory terminalConfigurations,
+        REVBuybackHookConfig memory buybackHookConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+    )
+        external
+        returns (uint256);
+
     function launchRevnetFor(
         uint256 revnetId,
         REVConfig memory configuration,

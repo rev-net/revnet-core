@@ -50,6 +50,10 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
         _CROPTOP_PERMISSIONS_INDEXES.push(JBPermissionIds.ADJUST_721_TIERS);
     }
 
+    //*********************************************************************//
+    // --------------------- external transactions ----------------------- //
+    //*********************************************************************//
+
     /// @notice Deploy a revnet that supports 721 sales.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration The data needed to deploy a basic revnet.
@@ -63,7 +67,51 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
     /// @param allowedPosts The type of posts that the revent should allow.
     /// @return revnetId The ID of the newly created revnet.
     /// @return hook The address of the 721 hook that was deployed on the revnet.
-    function deployCroptopRevnetFor(
+    function deployCroptopRevnetWith(
+        REVConfig memory configuration,
+        JBTerminalConfig[] memory terminalConfigurations,
+        REVBuybackHookConfig memory buybackHookConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration,
+        REVDeploy721TiersHookConfig memory hookConfiguration,
+        JBPayHookSpecification[] memory otherPayHooksSpecifications,
+        uint16 extraHookMetadata,
+        REVCroptopAllowedPost[] memory allowedPosts
+    )
+        external
+        override
+        returns (uint256 revnetId, IJB721TiersHook hook)
+    {
+        (revnetId, hook) = launchCroptopRevnetFor({
+            revnetId: 0,
+            configuration: configuration,
+            terminalConfigurations: terminalConfigurations,
+            buybackHookConfiguration: buybackHookConfiguration,
+            hookConfiguration: hookConfiguration,
+            otherPayHooksSpecifications: otherPayHooksSpecifications,
+            extraHookMetadata: extraHookMetadata,
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration,
+            allowedPosts: allowedPosts
+        });
+    }
+
+    //*********************************************************************//
+    // ---------------------- public transactions ------------------------ //
+    //*********************************************************************//
+
+    /// @notice Launch a revnet that supports 721 sales.
+    /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
+    /// @param configuration The data needed to deploy a basic revnet.
+    /// @param terminalConfigurations The terminals that the network uses to accept payments through.
+    /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
+    /// for new participants.
+    /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
+    /// @param hookConfiguration Data used for setting up the 721 tiers.
+    /// @param otherPayHooksSpecifications Any hooks that should run when the revnet is paid alongside the 721 hook.
+    /// @param extraHookMetadata Extra metadata to attach to the cycle for the delegates to use.
+    /// @param allowedPosts The type of posts that the revent should allow.
+    /// @return revnetId The ID of the newly created revnet.
+    /// @return hook The address of the 721 hook that was deployed on the revnet.
+    function launchCroptopRevnetFor(
         uint256 revnetId,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
@@ -79,7 +127,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
         returns (uint256, IJB721TiersHook hook)
     {
         // Deploy the revnet with tiered 721 hooks.
-        (revnetId, hook) = super.deployTiered721RevnetFor({
+        (revnetId, hook) = super.launchTiered721RevnetFor({
             revnetId: revnetId,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,

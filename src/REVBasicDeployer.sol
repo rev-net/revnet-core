@@ -331,10 +331,40 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     }
 
     //*********************************************************************//
-    // ---------------------- public transactions ------------------------ //
+    // --------------------- external transactions ----------------------- //
     //*********************************************************************//
 
     /// @notice Deploy a basic revnet.
+    /// @param configuration The data needed to deploy a basic revnet.
+    /// @param terminalConfigurations The terminals that the network uses to accept payments through.
+    /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
+    /// for new participants.
+    /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
+    /// @return revnetId The ID of the newly created revnet.
+    function deployRevnetWith(
+        REVConfig memory configuration,
+        JBTerminalConfig[] memory terminalConfigurations,
+        REVBuybackHookConfig memory buybackHookConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+    )
+        external
+        override
+        returns (uint256)
+    {
+        return launchRevnetFor({
+            revnetId: 0,
+            configuration: configuration,
+            terminalConfigurations: terminalConfigurations,
+            buybackHookConfiguration: buybackHookConfiguration,
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration
+        });
+    }
+
+    //*********************************************************************//
+    // ---------------------- public transactions ------------------------ //
+    //*********************************************************************//
+
+    /// @notice Launch a basic revnet.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
