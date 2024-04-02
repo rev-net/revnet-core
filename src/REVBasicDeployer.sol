@@ -82,9 +82,12 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     //*********************************************************************//
 
     /// @notice The permissions that the provided operator should be granted. This is set once in the constructor
-    /// to contain only the SET_SPLITS operation.
     /// @dev This should only be set in the constructor.
-    uint256[] internal _SPLIT_OPERATOR_PERMISSIONS_INDEXES;
+    uint256[] internal _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES;
+
+    /// @notice The permissions that the provided operator should be granted if the revnet was deployed with that intent. This is set once for each revnet when deployed. 
+    /// @dev This should only be set in the deployment process for each revnet.
+    mapping(uint256 => uint256[]) internal _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES;
 
     /// @notice The pay hooks to include during payments to networks.
     /// @custom:param revnetId The ID of the revnet to which the extensions apply.
@@ -248,9 +251,9 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
-        _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
-        _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL_PARAMS);
-        _SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_PROJECT_METADATA);
+        _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
+        _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL_PARAMS);
+        _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_PROJECT_METADATA);
     }
 
     //*********************************************************************//
@@ -261,13 +264,17 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @param revnetId The ID of the revnet having its operator replaced.
     /// @param newSplitOperator The address of the new split operator.
     function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external {
+        
+        // Keep a reference to the split operator permission indexes.
+        uint256[] memory splitOperatorPermissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
+
         /// Make sure the message sender is the current split operator.
         if (
             !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
                 operator: _msgSender(),
                 account: address(this),
                 projectId: revnetId,
-                permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
+                permissionIds: splitOperatorPermissionIndexes
             })
         ) revert REVBasicDeployer_Unauthorized();
 
@@ -287,7 +294,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             permissionsData: JBPermissionsData({
                 operator: newSplitOperator,
                 projectId: revnetId,
-                permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
+                permissionIds: splitOperatorPermissionIndexes
             })
         });
 
@@ -312,7 +319,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
                 operator: _msgSender(),
                 account: address(this),
                 projectId: revnetId,
-                permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
+                permissionIds: _splitOperatorPermissionIndexesOf(revnetId)
             })
         ) revert REVBasicDeployer_Unauthorized();
 
@@ -476,7 +483,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         JBPermissionsData memory permissionsData = JBPermissionsData({
             operator: configuration.initialSplitOperator,
             projectId: revnetId,
-            permissionIds: _SPLIT_OPERATOR_PERMISSIONS_INDEXES
+            permissionIds: _splitOperatorPermissionIndexesOf(revnetId)
         });
 
         // Give the operator its permissions.
@@ -671,6 +678,42 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
 
         // Store the hook.
         buybackHookOf[revnetId] = buybackHookConfiguration.hook;
+    }
+    
+    /// @notice The permissions that the split operator should be granted for a revnet.
+    /// @param revnetId The ID of the revnet to check operator permissions for.
+    /// @return operatorPermissions The permissions that the split operator should be granted for the revnet, including default and custom permissions.
+    function _splitOperatorPermissionIndexesOf(uint256 revnetId) internal view returns (uint[] memory) {
+        
+        // Keep a reference to the default split operator permissions.
+        uint256[] memory defaultSplitOperatorPermissionIndexes = _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES;
+
+        // Keep a reference to the number of default permissions.
+        uint256 numberOfDefaultPermissionIndexes = defaultSplitOperatorPermissionIndexes.length;
+
+        // Keep a reference to the custom split operator permissions.
+        uint256[] memory customSplitOperatorPermissionIndexes = _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId];
+
+        // Keep a reference to the number of custom permissions.
+        uint256 numberOfCustomPermissionIndexes = customSplitOperatorPermissionIndexes.length;
+
+        // Get the total number of permissions.
+        uint256 numberOfPermissionIndexes = numberOfDefaultPermissionIndexes + numberOfCustomPermissionIndexes;
+
+        // Make the array that merges the default operator permissions and the custom ones. 
+        uint256[] memory allOperatorPermissions = new uint[](numberOfPermissionIndexes);
+        
+        // Copy elements from the default permissions.
+        for(uint i; i < numberOfDefaultPermissionIndexes; i++) {
+            allOperatorPermissions[i] = defaultSplitOperatorPermissionIndexes[i];
+        }
+
+        // Copy elements from the custom permissions. 
+        for(uint i; i < numberOfCustomPermissionIndexes; i++) {
+            allOperatorPermissions[numberOfDefaultPermissionIndexes + i] = customSplitOperatorPermissionIndexes[i];
+        }
+        
+        return allOperatorPermissions;
     }
 
     /// @notice Encodes a configuration into a hash.
