@@ -85,7 +85,8 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @dev This should only be set in the constructor.
     uint256[] internal _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES;
 
-    /// @notice The permissions that the provided operator should be granted if the revnet was deployed with that intent. This is set once for each revnet when deployed. 
+    /// @notice The permissions that the provided operator should be granted if the revnet was deployed with that
+    /// intent. This is set once for each revnet when deployed.
     /// @dev This should only be set in the deployment process for each revnet.
     mapping(uint256 => uint256[]) internal _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES;
 
@@ -264,7 +265,6 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @param revnetId The ID of the revnet having its operator replaced.
     /// @param newSplitOperator The address of the new split operator.
     function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external {
-        
         // Keep a reference to the split operator permission indexes.
         uint256[] memory splitOperatorPermissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
 
@@ -679,12 +679,16 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         // Store the hook.
         buybackHookOf[revnetId] = buybackHookConfiguration.hook;
     }
-    
+
     /// @notice The permissions that the split operator should be granted for a revnet.
     /// @param revnetId The ID of the revnet to check operator permissions for.
-    /// @return allOperatorPermissions The permissions that the split operator should be granted for the revnet, including default and custom permissions.
-    function _splitOperatorPermissionIndexesOf(uint256 revnetId) internal view returns (uint256[] memory allOperatorPermissions) {
-        
+    /// @return allOperatorPermissions The permissions that the split operator should be granted for the revnet,
+    /// including default and custom permissions.
+    function _splitOperatorPermissionIndexesOf(uint256 revnetId)
+        internal
+        view
+        returns (uint256[] memory allOperatorPermissions)
+    {
         // Keep a reference to the default split operator permissions.
         uint256[] memory defaultSplitOperatorPermissionIndexes = _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES;
 
@@ -697,16 +701,16 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         // Keep a reference to the number of custom permissions.
         uint256 numberOfCustomPermissionIndexes = customSplitOperatorPermissionIndexes.length;
 
-        // Make the array that merges the default operator permissions and the custom ones. 
+        // Make the array that merges the default operator permissions and the custom ones.
         allOperatorPermissions = new uint256[](numberOfDefaultPermissionIndexes + numberOfCustomPermissionIndexes);
-        
+
         // Copy elements from the default permissions.
-        for(uint256 i; i < numberOfDefaultPermissionIndexes; i++) {
+        for (uint256 i; i < numberOfDefaultPermissionIndexes; i++) {
             allOperatorPermissions[i] = defaultSplitOperatorPermissionIndexes[i];
         }
 
-        // Copy elements from the custom permissions. 
-        for(uint256 i; i < numberOfCustomPermissionIndexes; i++) {
+        // Copy elements from the custom permissions.
+        for (uint256 i; i < numberOfCustomPermissionIndexes; i++) {
             allOperatorPermissions[numberOfDefaultPermissionIndexes + i] = customSplitOperatorPermissionIndexes[i];
         }
     }
