@@ -251,8 +251,8 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
-        _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLITS);
-        _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL_PARAMS);
+        _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLIT_GROUPS);
+        _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL);
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_PROJECT_METADATA);
     }
 
@@ -682,7 +682,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     
     /// @notice The permissions that the split operator should be granted for a revnet.
     /// @param revnetId The ID of the revnet to check operator permissions for.
-    /// @return operatorPermissions The permissions that the split operator should be granted for the revnet, including default and custom permissions.
+    /// @return allOperatorPermissions The permissions that the split operator should be granted for the revnet, including default and custom permissions.
     function _splitOperatorPermissionIndexesOf(uint256 revnetId) internal view returns (uint256[] memory allOperatorPermissions) {
         
         // Keep a reference to the default split operator permissions.
