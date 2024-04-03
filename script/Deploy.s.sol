@@ -66,7 +66,7 @@ contract DeployScript is Script, Sphinx {
         // Check if the contracts are already deployed or if there are any changes.
         if (
             !_isDeployed(
-                BASIC_DEPLOYER, type(REVBasicDeployer).creationCode, abi.encode(core.controller, suckers.registry)
+                BASIC_DEPLOYER, type(REVBasicDeployer).creationCode, abi.encode(core.controller, suckers.registry, TRUSTED_FORWARDER)
             )
         ) new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, TRUSTED_FORWARDER);
 
@@ -74,7 +74,7 @@ contract DeployScript is Script, Sphinx {
             !_isDeployed(
                 CROPTOP_DEPLOYER,
                 type(REVCroptopDeployer).creationCode,
-                abi.encode(core.controller, hook.hook_deployer, croptop.publisher, suckers.registry)
+                abi.encode(core.controller, suckers.registry, TRUSTED_FORWARDER, hook.hook_deployer, croptop.publisher)
             )
         ) {
             new REVCroptopDeployer{salt: CROPTOP_DEPLOYER}(

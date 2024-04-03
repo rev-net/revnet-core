@@ -683,7 +683,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @notice The permissions that the split operator should be granted for a revnet.
     /// @param revnetId The ID of the revnet to check operator permissions for.
     /// @return operatorPermissions The permissions that the split operator should be granted for the revnet, including default and custom permissions.
-    function _splitOperatorPermissionIndexesOf(uint256 revnetId) internal view returns (uint[] memory) {
+    function _splitOperatorPermissionIndexesOf(uint256 revnetId) internal view returns (uint256[] memory allOperatorPermissions) {
         
         // Keep a reference to the default split operator permissions.
         uint256[] memory defaultSplitOperatorPermissionIndexes = _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES;
@@ -697,23 +697,18 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         // Keep a reference to the number of custom permissions.
         uint256 numberOfCustomPermissionIndexes = customSplitOperatorPermissionIndexes.length;
 
-        // Get the total number of permissions.
-        uint256 numberOfPermissionIndexes = numberOfDefaultPermissionIndexes + numberOfCustomPermissionIndexes;
-
         // Make the array that merges the default operator permissions and the custom ones. 
-        uint256[] memory allOperatorPermissions = new uint[](numberOfPermissionIndexes);
+        allOperatorPermissions = new uint256[](numberOfDefaultPermissionIndexes + numberOfCustomPermissionIndexes);
         
         // Copy elements from the default permissions.
-        for(uint i; i < numberOfDefaultPermissionIndexes; i++) {
+        for(uint256 i; i < numberOfDefaultPermissionIndexes; i++) {
             allOperatorPermissions[i] = defaultSplitOperatorPermissionIndexes[i];
         }
 
         // Copy elements from the custom permissions. 
-        for(uint i; i < numberOfCustomPermissionIndexes; i++) {
+        for(uint256 i; i < numberOfCustomPermissionIndexes; i++) {
             allOperatorPermissions[numberOfDefaultPermissionIndexes + i] = customSplitOperatorPermissionIndexes[i];
         }
-        
-        return allOperatorPermissions;
     }
 
     /// @notice Encodes a configuration into a hash.
