@@ -220,9 +220,6 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         // Make sure the 721 received is the JBProjects contract.
         if (msg.sender != address(CONTROLLER.PROJECTS())) revert();
 
-        // Make sure the 721 is being received as a mint.
-        if (from != address(0)) revert();
-
         return IERC721Receiver.onERC721Received.selector;
     }
 
