@@ -110,6 +110,9 @@ contract REVTiered721HookDeployer is REVPayHookDeployer, IREVTiered721HookDeploy
         override
         returns (uint256, IJB721TiersHook hook)
     {
+        // Keep a reference to the original revnet ID passed in.
+        uint256 originalRevnetId = revnetId;
+
         // Get the revnet ID, optimistically knowing it will be one greater than the current count.
         if (revnetId == 0) revnetId = CONTROLLER.PROJECTS().count() + 1;
 
@@ -147,7 +150,7 @@ contract REVTiered721HookDeployer is REVPayHookDeployer, IREVTiered721HookDeploy
             JBPayHookSpecification({hook: IJBPayHook(address(hook)), amount: 0, metadata: bytes("")});
 
         super.launchPayHookRevnetFor({
-            revnetId: revnetId,
+            revnetId: originalRevnetId,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
