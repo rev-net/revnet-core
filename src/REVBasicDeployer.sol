@@ -219,8 +219,10 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
 
         // Make sure the 721 received is the JBProjects contract.
         if (msg.sender != address(CONTROLLER.PROJECTS())) revert();
+
         // Make sure the 721 is being received as a mint.
         if (from != address(0)) revert();
+
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -335,36 +337,6 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         });
 
         emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, _msgSender());
-    }
-
-    //*********************************************************************//
-    // --------------------- external transactions ----------------------- //
-    //*********************************************************************//
-
-    /// @notice Deploy a basic revnet.
-    /// @param configuration The data needed to deploy a basic revnet.
-    /// @param terminalConfigurations The terminals that the network uses to accept payments through.
-    /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
-    /// for new participants.
-    /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
-    /// @return revnetId The ID of the newly created revnet.
-    function deployRevnetWith(
-        REVConfig memory configuration,
-        JBTerminalConfig[] memory terminalConfigurations,
-        REVBuybackHookConfig memory buybackHookConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
-    )
-        external
-        override
-        returns (uint256)
-    {
-        return launchRevnetFor({
-            revnetId: 0,
-            configuration: configuration,
-            terminalConfigurations: terminalConfigurations,
-            buybackHookConfiguration: buybackHookConfiguration,
-            suckerDeploymentConfiguration: suckerDeploymentConfiguration
-        });
     }
 
     //*********************************************************************//

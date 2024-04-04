@@ -27,42 +27,6 @@ contract REVPayHookDeployer is REVBasicDeployer, IREVPayHookDeployer {
     {}
 
     //*********************************************************************//
-    // --------------------- external transactions ----------------------- //
-    //*********************************************************************//
-
-    /// @notice Deploy a basic revnet that also calls other specified pay hooks.
-    /// @param configuration The data needed to deploy a basic revnet.
-    /// @param terminalConfigurations The terminals that the network uses to accept payments through.
-    /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
-    /// for new participants.
-    /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
-    /// @param payHookSpecifications Any hooks that should run when the revnet is paid.
-    /// @param extraHookMetadata Extra metadata to attach to the cycle for the delegates to use.
-    /// @return revnetId The ID of the newly created revnet.
-    function deployPayHookRevnetWith(
-        REVConfig memory configuration,
-        JBTerminalConfig[] memory terminalConfigurations,
-        REVBuybackHookConfig memory buybackHookConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration,
-        JBPayHookSpecification[] memory payHookSpecifications,
-        uint16 extraHookMetadata
-    )
-        external
-        override
-        returns (uint256)
-    {
-        return launchPayHookRevnetFor({
-            revnetId: 0,
-            configuration: configuration,
-            terminalConfigurations: terminalConfigurations,
-            buybackHookConfiguration: buybackHookConfiguration,
-            suckerDeploymentConfiguration: suckerDeploymentConfiguration,
-            payHookSpecifications: payHookSpecifications,
-            extraHookMetadata: extraHookMetadata
-        });
-    }
-
-    //*********************************************************************//
     // ---------------------- public transactions ------------------------ //
     //*********************************************************************//
 

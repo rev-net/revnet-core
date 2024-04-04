@@ -14,19 +14,6 @@ import {IREVTiered721HookDeployer} from "./IREVTiered721HookDeployer.sol";
 interface IREVCroptopDeployer is IREVTiered721HookDeployer {
     function PUBLISHER() external view returns (CTPublisher);
 
-    function deployCroptopRevnetWith(
-        REVConfig memory configuration,
-        JBTerminalConfig[] memory terminalConfigurations,
-        REVBuybackHookConfig memory buybackHookConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration,
-        REVDeploy721TiersHookConfig memory hookConfiguration,
-        JBPayHookSpecification[] memory otherPayHooksSpecifications,
-        uint16 extraHookMetadata,
-        REVCroptopAllowedPost[] memory allowedPosts
-    )
-        external
-        returns (uint256 revnetId, IJB721TiersHook hook);
-
     function launchCroptopRevnetFor(
         uint256 revnetId,
         REVConfig memory configuration,
