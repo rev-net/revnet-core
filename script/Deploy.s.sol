@@ -63,6 +63,15 @@ contract DeployScript is Script, Sphinx {
     }
 
     function deploy() public sphinx {
+        // Check if the contracts are already deployed or if there are any changes.
+        if (
+            !_isDeployed(
+                BASIC_DEPLOYER,
+                type(REVBasicDeployer).creationCode,
+                abi.encode(core.controller, suckers.registry, TRUSTED_FORWARDER)
+            )
+        ) new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, TRUSTED_FORWARDER);
+
         if (
             !_isDeployed(
                 CROPTOP_DEPLOYER,
