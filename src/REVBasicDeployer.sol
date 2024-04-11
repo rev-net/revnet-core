@@ -205,7 +205,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @dev Make sure only mints can be received.
     function onERC721Received(
         address operator,
-        address from,
+        address,
         uint256 tokenId,
         bytes calldata data
     )
