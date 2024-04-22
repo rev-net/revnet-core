@@ -32,6 +32,14 @@ interface IREVBasicDeployer {
         address caller
     );
 
+    event Mint(
+        uint256 indexed revnetId,
+        uint256 indexed stageId,
+        address indexed beneficiary,
+        uint256 count,
+        address caller
+    );
+
     function EXIT_DELAY() external view returns (uint256);
     function CONTROLLER() external view returns (IJBController);
     function SUCKER_REGISTRY() external view returns (IBPSuckerRegistry);

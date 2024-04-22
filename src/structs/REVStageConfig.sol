@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {REVMintConfig} from "./REVMintConfig.sol";
+
 /// @custom:member startsAtOrAfter The timestamp to start a stage at the given rate at or after.
+/// @custom:member mintConfigs The configurations of mints during this stage.
 /// @custom:member splitRate The percentage of newly issued tokens that should be split with the operator, out
 /// of
 /// 10_000 (JBConstants.MAX_RESERVED_RATE).
@@ -19,6 +22,7 @@ pragma solidity ^0.8.0;
 /// redemptions are made, everyone's redemptions are treated equally. The higher the intensity, the higher the tax.
 struct REVStageConfig {
     uint40 startsAtOrAfter;
+    REVMintConfig[] mintConfigs;
     uint16 splitRate;
     uint112 initialIssuanceRate;
     uint40 priceCeilingIncreaseFrequency;

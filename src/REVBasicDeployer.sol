@@ -18,6 +18,7 @@ import {JBRulesetMetadata} from "@bananapus/core/src/structs/JBRulesetMetadata.s
 import {JBRulesetConfig} from "@bananapus/core/src/structs/JBRulesetConfig.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
+import {JBRuleset} from "@bananapus/core/src/structs/JBRuleset.sol";
 import {JBSplitGroup} from "@bananapus/core/src/structs/JBSplitGroup.sol";
 import {JBSplit} from "@bananapus/core/src/structs/JBSplit.sol";
 import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.sol";
@@ -33,6 +34,7 @@ import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegi
 
 import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
+import {REVMintConfig} from "./structs/REVMintConfig.sol";
 import {REVStageConfig} from "./structs/REVStageConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
@@ -76,6 +78,13 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @notice The time at which exits from a revnet become allowed.
     /// @custom:param revnetId The ID of the revnet to which the delay applies.
     mapping(uint256 revnetId => uint256 exitDelay) public override exitDelayOf;
+
+    /// @notice The specification of how many tokens are still allowed to be minted at each stage of a revnet.
+    /// @custom:param revnetId The ID of the revnet to which the mint applies.
+    /// @custom:param rulesetId The ID of the ruleset to which the mint applies.
+    /// @custom:param beneficiary The address that will benefit from the mint.
+    mapping(uint256 revnetId => mapping(uint256 rulesetId => mapping(address beneficiary => uint256))) public
+        allowedMintCountOf;
 
     //*********************************************************************//
     // ------------------- internal stored properties -------------------- //
@@ -371,6 +380,33 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         });
     }
 
+    /// @notice Mint tokens from a revnet to a specified beneficiary according to the rules set for the revnet.
+    /// @param revnetId The ID of the revnet to mint tokens from.
+    /// @param beneficiary The address to mint tokens to.
+    function mintFor(uint256 revnetId, address beneficiary) external {
+        // Get a reference to the revnet's current ruleset.
+        JBRuleset memory ruleset = CONTROLLER.RULESETS().currentOf(revnetId);
+
+        // Get a reference to the amount that should be minted.
+        uint256 count = allowedMintCountOf[revnetId][ruleset.id][beneficiary];
+
+        // Premint tokens to the split operator if needed.
+        if (count != 0) {
+            CONTROLLER.mintTokensOf({
+                projectId: revnetId,
+                tokenCount: count,
+                beneficiary: beneficiary,
+                memo: "",
+                useReservedRate: false
+            });
+        }
+
+        // Reset the mint amount.
+        allowedMintCountOf[revnetId][ruleset.id][beneficiary] = 0;
+
+        emit Mint(revnetId, ruleset.id, beneficiary, count, msg.sender);
+    }
+
     //*********************************************************************//
     // --------------------- itnernal transactions ----------------------- //
     //*********************************************************************//
@@ -420,10 +456,10 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             });
         }
 
-        // Store the exit delay of the revnet if it is in progess or if premint isn't on this chain. This prevents exits
+        // Store the exit delay of the revnet if it is in progess or if an initial premint exists. This prevents exits
         // from the revnet until the delay
         // is up.
-        if (isInProgress || configuration.premintChainId != block.chainid) {
+        if (isInProgress || configuration.stageConfigurations[0].mintConfigs.length != 0) {
             exitDelayOf[revnetId] = block.timestamp + EXIT_DELAY;
         }
 
@@ -447,6 +483,9 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             splitGroups: _makeOperatorSplitGroupWith(configuration.initialSplitOperator)
         });
 
+        // Store the mint amounts.
+        _storeMintAmounts(revnetId, configuration);
+
         // Keep a reference to permissions being set. Give the operator permission to change the recipients of the
         // operator's split.
         JBPermissionsData memory permissionsData = JBPermissionsData({
@@ -460,17 +499,6 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             account: address(this),
             permissionsData: permissionsData
         });
-
-        // Premint tokens to the split operator if needed.
-        if (configuration.premintTokenAmount > 0 && configuration.premintChainId == block.chainid) {
-            CONTROLLER.mintTokensOf({
-                projectId: revnetId,
-                tokenCount: configuration.premintTokenAmount,
-                beneficiary: configuration.initialSplitOperator,
-                memo: string.concat("$", configuration.description.ticker, " preminted"),
-                useReservedRate: false
-            });
-        }
 
         // Give the sucker registry permission to map tokens.
         uint256[] memory registryPermissions = new uint256[](1);
@@ -588,8 +616,41 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         }
     }
 
-    /// @notice Creates a group of splits that goes entirely to the provided split operator.
+    /// @notice Stores the amount of tokens that can be minted during each stage from this chain.
+    /// @param revnetId The ID of the revnet to which the mints should apply.
+    /// @param configuration The data that defines the revnet's characteristics.
+    function _storeMintAmounts(uint256 revnetId, REVConfig memory configuration) internal {
+        // Keep a reference to the number of stages to schedule.
+        uint256 numberOfStages = configuration.stageConfigurations.length;
 
+        // Keep a reference to the stage configuration being iterated on.
+        REVStageConfig memory stageConfiguration;
+
+        // Loop through each stage to set up its ruleset configuration.
+        for (uint256 i; i < numberOfStages; i++) {
+            // Set the stage configuration being iterated on.
+            stageConfiguration = configuration.stageConfigurations[i];
+
+            // Keep a reference to the number of mints to store.
+            uint256 numberOfMints = stageConfiguration.mintConfigs.length;
+
+            // Keep a reference to the mint config being iterated on.
+            REVMintConfig memory mintConfig;
+
+            // Loop through each mint to store its amount.
+            for (uint256 j; j < numberOfMints; j++) {
+                // Set the mint config being iterated on.
+                mintConfig = stageConfiguration.mintConfigs[j];
+
+                // Store the amount of tokens that can be minted during this stage from this chain.
+                if (mintConfig.chainId == block.chainid) {
+                    allowedMintCountOf[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.tokenAmount;
+                }
+            }
+        }
+    }
+
+    /// @notice Creates a group of splits that goes entirely to the provided split operator.
     /// @param splitOperator The address to send the entire split amount to.
     /// @return splitGroups The split groups representing operator's split.
     function _makeOperatorSplitGroupWith(address splitOperator)
@@ -690,7 +751,6 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     function _encodedConfig(REVConfig memory configuration) internal pure returns (bytes memory) {
         return abi.encode(
             configuration.baseCurrency,
-            configuration.premintChainId,
             configuration.description.name,
             configuration.description.ticker,
             configuration.description.salt
@@ -707,9 +767,9 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     )
         internal
         view
-        returns (bytes memory)
+        returns (bytes memory encodedConfiguration)
     {
-        return abi.encode(
+        encodedConfiguration = abi.encode(
             // If no start time is provided for the first stage, use the current block timestamp.
             (stageNumber == 0 && stageConfiguration.startsAtOrAfter == 0)
                 ? block.timestamp
@@ -720,6 +780,22 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             stageConfiguration.priceCeilingIncreasePercentage,
             stageConfiguration.priceFloorTaxIntensity
         );
+
+        // Get a reference to the mint configs.
+        uint256 numberOfMintConfigs = stageConfiguration.mintConfigs.length;
+
+        // Add each mint config to the hash.
+        for (uint256 i; i < numberOfMintConfigs; i++) {
+            encodedConfiguration =
+                abi.encodePacked(encodedConfiguration, _encodedMintConfig(stageConfiguration.mintConfigs[i]));
+        }
+    }
+
+    /// @notice Encodes a mint configuration into a hash.
+    /// @notice mintConfig The data that defines how many tokens are allowed to be minted at a stage.
+    /// @return encodedMintConfig The encoded mint config.
+    function _encodedMintConfig(REVMintConfig memory mintConfig) internal pure returns (bytes memory) {
+        return abi.encode(mintConfig.chainId, mintConfig.beneficiary, mintConfig.tokenAmount);
     }
 
     /// @notice Returns the sender, prefered to use over `msg.sender`
