@@ -644,7 +644,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
 
                 // Store the amount of tokens that can be minted during this stage from this chain.
                 if (mintConfig.chainId == block.chainid) {
-                    allowedMintCountOf[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.tokenAmount;
+                    allowedMintCountOf[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.count;
                 }
             }
         }
@@ -795,7 +795,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @notice mintConfig The data that defines how many tokens are allowed to be minted at a stage.
     /// @return encodedMintConfig The encoded mint config.
     function _encodedMintConfig(REVMintConfig memory mintConfig) internal pure returns (bytes memory) {
-        return abi.encode(mintConfig.chainId, mintConfig.beneficiary, mintConfig.tokenAmount);
+        return abi.encode(mintConfig.chainId, mintConfig.beneficiary, mintConfig.count);
     }
 
     /// @notice Returns the sender, prefered to use over `msg.sender`
