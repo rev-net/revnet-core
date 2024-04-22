@@ -390,6 +390,9 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         // Get a reference to the amount that should be minted.
         uint256 count = allowedMintCountOf[revnetId][ruleset.id][beneficiary];
 
+        // Reset the mint amount.
+        allowedMintCountOf[revnetId][ruleset.id][beneficiary] = 0;
+
         // Premint tokens to the split operator if needed.
         if (count != 0) {
             CONTROLLER.mintTokensOf({
@@ -400,9 +403,6 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
                 useReservedRate: false
             });
         }
-
-        // Reset the mint amount.
-        allowedMintCountOf[revnetId][ruleset.id][beneficiary] = 0;
 
         emit Mint(revnetId, ruleset.id, beneficiary, count, msg.sender);
     }
