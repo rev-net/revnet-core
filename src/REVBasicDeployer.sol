@@ -396,15 +396,15 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         allowedMintCountOf[revnetId][stage.id][beneficiary] = 0;
 
         // Premint tokens to the split operator if needed.
-        if (count != 0) {
-            CONTROLLER.mintTokensOf({
-                projectId: revnetId,
-                tokenCount: count,
-                beneficiary: beneficiary,
-                memo: "",
-                useReservedRate: false
-            });
-        }
+        if (count == 0) return;
+
+        CONTROLLER.mintTokensOf({
+            projectId: revnetId,
+            tokenCount: count,
+            beneficiary: beneficiary,
+            memo: "",
+            useReservedRate: false
+        });
 
         emit Mint(revnetId, stage.id, beneficiary, count, msg.sender);
     }
