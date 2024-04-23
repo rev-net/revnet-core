@@ -140,9 +140,11 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         // Keep a reference to the buyback hook.
         IJBRulesetDataHook buybackHook = buybackHookOf[context.projectId];
 
-        // // Set the values to be those returned by the buyback hook's data source.
+        // Set the values to be those returned by the buyback hook's data source.
         if (buybackHook != IJBRulesetDataHook(address(0))) {
             (weight, buybackHookSpecifications) = buybackHook.beforePayRecordedWith(context);
+        } else {
+            weight = context.weight;
         }
 
         // Check if a buyback hook is used.
@@ -384,14 +386,14 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @param revnetId The ID of the revnet to mint tokens from.
     /// @param beneficiary The address to mint tokens to.
     function mintFor(uint256 revnetId, address beneficiary) external {
-        // Get a reference to the revnet's current ruleset.
-        JBRuleset memory ruleset = CONTROLLER.RULESETS().currentOf(revnetId);
+        // Get a reference to the revnet's current stage.
+        JBRuleset memory stage = CONTROLLER.RULESETS().currentOf(revnetId);
 
         // Get a reference to the amount that should be minted.
-        uint256 count = allowedMintCountOf[revnetId][ruleset.id][beneficiary];
+        uint256 count = allowedMintCountOf[revnetId][stage.id][beneficiary];
 
         // Reset the mint amount.
-        allowedMintCountOf[revnetId][ruleset.id][beneficiary] = 0;
+        allowedMintCountOf[revnetId][stage.id][beneficiary] = 0;
 
         // Premint tokens to the split operator if needed.
         if (count != 0) {
@@ -404,7 +406,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             });
         }
 
-        emit Mint(revnetId, ruleset.id, beneficiary, count, msg.sender);
+        emit Mint(revnetId, stage.id, beneficiary, count, msg.sender);
     }
 
     //*********************************************************************//
