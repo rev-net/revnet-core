@@ -81,9 +81,9 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
 
     /// @notice The specification of how many tokens are still allowed to be minted at each stage of a revnet.
     /// @custom:param revnetId The ID of the revnet to which the mint applies.
-    /// @custom:param rulesetId The ID of the ruleset to which the mint applies.
+    /// @custom:param stageId The ID of the ruleset to which the mint applies.
     /// @custom:param beneficiary The address that will benefit from the mint.
-    mapping(uint256 revnetId => mapping(uint256 rulesetId => mapping(address beneficiary => uint256))) public
+    mapping(uint256 revnetId => mapping(uint256 stageId => mapping(address beneficiary => uint256))) public
         allowedMintCountOf;
 
     //*********************************************************************//
@@ -644,6 +644,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
 
                 // Store the amount of tokens that can be minted during this stage from this chain.
                 if (mintConfig.chainId == block.chainid) {
+                    // Stage IDs are indexed incrementally from the timestamp of this transaction.
                     allowedMintCountOf[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.count;
                 }
             }
