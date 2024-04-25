@@ -54,8 +54,8 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     //*********************************************************************//
 
     /// @notice The amount of time from a sucker being deployed to when it can facilitate exits.
-    /// @dev 90 days.
-    uint256 public constant EXIT_DELAY = 7_776_000;
+    /// @dev 30 days.
+    uint256 public constant EXIT_DELAY = 2_592_000;
 
     //*********************************************************************//
     // --------------- public immutable stored properties ---------------- //
