@@ -455,7 +455,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
                 memo: string.concat("$", configuration.description.ticker, " revnet deployed")
             });
         } else {
-            // Deploy a juicebox for the revnet.
+            // Launch rulesets for a pre-existing juicebox.
             CONTROLLER.launchRulesetsFor({
                 projectId: revnetId,
                 rulesetConfigurations: rulesetConfigurations,
