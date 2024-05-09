@@ -46,8 +46,10 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
-    error REVBasicDeployer_Unauthorized();
+    error REVBasicDeployer_BadStageTimes();
     error REVBasicDeployer_ExitDelayInEffect();
+    error REVBasicDeployer_StageNotStarted();
+    error REVBasicDeployer_Unauthorized();
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -384,19 +386,23 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
 
     /// @notice Mint tokens from a revnet to a specified beneficiary according to the rules set for the revnet.
     /// @param revnetId The ID of the revnet to mint tokens from.
+    /// @param stageId The ID of the stage to mint tokens from.
     /// @param beneficiary The address to mint tokens to.
-    function mintFor(uint256 revnetId, address beneficiary) external {
+    function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external {
         // Get a reference to the revnet's current stage.
-        JBRuleset memory stage = CONTROLLER.RULESETS().currentOf(revnetId);
+        JBRuleset memory stage = CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId);
+
+        // Make sure the stage has started.
+        if (stage.start > block.timestamp) revert REVBasicDeployer_StageNotStarted();
 
         // Get a reference to the amount that should be minted.
         uint256 count = allowedMintCountOf[revnetId][stage.id][beneficiary];
 
-        // Reset the mint amount.
-        allowedMintCountOf[revnetId][stage.id][beneficiary] = 0;
-
         // Premint tokens to the split operator if needed.
         if (count == 0) return;
+
+        // Reset the mint amount.
+        allowedMintCountOf[revnetId][stageId][beneficiary] = 0;
 
         CONTROLLER.mintTokensOf({
             projectId: revnetId,
@@ -572,10 +578,18 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         // Keep a reference to teh stage configuration being iterated on.
         REVStageConfig memory stageConfiguration;
 
+        // Keep a reference to the previous start time.
+        uint256 previousStartTime;
+
         // Loop through each stage to set up its ruleset configuration.
         for (uint256 i; i < numberOfStages; i++) {
             // Set the stage configuration being iterated on.
             stageConfiguration = configuration.stageConfigurations[i];
+
+            // Make sure the start time of this stage is after the previous stage.
+            if (stageConfiguration.startsAtOrAfter <= previousStartTime) {
+                revert REVBasicDeployer_BadStageTimes();
+            }
 
             rulesetConfigurations[i].mustStartAtOrAfter = stageConfiguration.startsAtOrAfter;
             rulesetConfigurations[i].duration = stageConfiguration.priceCeilingIncreaseFrequency;
@@ -615,6 +629,9 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             encodedConfiguration = abi.encodePacked(
                 encodedConfiguration, _encodedStageConfig({stageConfiguration: stageConfiguration, stageNumber: i})
             );
+            
+            // Set the previous start time.
+            previousStartTime = stageConfiguration.startsAtOrAfter;
         }
     }
 
@@ -632,7 +649,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         for (uint256 i; i < numberOfStages; i++) {
             // Set the stage configuration being iterated on.
             stageConfiguration = configuration.stageConfigurations[i];
-
+ 
             // Keep a reference to the number of mints to store.
             uint256 numberOfMints = stageConfiguration.mintConfigs.length;
 
@@ -644,10 +661,26 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
                 // Set the mint config being iterated on.
                 mintConfig = stageConfiguration.mintConfigs[j];
 
+                // Only deal with mint specification for this chain.
+                if (mintConfig.chainId != block.chainid) continue;
+
+                // Mint right away if the first stage has started.
+                if (stageConfiguration.startsAtOrAfter <= block.timestamp) {
+                    CONTROLLER.mintTokensOf({
+                        projectId: revnetId,
+                        tokenCount: mintConfig.count,
+                        beneficiary: mintConfig.beneficiary,
+                        memo: "",
+                        useReservedRate: false
+                    });
+                    emit Mint(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender);
+                }
                 // Store the amount of tokens that can be minted during this stage from this chain.
-                if (mintConfig.chainId == block.chainid) {
+                else {
                     // Stage IDs are indexed incrementally from the timestamp of this transaction.
                     allowedMintCountOf[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.count;
+
+                    emit StoreMintPotential(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender);
                 }
             }
         }
