@@ -442,6 +442,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         virtual
         returns (uint256)
     {
+        // Normalize the configurations.
         (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration, bool isInProgress) =
             _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata);
 
@@ -464,10 +465,8 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             });
         }
 
-        // Store the exit delay of the revnet if it is in progess or if an initial premint exists. This prevents exits
-        // from the revnet until the delay
-        // is up.
-        if (isInProgress || configuration.stageConfigurations[0].mintConfigs.length != 0) {
+        // Store the exit delay of the revnet if it is in progess. This prevents exits from the revnet until the delay is up.
+        if (isInProgress) {
             exitDelayOf[revnetId] = block.timestamp + EXIT_DELAY;
         }
 
