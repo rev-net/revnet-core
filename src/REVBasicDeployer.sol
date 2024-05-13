@@ -663,8 +663,8 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
                 // Only deal with mint specification for this chain.
                 if (mintConfig.chainId != block.chainid) continue;
 
-                // Mint right away if the first stage has started.
-                if (stageConfiguration.startsAtOrAfter <= block.timestamp) {
+                // Mint right away if its the first stage or its any stage that has started.
+                if (i == 0 || stageConfiguration.startsAtOrAfter <= block.timestamp) {
                     CONTROLLER.mintTokensOf({
                         projectId: revnetId,
                         tokenCount: mintConfig.count,
