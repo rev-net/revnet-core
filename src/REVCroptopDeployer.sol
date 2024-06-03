@@ -115,7 +115,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
     /// @param hook The hook that will be posted to.
     /// @param allowedPosts The type of posts that the revent should allow.
     function _configurePostingCriteriaFor(
-        uint256 revnetId,
+        uint256 revnetId, // TODO: This is unused
         address hook,
         REVCroptopAllowedPost[] memory allowedPosts
     )
@@ -137,7 +137,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
 
             // Set the formated post.
             formattedAllowedPosts[i] = CTAllowedPost({
-                nft: hook,
+                hook: hook,
                 category: post.category,
                 minimumPrice: post.minimumPrice,
                 minimumTotalSupply: post.minimumTotalSupply,
@@ -148,7 +148,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
 
         // Configure allowed posts.
         if (allowedPosts.length != 0) {
-            PUBLISHER.configurePostingCriteriaFor({projectId: revnetId, allowedPosts: formattedAllowedPosts});
+            PUBLISHER.configurePostingCriteriaFor({allowedPosts: formattedAllowedPosts});
         }
     }
 }

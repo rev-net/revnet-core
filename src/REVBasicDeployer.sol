@@ -286,7 +286,9 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
                 operator: _msgSender(),
                 account: address(this),
                 projectId: revnetId,
-                permissionIds: splitOperatorPermissionIndexes
+                permissionIds: splitOperatorPermissionIndexes,
+                includeRoot: false,
+                includeWildcardProjectId: false
             })
         ) revert REVBasicDeployer_Unauthorized();
 
@@ -331,7 +333,9 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
                 operator: _msgSender(),
                 account: address(this),
                 projectId: revnetId,
-                permissionIds: _splitOperatorPermissionIndexesOf(revnetId)
+                permissionIds: _splitOperatorPermissionIndexesOf(revnetId),
+                includeRoot: false,
+                includeWildcardProjectId: false
             })
         ) revert REVBasicDeployer_Unauthorized();
 
@@ -465,7 +469,8 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             });
         }
 
-        // Store the exit delay of the revnet if it is in progess. This prevents exits from the revnet until the delay is up.
+        // Store the exit delay of the revnet if it is in progess. This prevents exits from the revnet until the delay
+        // is up.
         if (isInProgress) {
             exitDelayOf[revnetId] = block.timestamp + EXIT_DELAY;
         }
@@ -574,7 +579,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         // Store the base currency in the encoding.
         encodedConfiguration = _encodedConfig(configuration);
 
-        // Keep a reference to teh stage configuration being iterated on.
+        // Keep a reference to the stage configuration being iterated on.
         REVStageConfig memory stageConfiguration;
 
         // Keep a reference to the previous start time.
@@ -604,6 +609,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
                 pausePay: false,
                 pauseCreditTransfers: false,
                 allowOwnerMinting: true, // Allow this contract to premint tokens as the network owner.
+                allowSetCustomToken: false,
                 allowTerminalMigration: false,
                 allowSetTerminals: false,
                 allowControllerMigration: false,
@@ -628,7 +634,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             encodedConfiguration = abi.encodePacked(
                 encodedConfiguration, _encodedStageConfig({stageConfiguration: stageConfiguration, stageNumber: i})
             );
-            
+
             // Set the previous start time.
             previousStartTime = stageConfiguration.startsAtOrAfter;
         }
@@ -648,7 +654,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         for (uint256 i; i < numberOfStages; i++) {
             // Set the stage configuration being iterated on.
             stageConfiguration = configuration.stageConfigurations[i];
- 
+
             // Keep a reference to the number of mints to store.
             uint256 numberOfMints = stageConfiguration.mintConfigs.length;
 
@@ -679,7 +685,9 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
                     // Stage IDs are indexed incrementally from the timestamp of this transaction.
                     allowedMintCountOf[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.count;
 
-                    emit StoreMintPotential(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender);
+                    emit StoreMintPotential(
+                        revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender
+                    );
                 }
             }
         }
