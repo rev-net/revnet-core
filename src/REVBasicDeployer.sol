@@ -609,7 +609,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
                 pausePay: false,
                 pauseCreditTransfers: false,
                 allowOwnerMinting: true, // Allow this contract to premint tokens as the network owner.
-                allowSetCustomToken: false,
+                allowSetCustomToken: true,
                 allowTerminalMigration: false,
                 allowSetTerminals: false,
                 allowControllerMigration: false,
