@@ -95,7 +95,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
         });
 
         // Format the posts.
-        _configurePostingCriteriaFor({revnetId: revnetId, hook: address(hook), allowedPosts: allowedPosts});
+        _configurePostingCriteriaFor({hook: address(hook), allowedPosts: allowedPosts});
 
         // Give the croptop publisher permission to post on this contract's behalf.
         IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
@@ -111,16 +111,9 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
     }
 
     /// @notice Configure croptop posting.
-    /// @param revnetId The ID of the revnet having posting configured.
     /// @param hook The hook that will be posted to.
     /// @param allowedPosts The type of posts that the revent should allow.
-    function _configurePostingCriteriaFor(
-        uint256 revnetId, // TODO: This is unused
-        address hook,
-        REVCroptopAllowedPost[] memory allowedPosts
-    )
-        internal
-    {
+    function _configurePostingCriteriaFor(address hook, REVCroptopAllowedPost[] memory allowedPosts) internal {
         // Keep a reference to the number of allowed posts.
         uint256 numberOfAllowedPosts = allowedPosts.length;
 
