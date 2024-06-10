@@ -45,10 +45,10 @@ library RevnetCoreDeploymentLib {
         returns (RevnetCoreDeployment memory deployment)
     {
         deployment.basic_deployer =
-            REVBasicDeployer(_getDeploymentAddress(path, "revnet-core", network_name, "REVBasicDeployer"));
+            REVBasicDeployer(_getDeploymentAddress(path, "revnet-core-testnet", network_name, "REVBasicDeployer"));
 
         deployment.croptop_deployer =
-            REVCroptopDeployer(_getDeploymentAddress(path, "revnet-core", network_name, "REVCroptopDeployer"));
+            REVCroptopDeployer(_getDeploymentAddress(path, "revnet-core-testnet", network_name, "REVCroptopDeployer"));
     }
 
     /// @notice Get the address of a contract that was deployed by the Deploy script.
