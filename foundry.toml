@@ -9,7 +9,7 @@ block_timestamp = 1643802347
 runs = 4096
 build_info = true
 extra_output = ['storageLayout']
-fs_permissions = [{ access = "read-write", path = "./"}]
+fs_permissions = [{ access = "read-write", path = "../"}]
 
 [rpc_endpoints]
 ethereum ="${RPC_ETHEREUM_MAINNET}"

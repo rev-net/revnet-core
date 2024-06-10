@@ -609,11 +609,11 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
                 pausePay: false,
                 pauseCreditTransfers: false,
                 allowOwnerMinting: true, // Allow this contract to auto mint tokens as the network owner.
-                allowSetCustomToken: false, 
+                allowSetCustomToken: false,
                 allowTerminalMigration: false,
                 allowSetTerminals: false,
-                allowControllerMigration: false,
                 allowSetController: false,
+                ownerMustSendPayouts: false,
                 holdFees: false,
                 useTotalSurplusForRedemptions: false,
                 useDataHookForPay: true, // Use the buyback hook data source.

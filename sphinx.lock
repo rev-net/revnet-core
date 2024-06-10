@@ -110,6 +110,111 @@
         "threshold": "1",
         "saltNonce": "10"
       }
+    },
+    "nana-core-testnet": {
+      "projectId": "clx9g9hr900000cma2wyj2tg1",
+      "projectName": "nana-core-testnet",
+      "defaultSafe": {
+        "safeName": "nana-core-testnet",
+        "owners": [
+          "0x8063549C1b5163931283e76785cF11e56DFdDC3a",
+          "0x7f75Ee000C7178D68Be4cb50243fC438F967e263",
+          "0x52b76eA545f4779620A666493e885CE20Fda9037",
+          "0xA7B609Ef5367aE505956aE6422B8fCB3Ec0a487E"
+        ],
+        "threshold": "1",
+        "saltNonce": "0"
+      }
+    },
+    "nana-swap-terminal-testnet": {
+      "projectId": "clx9hf39k00000cl6cbqy3h30",
+      "projectName": "nana-swap-terminal-testnet",
+      "defaultSafe": {
+        "safeName": "nana-swap-terminal-testnet",
+        "owners": [
+          "0x8063549C1b5163931283e76785cF11e56DFdDC3a",
+          "0x7f75Ee000C7178D68Be4cb50243fC438F967e263",
+          "0x52b76eA545f4779620A666493e885CE20Fda9037",
+          "0xA7B609Ef5367aE505956aE6422B8fCB3Ec0a487E"
+        ],
+        "threshold": "1",
+        "saltNonce": "1"
+      }
+    },
+    "nana-buyback-hook-testnet": {
+      "projectId": "clx9i2soa00000cju4j9x9gdt",
+      "projectName": "nana-buyback-hook-testnet",
+      "defaultSafe": {
+        "safeName": "nana-buyback-hook-testnet",
+        "owners": [
+          "0x8063549C1b5163931283e76785cF11e56DFdDC3a",
+          "0x7f75Ee000C7178D68Be4cb50243fC438F967e263",
+          "0x52b76eA545f4779620A666493e885CE20Fda9037",
+          "0xA7B609Ef5367aE505956aE6422B8fCB3Ec0a487E"
+        ],
+        "threshold": "1",
+        "saltNonce": "2"
+      }
+    },
+    "nana-suckers-testnet": {
+      "projectId": "clx9id8vg00000clda5s1cce8",
+      "projectName": "nana-suckers-testnet",
+      "defaultSafe": {
+        "safeName": "nana-suckers-testnet",
+        "owners": [
+          "0x8063549C1b5163931283e76785cF11e56DFdDC3a",
+          "0x7f75Ee000C7178D68Be4cb50243fC438F967e263",
+          "0x52b76eA545f4779620A666493e885CE20Fda9037",
+          "0xA7B609Ef5367aE505956aE6422B8fCB3Ec0a487E"
+        ],
+        "threshold": "1",
+        "saltNonce": "3"
+      }
+    },
+    "nana-721-hook-testnet": {
+      "projectId": "clx9intej00010cl693vhfieo",
+      "projectName": "nana-721-hook-testnet",
+      "defaultSafe": {
+        "safeName": "nana-721-hook-testnet",
+        "owners": [
+          "0x8063549C1b5163931283e76785cF11e56DFdDC3a",
+          "0x7f75Ee000C7178D68Be4cb50243fC438F967e263",
+          "0x52b76eA545f4779620A666493e885CE20Fda9037",
+          "0xA7B609Ef5367aE505956aE6422B8fCB3Ec0a487E"
+        ],
+        "threshold": "1",
+        "saltNonce": "4"
+      }
+    },
+    "croptop-core-testnet": {
+      "projectId": "clx9j4hud00020cl677kx1up8",
+      "projectName": "croptop-core-testnet",
+      "defaultSafe": {
+        "safeName": "croptop-core-testnet",
+        "owners": [
+          "0x8063549C1b5163931283e76785cF11e56DFdDC3a",
+          "0x7f75Ee000C7178D68Be4cb50243fC438F967e263",
+          "0x52b76eA545f4779620A666493e885CE20Fda9037",
+          "0xA7B609Ef5367aE505956aE6422B8fCB3Ec0a487E"
+        ],
+        "threshold": "1",
+        "saltNonce": "5"
+      }
+    },
+    "revnet-core-testnet": {
+      "projectId": "clx9jeat000000cl1hzvfbesa",
+      "projectName": "revnet-core-testnet",
+      "defaultSafe": {
+        "safeName": "revnet-core-testnet",
+        "owners": [
+          "0x8063549C1b5163931283e76785cF11e56DFdDC3a",
+          "0x7f75Ee000C7178D68Be4cb50243fC438F967e263",
+          "0x52b76eA545f4779620A666493e885CE20Fda9037",
+          "0xA7B609Ef5367aE505956aE6422B8fCB3Ec0a487E"
+        ],
+        "threshold": "1",
+        "saltNonce": "6"
+      }
     }
   }
 }
