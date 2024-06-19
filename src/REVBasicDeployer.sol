@@ -340,8 +340,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         ) revert REVBasicDeployer_Unauthorized();
 
         // Compose the salt.
-        bytes32 salt =
-            keccak256(abi.encodePacked(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
+        bytes32 salt = keccak256(abi.encode(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
 
         // Deploy the suckers.
         SUCKER_REGISTRY.deploySuckersFor({
@@ -533,7 +532,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
             SUCKER_REGISTRY.deploySuckersFor({
                 projectId: revnetId,
-                salt: keccak256(abi.encodePacked(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt)),
+                salt: keccak256(abi.encode(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt)),
                 configurations: suckerDeploymentConfiguration.deployerConfigurations
             });
         }
@@ -631,7 +630,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             }
 
             // Append the encoded stage properties.
-            encodedConfiguration = abi.encodePacked(
+            encodedConfiguration = abi.encode(
                 encodedConfiguration, _encodedStageConfig({stageConfiguration: stageConfiguration, stageNumber: i})
             );
 
@@ -830,7 +829,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         // Add each mint config to the hash.
         for (uint256 i; i < numberOfMintConfigs; i++) {
             encodedConfiguration =
-                abi.encodePacked(encodedConfiguration, _encodedMintConfig(stageConfiguration.mintConfigs[i]));
+                abi.encode(encodedConfiguration, _encodedMintConfig(stageConfiguration.mintConfigs[i]));
         }
     }
 
