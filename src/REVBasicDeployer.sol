@@ -105,7 +105,7 @@ contract REVBasicDeployer is
     // ------------------------ internal constants ----------------------- //
     //*********************************************************************//
 
-    /// @notice Project ID #2 receives fees. It should be the first project launched during the deployment process.
+    /// @notice Project ID #2 receives fees. It should be the second project launched during the deployment process.
     uint256 internal constant _FEE_BENEFICIARY_PROJECT_ID = 2;
 
     //*********************************************************************//
