@@ -13,6 +13,7 @@ import {IJBSplitHook} from "@bananapus/core/src/interfaces/IJBSplitHook.sol";
 import {IJBToken} from "@bananapus/core/src/interfaces/IJBToken.sol";
 import {IJBPayHook} from "@bananapus/core/src/interfaces/IJBPayHook.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
+import {JBRedemptionFormula} from "@bananapus/core/src/libraries/JBRedemptionFormula.sol";
 import {JBSplitGroupIds} from "@bananapus/core/src/libraries/JBSplitGroupIds.sol";
 import {JBRulesetMetadata} from "@bananapus/core/src/structs/JBRulesetMetadata.sol";
 import {JBRulesetConfig} from "@bananapus/core/src/structs/JBRulesetConfig.sol";
@@ -24,6 +25,7 @@ import {JBSplit} from "@bananapus/core/src/structs/JBSplit.sol";
 import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.sol";
 import {JBBeforeRedeemRecordedContext} from "@bananapus/core/src/structs/JBBeforeRedeemRecordedContext.sol";
 import {JBBeforePayRecordedContext} from "@bananapus/core/src/structs/JBBeforePayRecordedContext.sol";
+import {IJBRedemptionHook} from "@bananapus/core/src/interfaces/IJBRedemptionHook.sol";
 import {IJBRulesetDataHook} from "@bananapus/core/src/interfaces/IJBRulesetDataHook.sol";
 import {JBRedeemHookSpecification} from "@bananapus/core/src/structs/JBRedeemHookSpecification.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
@@ -41,7 +43,14 @@ import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
 import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
 
 /// @notice A contract that facilitates deploying a basic Revnet.
-contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRulesetDataHook, IERC721Receiver {
+contract REVBasicDeployer is
+    ERC165,
+    ERC2771Context,
+    IREVBasicDeployer,
+    IJBRulesetDataHook,
+    IJBRedemptionHook,
+    IERC721Receiver
+{
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
@@ -57,7 +66,11 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
 
     /// @notice The amount of time from a sucker being deployed to when it can facilitate exits.
     /// @dev 30 days.
-    uint256 public constant EXIT_DELAY = 2_592_000;
+    uint256 public constant override EXIT_DELAY = 2_592_000;
+
+    /// @notice Revnets' fee (as a fraction out of `JBConstants.MAX_FEE`).
+    /// @dev Fees are charged on redemptions while the redemption rate is less than 100%.
+    uint256 public constant override FEE = 25; // 2.5%
 
     //*********************************************************************//
     // --------------- public immutable stored properties ---------------- //
@@ -87,6 +100,13 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @custom:param beneficiary The address that will benefit from the mint.
     mapping(uint256 revnetId => mapping(uint256 stageId => mapping(address beneficiary => uint256))) public
         allowedMintCountOf;
+
+    //*********************************************************************//
+    // ------------------------ internal constants ----------------------- //
+    //*********************************************************************//
+
+    /// @notice Project ID #2 receives fees. It should be the first project launched during the deployment process.
+    uint256 internal constant _FEE_BENEFICIARY_PROJECT_ID = 2;
 
     //*********************************************************************//
     // ------------------- internal stored properties -------------------- //
@@ -177,11 +197,16 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         view
         virtual
         override
-        returns (uint256, uint256, uint256, JBRedeemHookSpecification[] memory specifications)
+        returns (uint256, JBRedeemHookSpecification[] memory)
     {
         // If the holder is a sucker, do not impose a tax.
         if (SUCKER_REGISTRY.isSuckerOf({projectId: context.projectId, suckerAddress: context.holder})) {
-            return (JBConstants.MAX_REDEMPTION_RATE, context.redeemCount, context.totalSupply, specifications);
+            return JBRedemptionFormula.reclaimableSurplusFrom({
+                surplus: context.surplus.value,
+                tokenCount: context.redeemCount,
+                totalSupply: context.totalSupply,
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE
+            });
         }
 
         // If there's an exit delay, do not allow exits until the delay has passed.
@@ -189,7 +214,24 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             revert REVBasicDeployer_ExitDelayInEffect();
         }
 
-        return (context.redemptionRate, context.redeemCount, context.totalSupply, specifications);
+        // Get the terminal that'll receive the fee if one wasn't provided.
+        IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf(_FEE_BENEFICIARY_PROJECT_ID, context.surplus.token);
+
+        // Do not charge a fee if the redemption rate is 100% or if there isn't a fee terminal.
+        if (context.redemptionRate == JBConstants.MAX_REDEMPTION_RATE || feeTerminal == address(0)) {
+            return (context.reclaimAmount, specifications);
+        }
+
+        // Get a reference to the fee amount.
+        uint256 feeAmount = JBFees.feeAmountFrom(context.reclaimAmount, FEE);
+
+        // Keep a reference to the hook specifications that invokes this hook to process the fee.
+        JBRedeemHookSpecification[] memory hookSpecifications = JBRedeemHookSpecification[](1);
+        hookSpecifications[0] =
+            JBRedeemHookSpecification({hook: address(this), amount: feeAmount, metadata: abi.encode(feeTerminal)});
+
+        // Return the reclaimed amount with the fee charged.
+        return (context.reclaimAmount - feeAmount, hookSpecifications);
     }
 
     /// @notice Required by the IJBRulesetDataHook interfaces.
@@ -314,42 +356,46 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
 
         emit ReplaceSplitOperator(revnetId, newSplitOperator, _msgSender());
     }
+    
+    /// @notice Processes the fee for the redemption.
+    /// @param context The redemption context passed in by the terminal.
+    function afterRedeemRecordedWith(JBAfterRedeemRecordedContext calldata context) external payable {
+        // Make sure only the project's payment terminals can access this function.
+        if (!DIRECTORY.isTerminalOf(context.projectId, IJBTerminal(msg.sender))) {
+            revert Unauthorized();
+        }
 
-    /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
-    /// @param revnetId The ID of the revnet having new suckers deployed.
-    /// @param encodedConfiguration A bytes representation of the revnet's configuration.
-    /// @param suckerDeploymentConfiguration The specifics about the suckers being deployed.
-    function deploySuckersFor(
-        uint256 revnetId,
-        bytes memory encodedConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
-    )
-        public
-        override
-    {
-        /// Make sure the message sender is the current split operator.
-        if (
-            !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
-                operator: _msgSender(),
-                account: address(this),
-                projectId: revnetId,
-                permissionIds: _splitOperatorPermissionIndexesOf(revnetId),
-                includeRoot: false,
-                includeWildcardProjectId: false
-            })
-        ) revert REVBasicDeployer_Unauthorized();
+        // Parse the metadata forwarded from the data hook to get the fee terminal.
+        (IJBTerminal feeTerminal) = abi.decode(context.hookMetadata, (IJBTerminal));
 
-        // Compose the salt.
-        bytes32 salt = keccak256(abi.encode(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
+        // Keep a reference to the amount that'll be paid in the native currency.
+        uint256 payValue = context.forwardedAmount.token == JBConstants.NATIVE_TOKEN ? context.forwardedAmount.value : 0;
 
-        // Deploy the suckers.
-        SUCKER_REGISTRY.deploySuckersFor({
-            projectId: revnetId,
-            salt: salt,
-            configurations: suckerDeploymentConfiguration.deployerConfigurations
-        });
+        // Send the projectId in the metadata.
+        bytes memory metadata = bytes(abi.encodePacked(context.projectId));
 
-        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, _msgSender());
+        // Send the fee.
+        try feeTerminal.pay{value: payValue}({
+            projectId: _FEE_BENEFICIARY_PROJECT_ID,
+            token: context.forwardedAmount.token,
+            amount: context.forwardedAmount.value,
+            beneficiary: context.holder,
+            minReturnedTokens: 0,
+            memo: "",
+            metadata: metadata
+        }) {} catch (bytes memory) {
+            // Send the fee beneficiary project in the metadata.
+            bytes memory metadata = bytes(abi.encodePacked(_FEE_BENEFICIARY_PROJECT_ID));
+
+            // Return funds to the project if the fee couldn't be processed.
+            IJBTerminal(msg.sender).addToBalanceOf{value: payValue}({
+                projectId: context.projectId,
+                token: context.forwardedAmount.token,
+                amount: context.forwardedAmount.value,
+                memo: "",
+                metadata: metadata
+            });
+        }
     }
 
     //*********************************************************************//
@@ -416,6 +462,43 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         });
 
         emit Mint(revnetId, stage.id, beneficiary, count, msg.sender);
+    }
+
+    /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
+    /// @param revnetId The ID of the revnet having new suckers deployed.
+    /// @param encodedConfiguration A bytes representation of the revnet's configuration.
+    /// @param suckerDeploymentConfiguration The specifics about the suckers being deployed.
+    function deploySuckersFor(
+        uint256 revnetId,
+        bytes memory encodedConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+    )
+        public
+        override
+    {
+        /// Make sure the message sender is the current split operator.
+        if (
+            !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
+                operator: _msgSender(),
+                account: address(this),
+                projectId: revnetId,
+                permissionIds: _splitOperatorPermissionIndexesOf(revnetId),
+                includeRoot: false,
+                includeWildcardProjectId: false
+            })
+        ) revert REVBasicDeployer_Unauthorized();
+
+        // Compose the salt.
+        bytes32 salt = keccak256(abi.encode(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
+
+        // Deploy the suckers.
+        SUCKER_REGISTRY.deploySuckersFor({
+            projectId: revnetId,
+            salt: salt,
+            configurations: suckerDeploymentConfiguration.deployerConfigurations
+        });
+
+        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, _msgSender());
     }
 
     //*********************************************************************//
@@ -616,7 +699,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
                 holdFees: false,
                 useTotalSurplusForRedemptions: false,
                 useDataHookForPay: true, // Use the buyback hook data source.
-                useDataHookForRedeem: false,
+                useDataHookForRedeem: true, // Use the fee hook data source.
                 dataHook: dataHook,
                 metadata: extraMetadata
             });
