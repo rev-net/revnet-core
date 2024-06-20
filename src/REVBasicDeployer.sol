@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
-
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {mulDiv} from "@prb/math/src/Common.sol";
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {IJBRulesetApprovalHook} from "@bananapus/core/src/interfaces/IJBRulesetApprovalHook.sol";
 import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
@@ -191,22 +191,30 @@ contract REVBasicDeployer is
         if (usesBuybackHook) hookSpecifications[numberOfStoredPayHookSpecifications] = buybackHookSpecifications[0];
     }
 
-    /// @notice This function is never called, it needs to be included to adhere to the interface.
+    /// @notice Determines how much to redeem.
+    /// @dev If a sucker is redeeming, there should be no tax imposed.
+    /// @dev Charge a fee on redemptions if there is an exit tax.
+    /// @param context The redemption context passed to this contract by the `redeemTokensOf(...)` function.
+    /// @return redemptionRate The redemption rate influencing the reclaim amount.
+    /// @return redeemCount The amount of tokens that should be considered redeemed.
+    /// @return totalSupply The total amount of tokens that are considered to be existing.
+    /// @return hookSpecifications The amount and data to send to redeem hooks (this contract) instead of returning to
+    /// the beneficiary.
     function beforeRedeemRecordedWith(JBBeforeRedeemRecordedContext calldata context)
         external
         view
         virtual
         override
-        returns (uint256, JBRedeemHookSpecification[] memory)
+        returns (uint256, uint256, uint256, JBRedeemHookSpecification[] memory)
     {
         // If the holder is a sucker, do not impose a tax.
         if (SUCKER_REGISTRY.isSuckerOf({projectId: context.projectId, suckerAddress: context.holder})) {
-            return JBRedemptionFormula.reclaimableSurplusFrom({
-                surplus: context.surplus.value,
-                tokenCount: context.redeemCount,
-                totalSupply: context.totalSupply,
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE
-            });
+            return (
+                JBConstants.MAX_REDEMPTION_RATE,
+                context.redeemCount,
+                context.totalSupply,
+                new JBRedeemHookSpecification[](0)
+            );
         }
 
         // If there's an exit delay, do not allow exits until the delay has passed.
@@ -219,19 +227,27 @@ contract REVBasicDeployer is
 
         // Do not charge a fee if the redemption rate is 100% or if there isn't a fee terminal.
         if (context.redemptionRate == JBConstants.MAX_REDEMPTION_RATE || feeTerminal == address(0)) {
-            return (context.reclaimAmount, specifications);
+            return (context.redemptionRate, context.redeemCount, context.totalSupply, specifications);
         }
 
-        // Get a reference to the fee amount.
-        uint256 feeAmount = JBFees.feeAmountFrom(context.reclaimAmount, FEE);
+        // Get a reference to the amount of tokens that are used to cover the fee.
+        uint256 feeRedeemCount = mulDiv(context.redeemCount, FEE, JBConstants.MAX_FEE);
 
         // Keep a reference to the hook specifications that invokes this hook to process the fee.
         JBRedeemHookSpecification[] memory hookSpecifications = JBRedeemHookSpecification[](1);
-        hookSpecifications[0] =
-            JBRedeemHookSpecification({hook: address(this), amount: feeAmount, metadata: abi.encode(feeTerminal)});
+        hookSpecifications[0] = JBRedeemHookSpecification({
+            hook: address(this),
+            amount: JBRedemptionFormula.reclaimableSurplusFrom({
+                surplus: context.surplus.value,
+                tokenCount: feeRedeemAmount,
+                totalSupply: context.totalSupply,
+                redemptionRate: context.redemptionRate
+            }),
+            metadata: abi.encode(feeTerminal)
+        });
 
         // Return the reclaimed amount with the fee charged.
-        return (context.reclaimAmount - feeAmount, hookSpecifications);
+        return (context.redemptionRate, context.redeemCount - feeRedeemCount, context.totalSupply, hookSpecifications);
     }
 
     /// @notice Required by the IJBRulesetDataHook interfaces.
@@ -356,7 +372,7 @@ contract REVBasicDeployer is
 
         emit ReplaceSplitOperator(revnetId, newSplitOperator, _msgSender());
     }
-    
+
     /// @notice Processes the fee for the redemption.
     /// @param context The redemption context passed in by the terminal.
     function afterRedeemRecordedWith(JBAfterRedeemRecordedContext calldata context) external payable {
