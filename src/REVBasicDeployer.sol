@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
+
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
@@ -205,16 +206,11 @@ contract REVBasicDeployer is
         view
         virtual
         override
-        returns (uint256, uint256, uint256, JBRedeemHookSpecification[] memory)
+        returns (uint256, uint256, uint256, JBRedeemHookSpecification[] memory hookSpecifications)
     {
         // If the holder is a sucker, do not impose a tax.
         if (SUCKER_REGISTRY.isSuckerOf({projectId: context.projectId, suckerAddress: context.holder})) {
-            return (
-                JBConstants.MAX_REDEMPTION_RATE,
-                context.redeemCount,
-                context.totalSupply,
-                new JBRedeemHookSpecification[](0)
-            );
+            return (JBConstants.MAX_REDEMPTION_RATE, context.redeemCount, context.totalSupply, hookSpecifications);
         }
 
         // If there's an exit delay, do not allow exits until the delay has passed.
@@ -227,14 +223,14 @@ contract REVBasicDeployer is
 
         // Do not charge a fee if the redemption rate is 100% or if there isn't a fee terminal.
         if (context.redemptionRate == JBConstants.MAX_REDEMPTION_RATE || feeTerminal == address(0)) {
-            return (context.redemptionRate, context.redeemCount, context.totalSupply, specifications);
+            return (context.redemptionRate, context.redeemCount, context.totalSupply, hookSpecifications);
         }
 
         // Get a reference to the amount of tokens that are used to cover the fee.
         uint256 feeRedeemCount = mulDiv(context.redeemCount, FEE, JBConstants.MAX_FEE);
 
         // Keep a reference to the hook specifications that invokes this hook to process the fee.
-        JBRedeemHookSpecification[] memory hookSpecifications = JBRedeemHookSpecification[](1);
+        hookSpecifications = JBRedeemHookSpecification[](1);
         hookSpecifications[0] = JBRedeemHookSpecification({
             hook: address(this),
             amount: JBRedemptionFormula.reclaimableSurplusFrom({
