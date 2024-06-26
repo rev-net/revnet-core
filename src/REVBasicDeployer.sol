@@ -24,6 +24,12 @@ import {JBSplit} from "@bananapus/core/src/structs/JBSplit.sol";
 import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.sol";
 import {JBBeforeRedeemRecordedContext} from "@bananapus/core/src/structs/JBBeforeRedeemRecordedContext.sol";
 import {JBBeforePayRecordedContext} from "@bananapus/core/src/structs/JBBeforePayRecordedContext.sol";
+<<<<<<< Updated upstream
+=======
+import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
+import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
+import {IJBRedemptionHook} from "@bananapus/core/src/interfaces/IJBRedemptionHook.sol";
+>>>>>>> Stashed changes
 import {IJBRulesetDataHook} from "@bananapus/core/src/interfaces/IJBRulesetDataHook.sol";
 import {JBRedeemHookSpecification} from "@bananapus/core/src/structs/JBRedeemHookSpecification.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
@@ -31,6 +37,7 @@ import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackH
 import {BPTokenMapping} from "@bananapus/suckers/src/structs/BPTokenMapping.sol";
 import {IBPSucker} from "@bananapus/suckers/src/interfaces/IBPSucker.sol";
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
+import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
 import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
@@ -41,7 +48,19 @@ import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
 import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
 
 /// @notice A contract that facilitates deploying a basic Revnet.
+<<<<<<< Updated upstream
 contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRulesetDataHook, IERC721Receiver {
+=======
+contract REVBasicDeployer is
+    ERC165,
+    ERC2771Context,
+    IREVBasicDeployer,
+    IJBPermissioned,
+    IJBRulesetDataHook,
+    IJBRedemptionHook,
+    IERC721Receiver
+{
+>>>>>>> Stashed changes
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
@@ -68,6 +87,9 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
 
     /// @notice The registry that deploys and tracks each project's suckers.
     IBPSuckerRegistry public immutable override SUCKER_REGISTRY;
+    
+    /// @notice The contract that stores ENS project handles.
+    IJBProjectHandles public immutable override PROJECT_HANDLES;
 
     //*********************************************************************//
     // --------------------- public stored properties -------------------- //
@@ -214,6 +236,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         // No other contract has minting permissions.
         return false;
     }
+    
 
     /// @dev Make sure only mints can be received.
     function onERC721Received(
@@ -240,6 +263,21 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     // -------------------------- public views --------------------------- //
     //*********************************************************************//
 
+    /// @notice A flag indicating if a given address is the revnets split operator.
+    /// @param revnetId The ID of the revnet to check the split operator for.
+    /// @param addr The address to check if is the split operator.
+    /// @return flag The flag indicating if the address is the split operator.
+    function isSplitOperatorOf(uint256 revnetId, address addr) public view override returns (bool) {
+        return IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
+            operator: _msgSender(),
+            account: address(this),
+            projectId: revnetId,
+            permissionIds: _splitOperatorPermissionIndexesOf(revnetId),
+            includeRoot: false,
+            includeWildcardProjectId: false
+        });
+    }
+
     /// @notice Indicates if this contract adheres to the specified interface.
     /// @dev See {IERC165-supportsInterface}.
     /// @param interfaceId The ID of the interface to check for adherence to.
@@ -252,18 +290,24 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     // -------------------------- constructor ---------------------------- //
     //*********************************************************************//
 
+    /// @param permissions A contract storing permissions.  
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
+    /// @param projectHandles The contract that stores ENS project handles.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
-    constructor(
+    constructor()
+        IJBPermissions permissions,
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
+        IJBProjectHandles projectHandles,
         address trustedForwarder
     )
+        IJBPermissioned(permissions)
         ERC2771Context(trustedForwarder)
     {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
+        PROJECT_HANDLES = projectHandles,
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLIT_GROUPS);
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL);
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_PROJECT_METADATA);
@@ -418,6 +462,63 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         emit Mint(revnetId, stage.id, beneficiary, count, msg.sender);
     }
 
+<<<<<<< Updated upstream
+=======
+    /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
+    /// @param revnetId The ID of the revnet having new suckers deployed.
+    /// @param encodedConfiguration A bytes representation of the revnet's configuration.
+    /// @param suckerDeploymentConfiguration The specifics about the suckers being deployed.
+    function deploySuckersFor(
+        uint256 revnetId,
+        bytes memory encodedConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+    )
+        public
+        override
+    {
+        // Make sure the message sender is the current split operator.
+        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
+
+        // Enforce permissions.
+        _requirePermissionFrom({
+            account: _msgSender(),
+            projectId: projectId,
+            permissionId: JBPermissionIds.DEPLOY_SUCKERS
+        });
+
+        // Compose the salt.
+        bytes32 salt = keccak256(abi.encode(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
+
+        // Deploy the suckers.
+        SUCKER_REGISTRY.deploySuckersFor({
+            projectId: revnetId,
+            salt: salt,
+            configurations: suckerDeploymentConfiguration.deployerConfigurations
+        });
+
+        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, _msgSender());
+    }
+
+    /// @notice Point from a revnet to an ENS node.
+    /// @dev The `parts` ["jbx", "dao", "foo"] represents foo.dao.jbx.eth.
+    /// @dev The split operator must call this function to set its ENS name parts.
+    /// @param chainId The chain ID of the network the project is on.
+    /// @param projectId The ID of the project to set an ENS handle for.
+    /// @param parts The parts of the ENS domain to use as the project handle, excluding the trailing .eth. 
+    function setEnsNamePartsFor(uint256 chainId, uint256 projectId, string[] memory parts) external override {
+        /// Make sure the message sender is the current split operator.
+        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
+
+        // Enforce permissions.
+        _requirePermissionFrom({
+            account: _msgSender(),
+            projectId: projectId,
+            permissionId: JBPermissionIds.SET_ENS_NAME
+        });
+
+        PROJECT_HANDLES.setEnsNamePartsFor(chainId, projectId, parts);
+    }
+>>>>>>> Stashed changes
     //*********************************************************************//
     // --------------------- itnernal transactions ----------------------- //
     //*********************************************************************//
