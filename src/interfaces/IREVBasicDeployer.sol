@@ -49,7 +49,11 @@ interface IREVBasicDeployer {
     function buybackHookOf(uint256 revnetId) external view returns (IJBRulesetDataHook);
     function exitDelayOf(uint256 revnetId) external view returns (uint256);
     function payHookSpecificationsOf(uint256 revnetId) external view returns (JBPayHookSpecification[] memory);
-    function isSplitOperatorOf(uint256 revnetId, address addr) public view returns (bool);
+    function isSplitOperatorOf(uint256 revnetId, address addr) external view returns (bool);
+
+    function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external;
+    function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
+    function setEnsNamePartsFor(uint256 chainId, uint256 revnetId, string[] memory parts) external;
 
     function launchRevnetFor(
         uint256 revnetId,

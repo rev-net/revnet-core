@@ -6,6 +6,7 @@ import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {JBPermissioned} from "@bananapus/core/src/abstract/JBPermissioned.sol";
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {IJBRulesetApprovalHook} from "@bananapus/core/src/interfaces/IJBRulesetApprovalHook.sol";
 import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
@@ -24,9 +25,7 @@ import {JBSplit} from "@bananapus/core/src/structs/JBSplit.sol";
 import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.sol";
 import {JBBeforeRedeemRecordedContext} from "@bananapus/core/src/structs/JBBeforeRedeemRecordedContext.sol";
 import {JBBeforePayRecordedContext} from "@bananapus/core/src/structs/JBBeforePayRecordedContext.sol";
-import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
 import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
-import {IJBRedeemHook} from "@bananapus/core/src/interfaces/IJBRedeemHook.sol";
 import {IJBRulesetDataHook} from "@bananapus/core/src/interfaces/IJBRulesetDataHook.sol";
 import {JBRedeemHookSpecification} from "@bananapus/core/src/structs/JBRedeemHookSpecification.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
@@ -48,10 +47,9 @@ import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol
 contract REVBasicDeployer is
     ERC165,
     ERC2771Context,
+    JBPermissioned,
     IREVBasicDeployer,
-    IJBPermissioned,
     IJBRulesetDataHook,
-    IJBRedeemHook,
     IERC721Receiver
 {
     //*********************************************************************//
@@ -276,8 +274,7 @@ contract REVBasicDeployer is
     /// @return A flag indicating if the provided interface ID is supported.
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
         return interfaceId == type(IJBRulesetDataHook).interfaceId || interfaceId == type(IJBPermissioned).interfaceId
-            || interfaceId == type(IJBRulesetDataHook).interfaceId || interfaceId == type(IJBRedeemHook).interfaceId
-            || super.supportsInterface(interfaceId);
+            || interfaceId == type(IJBRulesetDataHook).interfaceId || super.supportsInterface(interfaceId);
     }
 
     //*********************************************************************//
@@ -296,7 +293,7 @@ contract REVBasicDeployer is
         IJBProjectHandles projectHandles,
         address trustedForwarder
     )
-        IJBPermissioned(permissions)
+        JBPermissioned(permissions)
         ERC2771Context(trustedForwarder)
     {
         CONTROLLER = controller;
@@ -314,7 +311,7 @@ contract REVBasicDeployer is
     /// @notice A revnet's operator can replace itself.
     /// @param revnetId The ID of the revnet having its operator replaced.
     /// @param newSplitOperator The address of the new split operator.
-    function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external {
+    function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external override {
         // Keep a reference to the split operator permission indexes.
         uint256[] memory splitOperatorPermissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
 
@@ -357,7 +354,7 @@ contract REVBasicDeployer is
     /// @param revnetId The ID of the revnet to mint tokens from.
     /// @param stageId The ID of the stage to mint tokens from.
     /// @param beneficiary The address to mint tokens to.
-    function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external {
+    function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external override {
         // Get a reference to the revnet's current stage.
         JBRuleset memory stage = CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId);
 
@@ -388,16 +385,16 @@ contract REVBasicDeployer is
     /// @dev The `parts` ["jbx", "dao", "foo"] represents foo.dao.jbx.eth.
     /// @dev The split operator must call this function to set its ENS name parts.
     /// @param chainId The chain ID of the network the project is on.
-    /// @param projectId The ID of the project to set an ENS handle for.
+    /// @param revnetId The ID of the revnet to set an ENS handle for.
     /// @param parts The parts of the ENS domain to use as the project handle, excluding the trailing .eth.
-    function setEnsNamePartsFor(uint256 chainId, uint256 projectId, string[] memory parts) external override {
+    function setEnsNamePartsFor(uint256 chainId, uint256 revnetId, string[] memory parts) external override {
         /// Make sure the message sender is the current split operator.
         if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
 
         // Enforce permissions.
-        _requirePermissionFrom({account: _msgSender(), projectId: projectId, permissionId: JBPermissionIds.SET_ENS_NAME});
+        _requirePermissionFrom({account: _msgSender(), projectId: revnetId, permissionId: JBPermissionIds.SET_ENS_NAME});
 
-        PROJECT_HANDLES.setEnsNamePartsFor(chainId, projectId, parts);
+        PROJECT_HANDLES.setEnsNamePartsFor(chainId, revnetId, parts);
     }
 
     //*********************************************************************//
@@ -453,7 +450,7 @@ contract REVBasicDeployer is
         // Enforce permissions.
         _requirePermissionFrom({
             account: _msgSender(),
-            projectId: projectId,
+            projectId: revnetId,
             permissionId: JBPermissionIds.DEPLOY_SUCKERS
         });
 
@@ -894,18 +891,18 @@ contract REVBasicDeployer is
 
     /// @notice Returns the sender, prefered to use over `msg.sender`
     /// @return sender the sender address of this call.
-    function _msgSender() internal view override returns (address sender) {
+    function _msgSender() internal view override(ERC2771Context, Context) returns (address sender) {
         return ERC2771Context._msgSender();
     }
 
     /// @notice Returns the calldata, prefered to use over `msg.data`
     /// @return calldata the `msg.data` of this call
-    function _msgData() internal view override returns (bytes calldata) {
+    function _msgData() internal view override(ERC2771Context, Context) returns (bytes calldata) {
         return ERC2771Context._msgData();
     }
 
     /// @dev ERC-2771 specifies the context as being a single address (20 bytes).
-    function _contextSuffixLength() internal view virtual override returns (uint256) {
+    function _contextSuffixLength() internal view virtual override(ERC2771Context, Context) returns (uint256) {
         return super._contextSuffixLength();
     }
 }

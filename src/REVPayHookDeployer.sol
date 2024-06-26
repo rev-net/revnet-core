@@ -2,10 +2,12 @@
 pragma solidity 0.8.23;
 
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
+import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackHook.sol";
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
+import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
 import {IREVPayHookDeployer} from "./interfaces/IREVPayHookDeployer.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
@@ -15,15 +17,19 @@ import {REVBasicDeployer} from "./REVBasicDeployer.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also calls other hooks when paid.
 contract REVPayHookDeployer is REVBasicDeployer, IREVPayHookDeployer {
+    /// @param permissions A contract storing permissions.
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
+    /// @param projectHandles The contract that stores ENS project handles.
     constructor(
+        IJBPermissions permissions,
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
-        address trustedForwarder
+        address trustedForwarder,
+        IJBProjectHandles projectHandles
     )
-        REVBasicDeployer(controller, suckerRegistry, trustedForwarder)
+        REVBasicDeployer(permissions, controller, suckerRegistry, trustedForwarder, projectHandles)
     {}
 
     //*********************************************************************//
