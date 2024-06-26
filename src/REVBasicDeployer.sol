@@ -24,12 +24,9 @@ import {JBSplit} from "@bananapus/core/src/structs/JBSplit.sol";
 import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.sol";
 import {JBBeforeRedeemRecordedContext} from "@bananapus/core/src/structs/JBBeforeRedeemRecordedContext.sol";
 import {JBBeforePayRecordedContext} from "@bananapus/core/src/structs/JBBeforePayRecordedContext.sol";
-<<<<<<< Updated upstream
-=======
 import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
 import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
 import {IJBRedemptionHook} from "@bananapus/core/src/interfaces/IJBRedemptionHook.sol";
->>>>>>> Stashed changes
 import {IJBRulesetDataHook} from "@bananapus/core/src/interfaces/IJBRulesetDataHook.sol";
 import {JBRedeemHookSpecification} from "@bananapus/core/src/structs/JBRedeemHookSpecification.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
@@ -48,9 +45,6 @@ import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
 import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
 
 /// @notice A contract that facilitates deploying a basic Revnet.
-<<<<<<< Updated upstream
-contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRulesetDataHook, IERC721Receiver {
-=======
 contract REVBasicDeployer is
     ERC165,
     ERC2771Context,
@@ -60,7 +54,6 @@ contract REVBasicDeployer is
     IJBRedemptionHook,
     IERC721Receiver
 {
->>>>>>> Stashed changes
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
@@ -462,8 +455,6 @@ contract REVBasicDeployer is
         emit Mint(revnetId, stage.id, beneficiary, count, msg.sender);
     }
 
-<<<<<<< Updated upstream
-=======
     /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
     /// @param revnetId The ID of the revnet having new suckers deployed.
     /// @param encodedConfiguration A bytes representation of the revnet's configuration.
@@ -518,7 +509,6 @@ contract REVBasicDeployer is
 
         PROJECT_HANDLES.setEnsNamePartsFor(chainId, projectId, parts);
     }
->>>>>>> Stashed changes
     //*********************************************************************//
     // --------------------- itnernal transactions ----------------------- //
     //*********************************************************************//
