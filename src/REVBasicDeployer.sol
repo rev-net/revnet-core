@@ -299,7 +299,7 @@ contract REVBasicDeployer is
     /// @param interfaceId The ID of the interface to check for adherence to.
     /// @return A flag indicating if the provided interface ID is supported.
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
-        return interfaceId == type(IJBRulesetDataHook).interfaceId || super.supportsInterface(interfaceId);
+        return interfaceId == type(IJBRulesetDataHook).interfaceId || interfaceId == type(IJBRedeemHook).interfaceId || super.supportsInterface(interfaceId);
     }
 
     //*********************************************************************//
