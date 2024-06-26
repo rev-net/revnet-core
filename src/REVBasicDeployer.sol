@@ -14,7 +14,7 @@ import {IJBSplitHook} from "@bananapus/core/src/interfaces/IJBSplitHook.sol";
 import {IJBToken} from "@bananapus/core/src/interfaces/IJBToken.sol";
 import {IJBPayHook} from "@bananapus/core/src/interfaces/IJBPayHook.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
-import {JBRedemptionFormula} from "@bananapus/core/src/libraries/JBRedemptionFormula.sol";
+import {JBRedemptions} from "@bananapus/core/src/libraries/JBRedemptions.sol";
 import {JBSplitGroupIds} from "@bananapus/core/src/libraries/JBSplitGroupIds.sol";
 import {JBRulesetMetadata} from "@bananapus/core/src/structs/JBRulesetMetadata.sol";
 import {JBRulesetConfig} from "@bananapus/core/src/structs/JBRulesetConfig.sol";
@@ -77,6 +77,9 @@ contract REVBasicDeployer is
     // --------------- public immutable stored properties ---------------- //
     //*********************************************************************//
 
+    /// @notice The ID of the revnet that will receive fees. 
+    uint256 public immutable override FEE_REVNET_ID;
+
     /// @notice The controller that networks are made from.
     IJBController public immutable override CONTROLLER;
 
@@ -101,13 +104,6 @@ contract REVBasicDeployer is
     /// @custom:param beneficiary The address that will benefit from the mint.
     mapping(uint256 revnetId => mapping(uint256 stageId => mapping(address beneficiary => uint256))) public
         allowedMintCountOf;
-
-    //*********************************************************************//
-    // ------------------------ internal constants ----------------------- //
-    //*********************************************************************//
-
-    /// @notice Project ID #2 receives fees. It should be the second project launched during the deployment process.
-    uint256 internal constant _FEE_BENEFICIARY_PROJECT_ID = 2;
 
     //*********************************************************************//
     // ------------------- internal stored properties -------------------- //
@@ -219,7 +215,7 @@ contract REVBasicDeployer is
         }
 
         // Get the terminal that'll receive the fee if one wasn't provided.
-        IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf(_FEE_BENEFICIARY_PROJECT_ID, context.surplus.token);
+        IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf(FEE_REVNET_ID, context.surplus.token);
 
         // Do not charge a fee if the redemption rate is 100% or if there isn't a fee terminal.
         if (context.redemptionRate == JBConstants.MAX_REDEMPTION_RATE || feeTerminal == address(0)) {
@@ -233,7 +229,7 @@ contract REVBasicDeployer is
         hookSpecifications = JBRedeemHookSpecification[](1);
         hookSpecifications[0] = JBRedeemHookSpecification({
             hook: address(this),
-            amount: JBRedemptionFormula.reclaimableSurplusFrom({
+            amount: JBRedemptions.reclaimableSurplusFrom({
                 surplus: context.surplus.value,
                 tokenCount: feeRedeemAmount,
                 totalSupply: context.totalSupply,
@@ -308,16 +304,19 @@ contract REVBasicDeployer is
 
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
+    /// @param feeRevnetId The ID of the revnet that will receive fees.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     constructor(
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
+        uint256 feeRevnetId,
         address trustedForwarder
     )
         ERC2771Context(trustedForwarder)
     {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
+        FEE_REVNET_ID = feeRevnetId;
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLIT_GROUPS);
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL);
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_PROJECT_METADATA);
@@ -388,7 +387,7 @@ contract REVBasicDeployer is
 
         // Send the fee.
         try feeTerminal.pay{value: payValue}({
-            projectId: _FEE_BENEFICIARY_PROJECT_ID,
+            projectId: FEE_REVNET_ID,
             token: context.forwardedAmount.token,
             amount: context.forwardedAmount.value,
             beneficiary: context.holder,
@@ -396,8 +395,8 @@ contract REVBasicDeployer is
             memo: "",
             metadata: metadata
         }) {} catch (bytes memory) {
-            // Send the fee beneficiary project in the metadata.
-            bytes memory metadata = bytes(abi.encodePacked(_FEE_BENEFICIARY_PROJECT_ID));
+            // Send the fee revnet in the metadata as the referrer.
+            bytes memory metadata = bytes(abi.encodePacked(FEE_REVNET_ID));
 
             // Return funds to the project if the fee couldn't be processed.
             IJBTerminal(msg.sender).addToBalanceOf{value: payValue}({

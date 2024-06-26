@@ -25,15 +25,17 @@ contract REVTiered721HookDeployer is REVPayHookDeployer, IREVTiered721HookDeploy
 
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
+    /// @param feeRevnetId The ID of the revnet that will receive fees.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     /// @param hookDeployer The 721 tiers hook deployer.
     constructor(
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
+        uint256 feeRevnetId,
         address trustedForwarder,
         IJB721TiersHookDeployer hookDeployer
     )
-        REVPayHookDeployer(controller, suckerRegistry, trustedForwarder)
+        REVPayHookDeployer(controller, suckerRegistry, feeRevnetId, trustedForwarder)
     {
         HOOK_DEPLOYER = hookDeployer;
     }
