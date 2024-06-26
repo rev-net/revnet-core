@@ -262,7 +262,7 @@ contract REVBasicDeployer is
     /// @return flag The flag indicating if the address is the split operator.
     function isSplitOperatorOf(uint256 revnetId, address addr) public view override returns (bool) {
         return IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
-            operator: _msgSender(),
+            operator: addr,
             account: address(this),
             projectId: revnetId,
             permissionIds: _splitOperatorPermissionIndexesOf(revnetId),
