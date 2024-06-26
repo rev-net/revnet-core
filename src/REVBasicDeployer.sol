@@ -352,41 +352,55 @@ contract REVBasicDeployer is
         emit ReplaceSplitOperator(revnetId, newSplitOperator, _msgSender());
     }
 
-    /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
-    /// @param revnetId The ID of the revnet having new suckers deployed.
-    /// @param encodedConfiguration A bytes representation of the revnet's configuration.
-    /// @param suckerDeploymentConfiguration The specifics about the suckers being deployed.
-    function deploySuckersFor(
-        uint256 revnetId,
-        bytes memory encodedConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
-    )
-        public
-        override
-    {
-        /// Make sure the message sender is the current split operator.
-        if (
-            !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
-                operator: _msgSender(),
-                account: address(this),
-                projectId: revnetId,
-                permissionIds: _splitOperatorPermissionIndexesOf(revnetId),
-                includeRoot: false,
-                includeWildcardProjectId: false
-            })
-        ) revert REVBasicDeployer_Unauthorized();
+    /// @notice Mint tokens from a revnet to a specified beneficiary according to the rules set for the revnet.
+    /// @param revnetId The ID of the revnet to mint tokens from.
+    /// @param stageId The ID of the stage to mint tokens from.
+    /// @param beneficiary The address to mint tokens to.
+    function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external {
+        // Get a reference to the revnet's current stage.
+        JBRuleset memory stage = CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId);
 
-        // Compose the salt.
-        bytes32 salt = keccak256(abi.encode(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
+        // Make sure the stage has started.
+        if (stage.start > block.timestamp) revert REVBasicDeployer_StageNotStarted();
 
-        // Deploy the suckers.
-        SUCKER_REGISTRY.deploySuckersFor({
+        // Get a reference to the amount that should be minted.
+        uint256 count = allowedMintCountOf[revnetId][stage.id][beneficiary];
+
+        // Premint tokens to the split operator if needed.
+        if (count == 0) return;
+
+        // Reset the mint amount.
+        allowedMintCountOf[revnetId][stageId][beneficiary] = 0;
+
+        CONTROLLER.mintTokensOf({
             projectId: revnetId,
-            salt: salt,
-            configurations: suckerDeploymentConfiguration.deployerConfigurations
+            tokenCount: count,
+            beneficiary: beneficiary,
+            memo: "",
+            useReservedRate: false
         });
 
-        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, _msgSender());
+        emit Mint(revnetId, stage.id, beneficiary, count, msg.sender);
+    }
+
+    /// @notice Point from a revnet to an ENS node.
+    /// @dev The `parts` ["jbx", "dao", "foo"] represents foo.dao.jbx.eth.
+    /// @dev The split operator must call this function to set its ENS name parts.
+    /// @param chainId The chain ID of the network the project is on.
+    /// @param projectId The ID of the project to set an ENS handle for.
+    /// @param parts The parts of the ENS domain to use as the project handle, excluding the trailing .eth. 
+    function setEnsNamePartsFor(uint256 chainId, uint256 projectId, string[] memory parts) external override {
+        /// Make sure the message sender is the current split operator.
+        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
+
+        // Enforce permissions.
+        _requirePermissionFrom({
+            account: _msgSender(),
+            projectId: projectId,
+            permissionId: JBPermissionIds.SET_ENS_NAME
+        });
+
+        PROJECT_HANDLES.setEnsNamePartsFor(chainId, projectId, parts);
     }
 
     //*********************************************************************//
@@ -424,37 +438,6 @@ contract REVBasicDeployer is
         });
     }
 
-    /// @notice Mint tokens from a revnet to a specified beneficiary according to the rules set for the revnet.
-    /// @param revnetId The ID of the revnet to mint tokens from.
-    /// @param stageId The ID of the stage to mint tokens from.
-    /// @param beneficiary The address to mint tokens to.
-    function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external {
-        // Get a reference to the revnet's current stage.
-        JBRuleset memory stage = CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId);
-
-        // Make sure the stage has started.
-        if (stage.start > block.timestamp) revert REVBasicDeployer_StageNotStarted();
-
-        // Get a reference to the amount that should be minted.
-        uint256 count = allowedMintCountOf[revnetId][stage.id][beneficiary];
-
-        // Premint tokens to the split operator if needed.
-        if (count == 0) return;
-
-        // Reset the mint amount.
-        allowedMintCountOf[revnetId][stageId][beneficiary] = 0;
-
-        CONTROLLER.mintTokensOf({
-            projectId: revnetId,
-            tokenCount: count,
-            beneficiary: beneficiary,
-            memo: "",
-            useReservedRate: false
-        });
-
-        emit Mint(revnetId, stage.id, beneficiary, count, msg.sender);
-    }
-
     /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
     /// @param revnetId The ID of the revnet having new suckers deployed.
     /// @param encodedConfiguration A bytes representation of the revnet's configuration.
@@ -490,25 +473,6 @@ contract REVBasicDeployer is
         emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, _msgSender());
     }
 
-    /// @notice Point from a revnet to an ENS node.
-    /// @dev The `parts` ["jbx", "dao", "foo"] represents foo.dao.jbx.eth.
-    /// @dev The split operator must call this function to set its ENS name parts.
-    /// @param chainId The chain ID of the network the project is on.
-    /// @param projectId The ID of the project to set an ENS handle for.
-    /// @param parts The parts of the ENS domain to use as the project handle, excluding the trailing .eth. 
-    function setEnsNamePartsFor(uint256 chainId, uint256 projectId, string[] memory parts) external override {
-        /// Make sure the message sender is the current split operator.
-        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
-
-        // Enforce permissions.
-        _requirePermissionFrom({
-            account: _msgSender(),
-            projectId: projectId,
-            permissionId: JBPermissionIds.SET_ENS_NAME
-        });
-
-        PROJECT_HANDLES.setEnsNamePartsFor(chainId, projectId, parts);
-    }
     //*********************************************************************//
     // --------------------- itnernal transactions ----------------------- //
     //*********************************************************************//
