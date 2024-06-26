@@ -26,7 +26,7 @@ import {JBBeforeRedeemRecordedContext} from "@bananapus/core/src/structs/JBBefor
 import {JBBeforePayRecordedContext} from "@bananapus/core/src/structs/JBBeforePayRecordedContext.sol";
 import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
 import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
-import {IJBRedemptionHook} from "@bananapus/core/src/interfaces/IJBRedemptionHook.sol";
+import {IJBRedeemHook} from "@bananapus/core/src/interfaces/IJBRedeemHook.sol";
 import {IJBRulesetDataHook} from "@bananapus/core/src/interfaces/IJBRulesetDataHook.sol";
 import {JBRedeemHookSpecification} from "@bananapus/core/src/structs/JBRedeemHookSpecification.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
@@ -51,7 +51,7 @@ contract REVBasicDeployer is
     IREVBasicDeployer,
     IJBPermissioned,
     IJBRulesetDataHook,
-    IJBRedemptionHook,
+    IJBRedeemHook,
     IERC721Receiver
 {
     //*********************************************************************//
@@ -80,7 +80,7 @@ contract REVBasicDeployer is
 
     /// @notice The registry that deploys and tracks each project's suckers.
     IBPSuckerRegistry public immutable override SUCKER_REGISTRY;
-    
+
     /// @notice The contract that stores ENS project handles.
     IJBProjectHandles public immutable override PROJECT_HANDLES;
 
@@ -229,7 +229,6 @@ contract REVBasicDeployer is
         // No other contract has minting permissions.
         return false;
     }
-    
 
     /// @dev Make sure only mints can be received.
     function onERC721Received(
@@ -276,19 +275,21 @@ contract REVBasicDeployer is
     /// @param interfaceId The ID of the interface to check for adherence to.
     /// @return A flag indicating if the provided interface ID is supported.
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
-        return interfaceId == type(IJBRulesetDataHook).interfaceId || super.supportsInterface(interfaceId);
+        return interfaceId == type(IJBRulesetDataHook).interfaceId || interfaceId == type(IJBPermissioned).interfaceId
+            || interfaceId == type(IJBRulesetDataHook).interfaceId || interfaceId == type(IJBRedeemHook).interfaceId
+            || super.supportsInterface(interfaceId);
     }
 
     //*********************************************************************//
     // -------------------------- constructor ---------------------------- //
     //*********************************************************************//
 
-    /// @param permissions A contract storing permissions.  
+    /// @param permissions A contract storing permissions.
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param projectHandles The contract that stores ENS project handles.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
-    constructor()
+    constructor(
         IJBPermissions permissions,
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
@@ -300,7 +301,7 @@ contract REVBasicDeployer is
     {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
-        PROJECT_HANDLES = projectHandles,
+        PROJECT_HANDLES = projectHandles;
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLIT_GROUPS);
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL);
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_PROJECT_METADATA);
@@ -388,17 +389,13 @@ contract REVBasicDeployer is
     /// @dev The split operator must call this function to set its ENS name parts.
     /// @param chainId The chain ID of the network the project is on.
     /// @param projectId The ID of the project to set an ENS handle for.
-    /// @param parts The parts of the ENS domain to use as the project handle, excluding the trailing .eth. 
+    /// @param parts The parts of the ENS domain to use as the project handle, excluding the trailing .eth.
     function setEnsNamePartsFor(uint256 chainId, uint256 projectId, string[] memory parts) external override {
         /// Make sure the message sender is the current split operator.
         if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
 
         // Enforce permissions.
-        _requirePermissionFrom({
-            account: _msgSender(),
-            projectId: projectId,
-            permissionId: JBPermissionIds.SET_ENS_NAME
-        });
+        _requirePermissionFrom({account: _msgSender(), projectId: projectId, permissionId: JBPermissionIds.SET_ENS_NAME});
 
         PROJECT_HANDLES.setEnsNamePartsFor(chainId, projectId, parts);
     }
