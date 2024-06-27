@@ -472,7 +472,7 @@ contract REVBasicDeployer is
             useReservedRate: false
         });
 
-        emit Mint(revnetId, stage.id, beneficiary, count, msg.sender);
+        emit Mint(revnetId, stage.id, beneficiary, count, msgSender());
     }
 
     /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
@@ -771,7 +771,7 @@ contract REVBasicDeployer is
                         memo: "",
                         useReservedRate: false
                     });
-                    emit Mint(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender);
+                    emit Mint(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msgSender());
                 }
                 // Store the amount of tokens that can be minted during this stage from this chain.
                 else {
@@ -779,7 +779,7 @@ contract REVBasicDeployer is
                     allowedMintCountOf[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.count;
 
                     emit StoreMintPotential(
-                        revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender
+                        revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msgSender()
                     );
                 }
             }
