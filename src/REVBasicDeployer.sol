@@ -869,18 +869,18 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
 
     /// @notice Returns the sender, prefered to use over `msg.sender`
     /// @return sender the sender address of this call.
-    function _msgSender() internal view override(ERC2771Context, Context) returns (address sender) {
+    function _msgSender() internal view override returns (address sender) {
         return ERC2771Context._msgSender();
     }
 
     /// @notice Returns the calldata, prefered to use over `msg.data`
     /// @return calldata the `msg.data` of this call
-    function _msgData() internal view override(ERC2771Context, Context) returns (bytes calldata) {
+    function _msgData() internal view override returns (bytes calldata) {
         return ERC2771Context._msgData();
     }
 
     /// @dev ERC-2771 specifies the context as being a single address (20 bytes).
-    function _contextSuffixLength() internal view virtual override(ERC2771Context, Context) returns (uint256) {
+    function _contextSuffixLength() internal view virtual override returns (uint256) {
         return super._contextSuffixLength();
     }
 }
