@@ -6,7 +6,6 @@ import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {JBPermissioned} from "@bananapus/core/src/abstract/JBPermissioned.sol";
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {IJBRulesetApprovalHook} from "@bananapus/core/src/interfaces/IJBRulesetApprovalHook.sol";
 import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
@@ -44,14 +43,7 @@ import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
 import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
 
 /// @notice A contract that facilitates deploying a basic Revnet.
-contract REVBasicDeployer is
-    ERC165,
-    ERC2771Context,
-    JBPermissioned,
-    IREVBasicDeployer,
-    IJBRulesetDataHook,
-    IERC721Receiver
-{
+contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRulesetDataHook, IERC721Receiver {
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
@@ -273,27 +265,23 @@ contract REVBasicDeployer is
     /// @param interfaceId The ID of the interface to check for adherence to.
     /// @return A flag indicating if the provided interface ID is supported.
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
-        return interfaceId == type(IJBRulesetDataHook).interfaceId || interfaceId == type(IJBPermissioned).interfaceId
-            || interfaceId == type(IJBRulesetDataHook).interfaceId || super.supportsInterface(interfaceId);
+        return interfaceId == type(IJBRulesetDataHook).interfaceId || super.supportsInterface(interfaceId);
     }
 
     //*********************************************************************//
     // -------------------------- constructor ---------------------------- //
     //*********************************************************************//
 
-    /// @param permissions A contract storing permissions.
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param projectHandles The contract that stores ENS project handles.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     constructor(
-        IJBPermissions permissions,
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
         IJBProjectHandles projectHandles,
         address trustedForwarder
     )
-        JBPermissioned(permissions)
         ERC2771Context(trustedForwarder)
     {
         CONTROLLER = controller;
@@ -391,9 +379,6 @@ contract REVBasicDeployer is
         /// Make sure the message sender is the current split operator.
         if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
 
-        // Enforce permissions.
-        _requirePermissionFrom({account: _msgSender(), projectId: revnetId, permissionId: JBPermissionIds.SET_ENS_NAME});
-
         PROJECT_HANDLES.setEnsNamePartsFor(chainId, revnetId, parts);
     }
 
@@ -446,13 +431,6 @@ contract REVBasicDeployer is
     {
         // Make sure the message sender is the current split operator.
         if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
-
-        // Enforce permissions.
-        _requirePermissionFrom({
-            account: _msgSender(),
-            projectId: revnetId,
-            permissionId: JBPermissionIds.DEPLOY_SUCKERS
-        });
 
         // Compose the salt.
         bytes32 salt = keccak256(abi.encode(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));

@@ -2,7 +2,6 @@
 pragma solidity 0.8.23;
 
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
-import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
 import {IJBPayHook} from "@bananapus/core/src/interfaces/IJBPayHook.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
@@ -25,21 +24,19 @@ contract REVTiered721HookDeployer is REVPayHookDeployer, IREVTiered721HookDeploy
     /// @notice The contract responsible for deploying the tiered 721 hook.
     IJB721TiersHookDeployer public immutable override HOOK_DEPLOYER;
 
-    /// @param permissions A contract storing permissions.
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     /// @param hookDeployer The 721 tiers hook deployer.
     /// @param projectHandles The contract that stores ENS project handles.
     constructor(
-        IJBPermissions permissions,
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
         address trustedForwarder,
         IJBProjectHandles projectHandles,
         IJB721TiersHookDeployer hookDeployer
     )
-        REVPayHookDeployer(permissions, controller, suckerRegistry, trustedForwarder, projectHandles)
+        REVPayHookDeployer(controller, suckerRegistry, trustedForwarder, projectHandles)
     {
         HOOK_DEPLOYER = hookDeployer;
     }
