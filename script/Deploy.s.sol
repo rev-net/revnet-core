@@ -64,7 +64,7 @@ contract DeployScript is Script, Sphinx {
             !_isDeployed(
                 BASIC_DEPLOYER,
                 type(REVBasicDeployer).creationCode,
-                abi.encode(core.permissions, core.controller, suckers.registry, TRUSTED_FORWARDER)
+                abi.encode(core.controller, suckers.registry, TRUSTED_FORWARDER)
             )
         ) new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, TRUSTED_FORWARDER);
 
@@ -73,7 +73,6 @@ contract DeployScript is Script, Sphinx {
                 CROPTOP_DEPLOYER,
                 type(REVCroptopDeployer).creationCode,
                 abi.encode(
-                    core.permissions,
                     core.controller,
                     suckers.registry,
                     TRUSTED_FORWARDER,
