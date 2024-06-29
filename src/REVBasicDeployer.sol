@@ -396,7 +396,7 @@ contract REVBasicDeployer is
             metadata: metadata
         }) {} catch (bytes memory) {
             // Send the fee revnet in the metadata as the referrer.
-            bytes memory metadata = bytes(abi.encodePacked(FEE_REVNET_ID));
+            metadata = bytes(abi.encodePacked(FEE_REVNET_ID));
 
             // Return funds to the project if the fee couldn't be processed.
             IJBTerminal(msg.sender).addToBalanceOf{value: payValue}({
