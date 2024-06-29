@@ -72,7 +72,13 @@ contract DeployScript is Script, Sphinx {
             !_isDeployed(
                 CROPTOP_DEPLOYER,
                 type(REVCroptopDeployer).creationCode,
-                abi.encode(core.controller, suckers.registry, TRUSTED_FORWARDER, hook.hook_deployer, croptop.publisher)
+                abi.encode(
+                    core.controller,
+                    suckers.registry,
+                    TRUSTED_FORWARDER,
+                    hook.hook_deployer,
+                    croptop.publisher
+                )
             )
         ) {
             new REVCroptopDeployer{salt: CROPTOP_DEPLOYER}(

@@ -24,6 +24,7 @@ import {JBSplit} from "@bananapus/core/src/structs/JBSplit.sol";
 import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.sol";
 import {JBBeforeRedeemRecordedContext} from "@bananapus/core/src/structs/JBBeforeRedeemRecordedContext.sol";
 import {JBBeforePayRecordedContext} from "@bananapus/core/src/structs/JBBeforePayRecordedContext.sol";
+import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
 import {IJBRulesetDataHook} from "@bananapus/core/src/interfaces/IJBRulesetDataHook.sol";
 import {JBRedeemHookSpecification} from "@bananapus/core/src/structs/JBRedeemHookSpecification.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
@@ -31,6 +32,7 @@ import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackH
 import {BPTokenMapping} from "@bananapus/suckers/src/structs/BPTokenMapping.sol";
 import {IBPSucker} from "@bananapus/suckers/src/interfaces/IBPSucker.sol";
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
+import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
 import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
@@ -68,6 +70,9 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
 
     /// @notice The registry that deploys and tracks each project's suckers.
     IBPSuckerRegistry public immutable override SUCKER_REGISTRY;
+
+    /// @notice The contract that stores ENS project handles.
+    IJBProjectHandles public immutable override PROJECT_HANDLES;
 
     //*********************************************************************//
     // --------------------- public stored properties -------------------- //
@@ -240,6 +245,21 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     // -------------------------- public views --------------------------- //
     //*********************************************************************//
 
+    /// @notice A flag indicating if a given address is the revnets split operator.
+    /// @param revnetId The ID of the revnet to check the split operator for.
+    /// @param addr The address to check if is the split operator.
+    /// @return flag The flag indicating if the address is the split operator.
+    function isSplitOperatorOf(uint256 revnetId, address addr) public view override returns (bool) {
+        return IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
+            operator: addr,
+            account: address(this),
+            projectId: revnetId,
+            permissionIds: _splitOperatorPermissionIndexesOf(revnetId),
+            includeRoot: false,
+            includeWildcardProjectId: false
+        });
+    }
+
     /// @notice Indicates if this contract adheres to the specified interface.
     /// @dev See {IERC165-supportsInterface}.
     /// @param interfaceId The ID of the interface to check for adherence to.
@@ -254,16 +274,19 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
 
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
+    /// @param projectHandles The contract that stores ENS project handles.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     constructor(
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
+        IJBProjectHandles projectHandles,
         address trustedForwarder
     )
         ERC2771Context(trustedForwarder)
     {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
+        PROJECT_HANDLES = projectHandles;
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLIT_GROUPS);
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL);
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_PROJECT_METADATA);
@@ -276,7 +299,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @notice A revnet's operator can replace itself.
     /// @param revnetId The ID of the revnet having its operator replaced.
     /// @param newSplitOperator The address of the new split operator.
-    function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external {
+    function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external override {
         // Keep a reference to the split operator permission indexes.
         uint256[] memory splitOperatorPermissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
 
@@ -315,42 +338,48 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         emit ReplaceSplitOperator(revnetId, newSplitOperator, _msgSender());
     }
 
-    /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
-    /// @param revnetId The ID of the revnet having new suckers deployed.
-    /// @param encodedConfiguration A bytes representation of the revnet's configuration.
-    /// @param suckerDeploymentConfiguration The specifics about the suckers being deployed.
-    function deploySuckersFor(
-        uint256 revnetId,
-        bytes memory encodedConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
-    )
-        public
-        override
-    {
-        /// Make sure the message sender is the current split operator.
-        if (
-            !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
-                operator: _msgSender(),
-                account: address(this),
-                projectId: revnetId,
-                permissionIds: _splitOperatorPermissionIndexesOf(revnetId),
-                includeRoot: false,
-                includeWildcardProjectId: false
-            })
-        ) revert REVBasicDeployer_Unauthorized();
+    /// @notice Mint tokens from a revnet to a specified beneficiary according to the rules set for the revnet.
+    /// @param revnetId The ID of the revnet to mint tokens from.
+    /// @param stageId The ID of the stage to mint tokens from.
+    /// @param beneficiary The address to mint tokens to.
+    function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external override {
+        // Get a reference to the revnet's current stage.
+        JBRuleset memory stage = CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId);
 
-        // Compose the salt.
-        bytes32 salt =
-            keccak256(abi.encodePacked(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
+        // Make sure the stage has started.
+        if (stage.start > block.timestamp) revert REVBasicDeployer_StageNotStarted();
 
-        // Deploy the suckers.
-        SUCKER_REGISTRY.deploySuckersFor({
+        // Get a reference to the amount that should be minted.
+        uint256 count = allowedMintCountOf[revnetId][stage.id][beneficiary];
+
+        // Premint tokens to the split operator if needed.
+        if (count == 0) return;
+
+        // Reset the mint amount.
+        allowedMintCountOf[revnetId][stageId][beneficiary] = 0;
+
+        CONTROLLER.mintTokensOf({
             projectId: revnetId,
-            salt: salt,
-            configurations: suckerDeploymentConfiguration.deployerConfigurations
+            tokenCount: count,
+            beneficiary: beneficiary,
+            memo: "",
+            useReservedRate: false
         });
 
-        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, _msgSender());
+        emit Mint(revnetId, stage.id, beneficiary, count, msg.sender);
+    }
+
+    /// @notice Point from a revnet to an ENS node.
+    /// @dev The `parts` ["jbx", "dao", "foo"] represents foo.dao.jbx.eth.
+    /// @dev The split operator must call this function to set its ENS name parts.
+    /// @param chainId The chain ID of the network the project is on.
+    /// @param revnetId The ID of the revnet to set an ENS handle for.
+    /// @param parts The parts of the ENS domain to use as the project handle, excluding the trailing .eth.
+    function setEnsNamePartsFor(uint256 chainId, uint256 revnetId, string[] memory parts) external override {
+        /// Make sure the message sender is the current split operator.
+        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
+
+        PROJECT_HANDLES.setEnsNamePartsFor(chainId, revnetId, parts);
     }
 
     //*********************************************************************//
@@ -388,35 +417,32 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         });
     }
 
-    /// @notice Mint tokens from a revnet to a specified beneficiary according to the rules set for the revnet.
-    /// @param revnetId The ID of the revnet to mint tokens from.
-    /// @param stageId The ID of the stage to mint tokens from.
-    /// @param beneficiary The address to mint tokens to.
-    function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external {
-        // Get a reference to the revnet's current stage.
-        JBRuleset memory stage = CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId);
+    /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
+    /// @param revnetId The ID of the revnet having new suckers deployed.
+    /// @param encodedConfiguration A bytes representation of the revnet's configuration.
+    /// @param suckerDeploymentConfiguration The specifics about the suckers being deployed.
+    function deploySuckersFor(
+        uint256 revnetId,
+        bytes memory encodedConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+    )
+        public
+        override
+    {
+        // Make sure the message sender is the current split operator.
+        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
 
-        // Make sure the stage has started.
-        if (stage.start > block.timestamp) revert REVBasicDeployer_StageNotStarted();
+        // Compose the salt.
+        bytes32 salt = keccak256(abi.encode(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
 
-        // Get a reference to the amount that should be minted.
-        uint256 count = allowedMintCountOf[revnetId][stage.id][beneficiary];
-
-        // Premint tokens to the split operator if needed.
-        if (count == 0) return;
-
-        // Reset the mint amount.
-        allowedMintCountOf[revnetId][stageId][beneficiary] = 0;
-
-        CONTROLLER.mintTokensOf({
+        // Deploy the suckers.
+        SUCKER_REGISTRY.deploySuckersFor({
             projectId: revnetId,
-            tokenCount: count,
-            beneficiary: beneficiary,
-            memo: "",
-            useReservedRate: false
+            salt: salt,
+            configurations: suckerDeploymentConfiguration.deployerConfigurations
         });
 
-        emit Mint(revnetId, stage.id, beneficiary, count, msg.sender);
+        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, _msgSender());
     }
 
     //*********************************************************************//
@@ -533,7 +559,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
             SUCKER_REGISTRY.deploySuckersFor({
                 projectId: revnetId,
-                salt: keccak256(abi.encodePacked(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt)),
+                salt: keccak256(abi.encode(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt)),
                 configurations: suckerDeploymentConfiguration.deployerConfigurations
             });
         }
@@ -631,7 +657,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             }
 
             // Append the encoded stage properties.
-            encodedConfiguration = abi.encodePacked(
+            encodedConfiguration = abi.encode(
                 encodedConfiguration, _encodedStageConfig({stageConfiguration: stageConfiguration, stageNumber: i})
             );
 
@@ -830,7 +856,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         // Add each mint config to the hash.
         for (uint256 i; i < numberOfMintConfigs; i++) {
             encodedConfiguration =
-                abi.encodePacked(encodedConfiguration, _encodedMintConfig(stageConfiguration.mintConfigs[i]));
+                abi.encode(encodedConfiguration, _encodedMintConfig(stageConfiguration.mintConfigs[i]));
         }
     }
 

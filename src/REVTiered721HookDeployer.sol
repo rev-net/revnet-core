@@ -2,14 +2,15 @@
 pragma solidity 0.8.23;
 
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
-import {JBOwnable} from "@bananapus/ownable/src/JBOwnable.sol";
 import {IJBPayHook} from "@bananapus/core/src/interfaces/IJBPayHook.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
+import {JBOwnable} from "@bananapus/ownable/src/JBOwnable.sol";
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
+import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
 import {IREVTiered721HookDeployer} from "./interfaces/IREVTiered721HookDeployer.sol";
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
@@ -27,13 +28,15 @@ contract REVTiered721HookDeployer is REVPayHookDeployer, IREVTiered721HookDeploy
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     /// @param hookDeployer The 721 tiers hook deployer.
+    /// @param projectHandles The contract that stores ENS project handles.
     constructor(
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
         address trustedForwarder,
+        IJBProjectHandles projectHandles,
         IJB721TiersHookDeployer hookDeployer
     )
-        REVPayHookDeployer(controller, suckerRegistry, trustedForwarder)
+        REVPayHookDeployer(controller, suckerRegistry, trustedForwarder, projectHandles)
     {
         HOOK_DEPLOYER = hookDeployer;
     }

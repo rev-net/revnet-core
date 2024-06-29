@@ -4,7 +4,6 @@ pragma solidity 0.8.23;
 import {CTPublisher} from "@croptop/core/src/CTPublisher.sol";
 import {CTAllowedPost} from "@croptop/core/src/structs/CTAllowedPost.sol";
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
-import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
 import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.sol";
@@ -12,6 +11,7 @@ import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
+import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
 import {IREVCroptopDeployer} from "./interfaces/IREVCroptopDeployer.sol";
 import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
@@ -35,16 +35,18 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
+    /// @param projectHandles The contract that stores ENS project handles.
     /// @param hookDeployer The 721 tiers hook deployer.
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     constructor(
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
         address trustedForwarder,
+        IJBProjectHandles projectHandles,
         IJB721TiersHookDeployer hookDeployer,
         CTPublisher publisher
     )
-        REVTiered721HookDeployer(controller, suckerRegistry, trustedForwarder, hookDeployer)
+        REVTiered721HookDeployer(controller, suckerRegistry, trustedForwarder, projectHandles, hookDeployer)
     {
         PUBLISHER = publisher;
         _CROPTOP_PERMISSIONS_INDEXES.push(JBPermissionIds.ADJUST_721_TIERS);
