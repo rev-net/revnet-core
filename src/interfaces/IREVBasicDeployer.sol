@@ -41,6 +41,7 @@ interface IREVBasicDeployer {
     );
 
     function EXIT_DELAY() external view returns (uint256);
+    function FEE() external view returns (uint256);
     function CONTROLLER() external view returns (IJBController);
     function SUCKER_REGISTRY() external view returns (IBPSuckerRegistry);
 
