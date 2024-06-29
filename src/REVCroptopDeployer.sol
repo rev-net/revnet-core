@@ -46,7 +46,7 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
         IJB721TiersHookDeployer hookDeployer,
         CTPublisher publisher
     )
-        REVTiered721HookDeployer(permissions, controller, suckerRegistry, trustedForwarder, projectHandles, hookDeployer)
+        REVTiered721HookDeployer(controller, suckerRegistry, trustedForwarder, projectHandles, hookDeployer)
     {
         PUBLISHER = publisher;
         _CROPTOP_PERMISSIONS_INDEXES.push(JBPermissionIds.ADJUST_721_TIERS);
