@@ -4,17 +4,18 @@ pragma solidity 0.8.23;
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
+import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackHook.sol";
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
 import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
-import {REVPayHook} from "./abstract/REVPayHook.sol";
-import {IREVPayHookDeployer} from "./interfaces/IREVPayHookDeployer.sol";
-import {REVConfig} from "./structs/REVConfig.sol";
-import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
-import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
+import {REVBasic} from "./REVBasic.sol";
+import {IREVPayHook} from "../interfaces/IREVPayHook.sol";
+import {REVConfig} from "./../structs/REVConfig.sol";
+import {REVBuybackHookConfig} from "./../structs/REVBuybackHookConfig.sol";
+import {REVSuckerDeploymentConfig} from "./../structs/REVSuckerDeploymentConfig.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also calls other hooks when paid.
-contract REVPayHookDeployer is REVPayHook, IREVPayHookDeployer {
+abstract contract REVPayHook is REVBasic, IREVPayHook {
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param projectHandles The contract that stores ENS project handles.
@@ -25,11 +26,11 @@ contract REVPayHookDeployer is REVPayHook, IREVPayHookDeployer {
         IJBProjectHandles projectHandles,
         address trustedForwarder
     )
-        REVPayHook(controller, suckerRegistry, projectHandles, trustedForwarder)
+        REVBasic(controller, suckerRegistry, projectHandles, trustedForwarder)
     {}
 
     //*********************************************************************//
-    // ---------------------- public transactions ------------------------ //
+    // --------------------- internal transactions ----------------------- //
     //*********************************************************************//
 
     /// @notice Launch a basic revnet that also calls other specified pay hooks.
@@ -42,7 +43,7 @@ contract REVPayHookDeployer is REVPayHook, IREVPayHookDeployer {
     /// @param payHookSpecifications Any hooks that should run when the revnet is paid.
     /// @param extraHookMetadata Extra metadata to attach to the cycle for the delegates to use.
     /// @return revnetId The ID of the newly created revnet.
-    function deployFor(
+    function _launchPayHookRevnetFor(
         uint256 revnetId,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
@@ -51,19 +52,32 @@ contract REVPayHookDeployer is REVPayHook, IREVPayHookDeployer {
         JBPayHookSpecification[] memory payHookSpecifications,
         uint16 extraHookMetadata
     )
-        external 
-        override
+        internal 
         returns (uint256)
     {
         // Deploy the revnet
-        return _launchPayHookRevnetFor({
+        revnetId = _launchRevnetFor({
             revnetId: revnetId,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
-            suckerDeploymentConfiguration: suckerDeploymentConfiguration,
-            payHookSpecifications: payHookSpecifications,
-            extraHookMetadata: extraHookMetadata
+            dataHook: IJBBuybackHook(address(this)),
+            extraHookMetadata: extraHookMetadata,
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
+
+        // Store the pay hooks.
+        // Keep a reference to the number of pay hooks are being stored.
+        uint256 numberOfPayHookSpecifications = payHookSpecifications.length;
+
+        // Store the pay hooks.
+        for (uint256 i; i < numberOfPayHookSpecifications; i++) {
+            // Store the value.
+            _payHookSpecificationsOf[revnetId].push(payHookSpecifications[i]);
+        }
+
+        emit StoredPayHookSpecifications(revnetId, payHookSpecifications, _msgSender());
+
+        return revnetId;
     }
 }

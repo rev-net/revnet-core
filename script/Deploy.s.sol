@@ -4,6 +4,7 @@ pragma solidity 0.8.23;
 import "@bananapus/core/script/helpers/CoreDeploymentLib.sol";
 import "@bananapus/721-hook/script/helpers/Hook721DeploymentLib.sol";
 import "@bananapus/suckers/script/helpers/SuckerDeploymentLib.sol";
+import "@bananapus/project-handles/script/helpers/ProjectHandlesDeploymentLib.sol";
 import "@croptop/core/script/helpers/CroptopDeploymentLib.sol";
 
 import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
@@ -21,6 +22,8 @@ contract DeployScript is Script, Sphinx {
     CroptopDeployment croptop;
     /// @notice tracks the deployment of the 721 hook contracts for the chain we are deploying to.
     Hook721Deployment hook;
+    /// @notice tracks the deploymet of the project handles contracts for the chain we are deploying to.
+    ProjectHandlesDeployment projectHandles;
 
     /// @notice The address that is allowed to forward calls to the terminal and controller on a users behalf.
     address private constant TRUSTED_FORWARDER = 0xB2b5841DBeF766d4b521221732F9B618fCf34A87;
@@ -54,6 +57,12 @@ contract DeployScript is Script, Sphinx {
         hook = Hook721DeploymentLib.getDeployment(
             vm.envOr("NANA_721_DEPLOYMENT_PATH", string("node_modules/@bananapus/721-hook/deployments/"))
         );
+        // Get the deployment addresses for the project handles contracts for this chain.
+        projectHandles = ProjectHandlesDeploymentLib.getDeployment(
+            vm.envOr(
+                "NANA_PROJECT_HANDLES_DEPLOYMENT_PATH", string("node_modules/@bananapus/project-handles/deployments/")
+            )
+        );
         // Perform the deployment transactions.
         deploy();
     }
@@ -66,17 +75,29 @@ contract DeployScript is Script, Sphinx {
                 type(REVBasicDeployer).creationCode,
                 abi.encode(core.controller, suckers.registry, TRUSTED_FORWARDER)
             )
-        ) new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, TRUSTED_FORWARDER);
+        ) new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, projectHandles.project_handles, TRUSTED_FORWARDER);
 
         if (
             !_isDeployed(
                 CROPTOP_DEPLOYER,
                 type(REVCroptopDeployer).creationCode,
-                abi.encode(core.controller, suckers.registry, TRUSTED_FORWARDER, hook.hook_deployer, croptop.publisher)
+                abi.encode(
+                    core.controller,
+                    suckers.registry,
+                    projectHandles.project_handles,
+                    TRUSTED_FORWARDER,
+                    hook.hook_deployer,
+                    croptop.publisher
+                )
             )
         ) {
             new REVCroptopDeployer{salt: CROPTOP_DEPLOYER}(
-                core.controller, suckers.registry, TRUSTED_FORWARDER, hook.hook_deployer, croptop.publisher
+                core.controller,
+                suckers.registry,
+                projectHandles.project_handles,
+                TRUSTED_FORWARDER,
+                hook.hook_deployer,
+                croptop.publisher
             );
         }
     }

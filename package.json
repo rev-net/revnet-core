@@ -16,14 +16,15 @@
     "dependencies": {
         "@bananapus/721-hook": "^0.0.14",
         "@bananapus/buyback-hook": "^0.0.12",
-        "@bananapus/core": "^0.0.18",
+        "@bananapus/core": "^0.0.19",
         "@bananapus/ownable": "^0.0.6",
-        "@bananapus/permission-ids": "^0.0.9",
+        "@bananapus/permission-ids": "^0.0.10",
+        "@bananapus/project-handles": "^0.0.5",
         "@bananapus/suckers": "^0.0.14",
         "@croptop/core": "^0.0.11",
         "@openzeppelin/contracts": "^5.0.2"
     },
     "devDependencies": {
-        "@sphinx-labs/plugins": "^0.32.2"
+        "@sphinx-labs/plugins": "^0.33.0"
     }
 }
