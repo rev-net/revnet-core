@@ -6,6 +6,7 @@ import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {mulDiv} from "@prb/math/src/Common.sol";
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {IJBRulesetApprovalHook} from "@bananapus/core/src/interfaces/IJBRulesetApprovalHook.sol";
 import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
@@ -491,7 +492,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         CONTROLLER.setSplitGroupsOf({
             projectId: revnetId,
             rulesetId: 0,
-            splitGroups: _makeOperatorSplitGroupWith(configuration.initialSplitOperator)
+            splitGroups: _makeOperatorSplitGroupWith(configuration.splitOperator)
         });
 
         // Store the mint amounts.
@@ -500,7 +501,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         // Keep a reference to permissions being set. Give the operator permission to change the recipients of the
         // operator's split.
         JBPermissionsData memory permissionsData = JBPermissionsData({
-            operator: configuration.initialSplitOperator,
+            operator: configuration.splitOperator,
             projectId: revnetId,
             permissionIds: _splitOperatorPermissionIndexesOf(revnetId)
         });
@@ -595,15 +596,15 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             }
 
             rulesetConfigurations[i].mustStartAtOrAfter = stageConfiguration.startsAtOrAfter;
-            rulesetConfigurations[i].duration = stageConfiguration.priceCeilingIncreaseFrequency;
+            rulesetConfigurations[i].duration = stageConfiguration.priceIncreaseFrequency;
             // Set the initial issuance for the first ruleset, otherwise pass 0 to inherit from the previous
             // ruleset.
-            rulesetConfigurations[i].weight = stageConfiguration.initialIssuanceRate;
-            rulesetConfigurations[i].decayRate = stageConfiguration.priceCeilingIncreasePercentage;
+            rulesetConfigurations[i].weight = mulDiv(1, 10 ** 18, stageConfiguration.initialPrice);
+            rulesetConfigurations[i].decayRate = stageConfiguration.priceIncreasePercentage;
             rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
             rulesetConfigurations[i].metadata = JBRulesetMetadata({
-                reservedRate: stageConfiguration.splitRate,
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.priceFloorTaxIntensity,
+                reservedRate: stageConfiguration.splitPercent,
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.cashOutTaxIntensity,
                 baseCurrency: configuration.baseCurrency,
                 pausePay: false,
                 pauseCreditTransfers: false,
@@ -816,11 +817,11 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             (stageNumber == 0 && stageConfiguration.startsAtOrAfter == 0)
                 ? block.timestamp
                 : stageConfiguration.startsAtOrAfter,
-            stageConfiguration.splitRate,
-            stageConfiguration.initialIssuanceRate,
-            stageConfiguration.priceCeilingIncreaseFrequency,
-            stageConfiguration.priceCeilingIncreasePercentage,
-            stageConfiguration.priceFloorTaxIntensity
+            stageConfiguration.splitPercent,
+            stageConfiguration.initialPrice,
+            stageConfiguration.priceIncreaseFrequency,
+            stageConfiguration.priceIncreasePercentage,
+            stageConfiguration.cashOutTaxIntensity
         );
 
         // Get a reference to the mint configs.

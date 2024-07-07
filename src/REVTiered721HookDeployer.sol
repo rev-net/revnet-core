@@ -90,17 +90,17 @@ contract REVTiered721HookDeployer is REVPayHookDeployer, IREVTiered721HookDeploy
         hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration.baseline721HookConfiguration);
 
         // If needed, give the operator permission to add and remove tiers.
-        if (hookConfiguration.operatorCanAdjustTiers) {
+        if (hookConfiguration.splitOperatorCanAdjustTiers) {
             _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId].push(JBPermissionIds.ADJUST_721_TIERS);
         }
 
         // If needed, give the operator permission to set the 721's metadata.
-        if (hookConfiguration.operatorCanUpdateMetadata) {
+        if (hookConfiguration.splitOperatorCanUpdateMetadata) {
             _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId].push(JBPermissionIds.SET_721_METADATA);
         }
 
         // If needed, give the operator permission to mint 721's from tiers that allow it.
-        if (hookConfiguration.operatorCanMint) {
+        if (hookConfiguration.splitOperatorCanMint) {
             _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId].push(JBPermissionIds.MINT_721);
         }
 
