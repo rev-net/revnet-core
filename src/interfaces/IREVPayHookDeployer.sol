@@ -5,14 +5,10 @@ import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpeci
 import {REVBuybackHookConfig} from "../structs/REVBuybackHookConfig.sol";
 import {REVSuckerDeploymentConfig} from "../structs/REVSuckerDeploymentConfig.sol";
 import {REVConfig} from "../structs/REVConfig.sol";
-import {IREVBasicDeployer} from "./IREVBasicDeployer.sol";
+import {IREVPayHook} from "./IREVPayHook.sol";
 
-interface IREVPayHookDeployer is IREVBasicDeployer {
-    event StoredPayHookSpecifications(
-        uint256 indexed revnetId, JBPayHookSpecification[] payHookSpecifications, address caller
-    );
-
-    function launchPayHookRevnetFor(
+interface IREVPayHookDeployer is IREVPayHook {
+    function deployFor(
         uint256 revnetId,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,

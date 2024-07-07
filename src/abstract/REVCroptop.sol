@@ -2,25 +2,37 @@
 pragma solidity 0.8.23;
 
 import {CTPublisher} from "@croptop/core/src/CTPublisher.sol";
+import {CTAllowedPost} from "@croptop/core/src/structs/CTAllowedPost.sol";
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
+import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
+import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.sol";
+import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
 import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
-import {REVCroptop} from "./abstract/REVCroptop.sol";
-import {IREVCroptopDeployer} from "./interfaces/IREVCroptopDeployer.sol";
-import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
-import {REVConfig} from "./structs/REVConfig.sol";
-import {REVCroptopAllowedPost} from "./structs/REVCroptopAllowedPost.sol";
-import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
-import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
+import {REVTiered721Hook} from "./REVTiered721Hook.sol";
+import {IREVCroptop} from "../interfaces/IREVCroptop.sol";
+import {REVDeploy721TiersHookConfig} from "./../structs/REVDeploy721TiersHookConfig.sol";
+import {REVConfig} from "./../structs/REVConfig.sol";
+import {REVCroptopAllowedPost} from "./../structs/REVCroptopAllowedPost.sol";
+import {REVBuybackHookConfig} from "./../structs/REVBuybackHookConfig.sol";
+import {REVSuckerDeploymentConfig} from "./../structs/REVSuckerDeploymentConfig.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s via the croptop
 /// publisher.
-contract REVCroptopDeployer is REVCroptop, IREVCroptopDeployer {
+contract REVCroptop is REVTiered721Hook, IREVCroptop {
+    /// @notice The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
+    CTPublisher public override PUBLISHER;
+
+    /// @notice The permissions that the croptop publisher should be granted. This is set once in the constructor to
+    /// contain only the ADJUST_TIERS operation.
+    /// @dev This should only be set in the constructor.
+    uint256[] internal _CROPTOP_PERMISSIONS_INDEXES;
+
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param projectHandles The contract that stores ENS project handles.
@@ -35,11 +47,14 @@ contract REVCroptopDeployer is REVCroptop, IREVCroptopDeployer {
         IJB721TiersHookDeployer hookDeployer,
         CTPublisher publisher
     )
-        REVCroptop(controller, suckerRegistry, projectHandles, trustedForwarder, hookDeployer, publisher)
-    {}
+        REVTiered721Hook(controller, suckerRegistry, projectHandles, trustedForwarder, hookDeployer)
+    {
+        PUBLISHER = publisher;
+        _CROPTOP_PERMISSIONS_INDEXES.push(JBPermissionIds.ADJUST_721_TIERS);
+    }
 
     //*********************************************************************//
-    // ---------------------- public transactions ------------------------ //
+    // --------------------- internal transactions ----------------------- //
     //*********************************************************************//
 
     /// @notice Launch a revnet that supports 721 sales.
@@ -55,7 +70,7 @@ contract REVCroptopDeployer is REVCroptop, IREVCroptopDeployer {
     /// @param allowedPosts The type of posts that the revent should allow.
     /// @return revnetId The ID of the newly created revnet.
     /// @return hook The address of the 721 hook that was deployed on the revnet.
-    function deployFor(
+    function _launchCroptopRevnetFor(
         uint256 revnetId,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
@@ -66,23 +81,69 @@ contract REVCroptopDeployer is REVCroptop, IREVCroptopDeployer {
         uint16 extraHookMetadata,
         REVCroptopAllowedPost[] memory allowedPosts
     )
-        external 
-        override
+        internal 
         returns (uint256, IJB721TiersHook hook)
     {
         // Deploy the revnet with tiered 721 hooks.
-        (revnetId, hook) = _launchCroptopRevnetFor({
+        (revnetId, hook) = _launchTiered721RevnetFor({
             revnetId: revnetId,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
-            suckerDeploymentConfiguration: suckerDeploymentConfiguration,
             hookConfiguration: hookConfiguration,
             otherPayHooksSpecifications: otherPayHooksSpecifications,
             extraHookMetadata: extraHookMetadata,
-            allowedPosts: allowedPosts
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration
+        });
+
+        // Format the posts.
+        _configurePostingCriteriaFor({hook: address(hook), allowedPosts: allowedPosts});
+
+        // Give the croptop publisher permission to post on this contract's behalf.
+        IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
+            account: address(this),
+            permissionsData: JBPermissionsData({
+                operator: address(PUBLISHER),
+                projectId: revnetId,
+                permissionIds: _CROPTOP_PERMISSIONS_INDEXES
+            })
         });
 
         return (revnetId, hook);
+    }
+
+    /// @notice Configure croptop posting.
+    /// @param hook The hook that will be posted to.
+    /// @param allowedPosts The type of posts that the revent should allow.
+    function _configurePostingCriteriaFor(address hook, REVCroptopAllowedPost[] memory allowedPosts) internal {
+        // Keep a reference to the number of allowed posts.
+        uint256 numberOfAllowedPosts = allowedPosts.length;
+
+        // Keep a reference to the formatted allowed posts.
+        CTAllowedPost[] memory formattedAllowedPosts = new CTAllowedPost[](numberOfAllowedPosts);
+
+        // Keep a reference to the post being iterated on.
+        REVCroptopAllowedPost memory post;
+
+        // Specify the hook for each allowed post.
+        for (uint256 i; i < numberOfAllowedPosts; i++) {
+            // Set the post being iterated on.
+            post = allowedPosts[i];
+
+            // Set the formated post.
+            formattedAllowedPosts[i] = CTAllowedPost({
+                hook: hook,
+                category: post.category,
+                minimumPrice: post.minimumPrice,
+                minimumTotalSupply: post.minimumTotalSupply,
+                maximumTotalSupply: post.maximumTotalSupply,
+                allowedAddresses: post.allowedAddresses
+            });
+        }
+
+        // Configure allowed posts.
+        if (allowedPosts.length != 0) {
+            PUBLISHER.configurePostingCriteriaFor({allowedPosts: formattedAllowedPosts});
+        }
     }
 }

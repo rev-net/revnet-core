@@ -2,22 +2,27 @@
 pragma solidity 0.8.23;
 
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
+import {IJBPayHook} from "@bananapus/core/src/interfaces/IJBPayHook.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
 import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
+import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
 import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
-import {REVTiered721Hook} from "./abstract/REVTiered721Hook.sol";
-import {IREVTiered721HookDeployer} from "./interfaces/IREVTiered721HookDeployer.sol";
-import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
-import {REVConfig} from "./structs/REVConfig.sol";
-import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
-import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
+import {REVPayHook} from "./REVPayHook.sol";
+import {IREVTiered721Hook} from "../interfaces/IREVTiered721Hook.sol";
+import {REVDeploy721TiersHookConfig} from "./../structs/REVDeploy721TiersHookConfig.sol";
+import {REVConfig} from "./../structs/REVConfig.sol";
+import {REVBuybackHookConfig} from "./../structs/REVBuybackHookConfig.sol";
+import {REVSuckerDeploymentConfig} from "./../structs/REVSuckerDeploymentConfig.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s.
-contract REVTiered721HookDeployer is REVTiered721Hook, IREVTiered721HookDeployer {
+contract REVTiered721Hook is REVPayHook, IREVTiered721Hook  {
+    /// @notice The contract responsible for deploying the tiered 721 hook.
+    IJB721TiersHookDeployer public immutable override HOOK_DEPLOYER;
+
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param projectHandles The contract that stores ENS project handles.
@@ -30,11 +35,13 @@ contract REVTiered721HookDeployer is REVTiered721Hook, IREVTiered721HookDeployer
         address trustedForwarder,
         IJB721TiersHookDeployer hookDeployer
     )
-        REVTiered721Hook(controller, suckerRegistry, projectHandles, trustedForwarder, hookDeployer)
-    {}
+        REVPayHook(controller, suckerRegistry, projectHandles, trustedForwarder)
+    {
+        HOOK_DEPLOYER = hookDeployer;
+    }
 
     //*********************************************************************//
-    // --------------------- external transactions ----------------------- //
+    // --------------------- internal transactions ----------------------- //
     //*********************************************************************//
 
     /// @notice Launch a revnet that supports 721 sales.
@@ -50,7 +57,7 @@ contract REVTiered721HookDeployer is REVTiered721Hook, IREVTiered721HookDeployer
     /// @return revnetId The ID of the newly created revnet.
     /// @return hook The address of the 721 hook that was deployed on the revnet.
 
-    function deployFor(
+    function _launchTiered721RevnetFor(
         uint256 revnetId,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
@@ -60,18 +67,55 @@ contract REVTiered721HookDeployer is REVTiered721Hook, IREVTiered721HookDeployer
         JBPayHookSpecification[] memory otherPayHooksSpecifications,
         uint16 extraHookMetadata
     )
-        external 
-        override
+        internal 
         returns (uint256, IJB721TiersHook hook)
     {
-        (revnetId, hook) = _launchTiered721RevnetFor({
-            revnetId: revnetId,
+        // Keep a reference to the original revnet ID passed in.
+        uint256 originalRevnetId = revnetId;
+
+        // Get the revnet ID, optimistically knowing it will be one greater than the current count.
+        if (revnetId == 0) revnetId = CONTROLLER.PROJECTS().count() + 1;
+
+        // Keep a reference to the number of pay hooks passed in.
+        uint256 numberOfOtherPayHooks = otherPayHooksSpecifications.length;
+
+        // Track an updated list of pay hooks that'll also fit the tiered 721 hook.
+        JBPayHookSpecification[] memory payHookSpecifications = new JBPayHookSpecification[](numberOfOtherPayHooks + 1);
+
+        // Repopulate the updated list with the params passed in.
+        for (uint256 i; i < numberOfOtherPayHooks; i++) {
+            payHookSpecifications[i] = otherPayHooksSpecifications[i];
+        }
+
+        // Deploy the tiered 721 hook contract.
+        hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration.baseline721HookConfiguration);
+
+        // If needed, give the operator permission to add and remove tiers.
+        if (hookConfiguration.operatorCanAdjustTiers) {
+            _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId].push(JBPermissionIds.ADJUST_721_TIERS);
+        }
+
+        // If needed, give the operator permission to set the 721's metadata.
+        if (hookConfiguration.operatorCanUpdateMetadata) {
+            _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId].push(JBPermissionIds.SET_721_METADATA);
+        }
+
+        // If needed, give the operator permission to mint 721's from tiers that allow it.
+        if (hookConfiguration.operatorCanMint) {
+            _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId].push(JBPermissionIds.MINT_721);
+        }
+
+        // Add the tiered 721 hook at the end.
+        payHookSpecifications[numberOfOtherPayHooks] =
+            JBPayHookSpecification({hook: IJBPayHook(address(hook)), amount: 0, metadata: bytes("")});
+
+        _launchPayHookRevnetFor({
+            revnetId: originalRevnetId,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration,
-            hookConfiguration: hookConfiguration,
-            otherPayHooksSpecifications: otherPayHooksSpecifications,
+            payHookSpecifications: payHookSpecifications,
             extraHookMetadata: extraHookMetadata
         });
 

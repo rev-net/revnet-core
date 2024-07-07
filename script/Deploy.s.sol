@@ -22,6 +22,8 @@ contract DeployScript is Script, Sphinx {
     CroptopDeployment croptop;
     /// @notice tracks the deployment of the 721 hook contracts for the chain we are deploying to.
     Hook721Deployment hook;
+    /// @notice tracks the deploymet of the project handles contracts for the chain we are deploying to.
+    ProjectHandlesDeployment projectHandles;
 
     /// @notice The address that is allowed to forward calls to the terminal and controller on a users behalf.
     address private constant TRUSTED_FORWARDER = 0xB2b5841DBeF766d4b521221732F9B618fCf34A87;
@@ -73,7 +75,7 @@ contract DeployScript is Script, Sphinx {
                 type(REVBasicDeployer).creationCode,
                 abi.encode(core.controller, suckers.registry, TRUSTED_FORWARDER)
             )
-        ) new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, TRUSTED_FORWARDER);
+        ) new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, projectHandles.project_handles, TRUSTED_FORWARDER);
 
         if (
             !_isDeployed(
@@ -82,7 +84,7 @@ contract DeployScript is Script, Sphinx {
                 abi.encode(
                     core.controller,
                     suckers.registry,
-                    projectHandles.handles,
+                    projectHandles.project_handles,
                     TRUSTED_FORWARDER,
                     hook.hook_deployer,
                     croptop.publisher
@@ -92,8 +94,8 @@ contract DeployScript is Script, Sphinx {
             new REVCroptopDeployer{salt: CROPTOP_DEPLOYER}(
                 core.controller,
                 suckers.registry,
+                projectHandles.project_handles,
                 TRUSTED_FORWARDER,
-                projectHandles.handles,
                 hook.hook_deployer,
                 croptop.publisher
             );
