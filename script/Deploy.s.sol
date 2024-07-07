@@ -4,6 +4,7 @@ pragma solidity 0.8.23;
 import "@bananapus/core/script/helpers/CoreDeploymentLib.sol";
 import "@bananapus/721-hook/script/helpers/Hook721DeploymentLib.sol";
 import "@bananapus/suckers/script/helpers/SuckerDeploymentLib.sol";
+import "@bananapus/project-handles/script/helpers/ProjectHandlesDeploymentLib.sol";
 import "@croptop/core/script/helpers/CroptopDeploymentLib.sol";
 
 import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
@@ -54,6 +55,12 @@ contract DeployScript is Script, Sphinx {
         hook = Hook721DeploymentLib.getDeployment(
             vm.envOr("NANA_721_DEPLOYMENT_PATH", string("node_modules/@bananapus/721-hook/deployments/"))
         );
+        // Get the deployment addresses for the project handles contracts for this chain.
+        projectHandles = ProjectHandlesDeploymentLib.getDeployment(
+            vm.envOr(
+                "NANA_PROJECT_HANDLES_DEPLOYMENT_PATH", string("node_modules/@bananapus/project-handles/deployments/")
+            )
+        );
         // Perform the deployment transactions.
         deploy();
     }
@@ -75,6 +82,7 @@ contract DeployScript is Script, Sphinx {
                 abi.encode(
                     core.controller,
                     suckers.registry,
+                    projectHandles.handles,
                     TRUSTED_FORWARDER,
                     hook.hook_deployer,
                     croptop.publisher
@@ -82,7 +90,12 @@ contract DeployScript is Script, Sphinx {
             )
         ) {
             new REVCroptopDeployer{salt: CROPTOP_DEPLOYER}(
-                core.controller, suckers.registry, TRUSTED_FORWARDER, hook.hook_deployer, croptop.publisher
+                core.controller,
+                suckers.registry,
+                TRUSTED_FORWARDER,
+                projectHandles.handles,
+                hook.hook_deployer,
+                croptop.publisher
             );
         }
     }

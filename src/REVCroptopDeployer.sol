@@ -4,6 +4,7 @@ pragma solidity 0.8.23;
 import {CTPublisher} from "@croptop/core/src/CTPublisher.sol";
 import {CTAllowedPost} from "@croptop/core/src/structs/CTAllowedPost.sol";
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
+import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
 import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.sol";
@@ -34,19 +35,19 @@ contract REVCroptopDeployer is REVTiered721HookDeployer, IREVCroptopDeployer {
 
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
-    /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     /// @param projectHandles The contract that stores ENS project handles.
+    /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     /// @param hookDeployer The 721 tiers hook deployer.
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     constructor(
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
-        address trustedForwarder,
         IJBProjectHandles projectHandles,
+        address trustedForwarder,
         IJB721TiersHookDeployer hookDeployer,
         CTPublisher publisher
     )
-        REVTiered721HookDeployer(controller, suckerRegistry, trustedForwarder, projectHandles, hookDeployer)
+        REVTiered721HookDeployer(controller, suckerRegistry, projectHandles, trustedForwarder, hookDeployer)
     {
         PUBLISHER = publisher;
         _CROPTOP_PERMISSIONS_INDEXES.push(JBPermissionIds.ADJUST_721_TIERS);

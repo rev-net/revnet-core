@@ -6,6 +6,7 @@ import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {JBPermissioned} from "@bananapus/core/src/abstract/JBPermissioned.sol";
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {IJBRulesetApprovalHook} from "@bananapus/core/src/interfaces/IJBRulesetApprovalHook.sol";
 import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
@@ -43,13 +44,22 @@ import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
 import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
 
 /// @notice A contract that facilitates deploying a basic Revnet.
-contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRulesetDataHook, IERC721Receiver {
+contract REVBasicDeployer is
+    JBPermissioned,
+    ERC165,
+    ERC2771Context,
+    IREVBasicDeployer,
+    IJBRulesetDataHook,
+    IERC721Receiver
+{
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
     error REVBasicDeployer_BadStageTimes();
     error REVBasicDeployer_ExitDelayInEffect();
+    error REVBasicDeployer_PermissionCantBeSet();
+    error REVBasicDeploy_SplitOperatorCantBeAdditionalOperator();
     error REVBasicDeployer_StageNotStarted();
     error REVBasicDeployer_Unauthorized();
 
@@ -60,6 +70,12 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @notice The amount of time from a sucker being deployed to when it can facilitate exits.
     /// @dev 30 days.
     uint256 public constant EXIT_DELAY = 2_592_000;
+
+    /// @notice The permission ID that this contract checks to allow setting a revnet's ENS handle.
+    uint256 public constant SET_ENS_HANDLE_PERMISSION = 100;
+
+    /// @notice The permission ID that this contract checks to allow deploying suckers for a revnet.
+    uint256 public constant DEPLOY_SUCKERS_PERMISSION = 101;
 
     //*********************************************************************//
     // --------------- public immutable stored properties ---------------- //
@@ -90,7 +106,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @custom:param revnetId The ID of the revnet to which the mint applies.
     /// @custom:param stageId The ID of the ruleset to which the mint applies.
     /// @custom:param beneficiary The address that will benefit from the mint.
-    mapping(uint256 revnetId => mapping(uint256 stageId => mapping(address beneficiary => uint256))) public
+    mapping(uint256 revnetId => mapping(uint256 stageId => mapping(address beneficiary => uint256))) public override
         allowedMintCountOf;
 
     //*********************************************************************//
@@ -109,6 +125,15 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @notice The pay hooks to include during payments to networks.
     /// @custom:param revnetId The ID of the revnet to which the extensions apply.
     mapping(uint256 revnetId => JBPayHookSpecification[] payHooks) internal _payHookSpecificationsOf;
+
+    /// @notice The additional operators of each revnet.
+    /// @custom:param revnetId The ID of the revnet to which the additional operators apply.
+    /// @custom:param operator The address of the operator that may be an additional operator.
+    mapping(uint256 revnetId => mapping(address operator => bool)) internal _isAdditionalOperatorOf;
+
+    /// @notice The additional operators of each revnet.
+    /// @custom:param revnetId The ID of the revnet to which the additional operators apply.
+    mapping(uint256 revnetId => address[]) internal _additionalOperatorsOf;
 
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
@@ -250,14 +275,14 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @param addr The address to check if is the split operator.
     /// @return flag The flag indicating if the address is the split operator.
     function isSplitOperatorOf(uint256 revnetId, address addr) public view override returns (bool) {
-        return IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
+        return _permissions().hasPermissions({
             operator: addr,
             account: address(this),
             projectId: revnetId,
             permissionIds: _splitOperatorPermissionIndexesOf(revnetId),
             includeRoot: false,
             includeWildcardProjectId: false
-        });
+        }) && !_isAdditionalOperatorOf[revnetId][addr];
     }
 
     /// @notice Indicates if this contract adheres to the specified interface.
@@ -282,6 +307,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         IJBProjectHandles projectHandles,
         address trustedForwarder
     )
+        JBPermissioned(IJBPermissioned(controller).PERMISSIONS())
         ERC2771Context(trustedForwarder)
     {
         CONTROLLER = controller;
@@ -290,6 +316,8 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLIT_GROUPS);
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL);
         _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_PROJECT_METADATA);
+        _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(SET_ENS_HANDLE_PERMISSION);
+        _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(DEPLOY_SUCKERS_PERMISSION);
     }
 
     //*********************************************************************//
@@ -297,36 +325,60 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     //*********************************************************************//
 
     /// @notice A revnet's operator can replace itself.
+    /// @dev Only the revnet's split operator can replace itself.
     /// @param revnetId The ID of the revnet having its operator replaced.
     /// @param newSplitOperator The address of the new split operator.
     function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external override {
+        // Keep a reference to the message sender.
+        address msgSender = _msgSender();
+
+        /// Make sure the message sender is the current split operator.
+        if (!isSplitOperatorOf(revnetId, msgSender)) revert REVBasicDeployer_Unauthorized();
+
         // Keep a reference to the split operator permission indexes.
         uint256[] memory splitOperatorPermissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
 
-        /// Make sure the message sender is the current split operator.
-        if (
-            !IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().hasPermissions({
-                operator: _msgSender(),
-                account: address(this),
-                projectId: revnetId,
-                permissionIds: splitOperatorPermissionIndexes,
-                includeRoot: false,
-                includeWildcardProjectId: false
-            })
-        ) revert REVBasicDeployer_Unauthorized();
-
         // Remove operator permission from the old split operator.
-        IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
+        _permissions().setPermissionsFor({
             account: address(this),
-            permissionsData: JBPermissionsData({
-                operator: _msgSender(),
-                projectId: revnetId,
-                permissionIds: new uint256[](0)
-            })
+            permissionsData: JBPermissionsData({operator: msgSender, projectId: revnetId, permissionIds: new uint256[](0)})
         });
 
-        // Give the new split operator permission to change the recipients of the operator's split.
-        IJBPermissioned(address(CONTROLLER.SPLITS())).PERMISSIONS().setPermissionsFor({
+        // Keep a reference to the additional operators of the split operator being removed.
+        address[] storage additionalOperators = _additionalOperatorsOf[revnetId];
+
+        // Keep a reference to the number of operators there are.
+        uint256 numberOfAdditionalOperators = additionalOperators.length;
+
+        if (numberOfAdditionalOperators != 0) {
+            // Keep a reference to the additional operator being iterated on.
+            address additionalOperator;
+
+            // Remove each operator.
+            for (uint256 i; i < numberOfAdditionalOperators; i++) {
+                // Set the reference to the additional operator being iterated on.
+                additionalOperator = additionalOperators[i];
+
+                // Remove the additional operator.
+                _isAdditionalOperatorOf[revnetId][additionalOperator] = false;
+
+                // Remove operator permission from the old additional operator.
+                _permissions().setPermissionsFor({
+                    account: address(this),
+                    permissionsData: JBPermissionsData({
+                        operator: additionalOperator,
+                        projectId: revnetId,
+                        permissionIds: new uint256[](0)
+                    })
+                });
+            }
+
+            // Delete the operators from storage.
+            delete _additionalOperatorsOf[revnetId];
+        }
+
+        // Give the new split operator its permissions.
+        _permissions().setPermissionsFor({
             account: address(this),
             permissionsData: JBPermissionsData({
                 operator: newSplitOperator,
@@ -335,7 +387,106 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             })
         });
 
-        emit ReplaceSplitOperator(revnetId, newSplitOperator, _msgSender());
+        emit ReplaceSplitOperator(revnetId, newSplitOperator, msgSender);
+    }
+
+    /// @notice Allow the split operator to set other operators that can operate the revnet on its behalf.
+    /// @dev Only the revnet's split operator can set additional operators.
+    /// @param revnetId The ID of the revnet that is having operators added.
+    /// @param additionalSplitOperator The address of the additional operator.
+    /// @param permissionIds The IDs of the permissions being set, which must be a subset of the split operator's
+    /// permissions.
+    function setAdditionalOperatorFor(
+        uint256 revnetId,
+        address additionalSplitOperator,
+        uint256[] memory permissionIds
+    )
+        external
+    {
+        // Keep a reference to the message sender.
+        address msgSender = _msgSender();
+
+        // Make sure the message sender is the current split operator.
+        if (!isSplitOperatorOf(revnetId, msgSender)) revert REVBasicDeployer_Unauthorized();
+
+        // Make sure the split operator isn't setting itself as the additional operator.
+        if (additionalSplitOperator == msgSender) revert REVBasicDeploy_SplitOperatorCantBeAdditionalOperator();
+
+        // Make sure the split operator has the permissions being set.
+        if (
+            _permissions().hasPermissions({
+                operator: msgSender,
+                account: address(this),
+                projectId: revnetId,
+                permissionIds: permissionIds,
+                includeRoot: false,
+                includeWildcardProjectId: false
+            })
+        ) revert REVBasicDeployer_PermissionCantBeSet();
+
+        // Give the additional operator the permissions.
+        _permissions().setPermissionsFor({
+            account: address(this),
+            permissionsData: JBPermissionsData({
+                operator: additionalSplitOperator,
+                projectId: revnetId,
+                permissionIds: permissionIds
+            })
+        });
+
+        // Keep a reference to if the additional operator is already an operator of the revnet.
+        bool isAdditionalOperator = _isAdditionalOperatorOf[revnetId][additionalSplitOperator];
+
+        // Store the additional operator if needed.
+        if (!isAdditionalOperator) {
+            _additionalOperatorsOf[revnetId].push(additionalSplitOperator);
+            _isAdditionalOperatorOf[revnetId][additionalSplitOperator] = true;
+        }
+
+        emit SetAdditionalOperator(revnetId, additionalSplitOperator, permissionIds, msgSender);
+    }
+
+    /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
+    /// @dev Only the revnet's split operator can deploy new suckers.
+    /// @param revnetId The ID of the revnet having new suckers deployed.
+    /// @param encodedConfiguration A bytes representation of the revnet's configuration.
+    /// @param suckerDeploymentConfiguration The specifics about the suckers being deployed.
+    function deploySuckersFor(
+        uint256 revnetId,
+        bytes memory encodedConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+    )
+        external
+        override
+    {
+        // Enforce permissions.
+        _requirePermissionFrom({account: address(this), projectId: revnetId, permissionId: DEPLOY_SUCKERS_PERMISSION});
+
+        // Compose the salt.
+        bytes32 salt = keccak256(abi.encode(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
+
+        // Deploy the suckers.
+        SUCKER_REGISTRY.deploySuckersFor({
+            projectId: revnetId,
+            salt: salt,
+            configurations: suckerDeploymentConfiguration.deployerConfigurations
+        });
+
+        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, _msgSender());
+    }
+
+    /// @notice Point from a revnet to an ENS node.
+    /// @dev Only the revnet's split operator can set its ENS name parts.
+    /// @dev The `parts` ["jbx", "dao", "foo"] represents foo.dao.jbx.eth.
+    /// @dev The split operator must call this function to set its ENS name parts.
+    /// @param chainId The chain ID of the network the project is on.
+    /// @param revnetId The ID of the revnet to set an ENS handle for.
+    /// @param parts The parts of the ENS domain to use as the project handle, excluding the trailing .eth.
+    function setEnsNamePartsFor(uint256 chainId, uint256 revnetId, string[] memory parts) external override {
+        // Enforce permissions.
+        _requirePermissionFrom({account: address(this), projectId: revnetId, permissionId: SET_ENS_HANDLE_PERMISSION});
+
+        PROJECT_HANDLES.setEnsNamePartsFor(chainId, revnetId, parts);
     }
 
     /// @notice Mint tokens from a revnet to a specified beneficiary according to the rules set for the revnet.
@@ -367,19 +518,6 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         });
 
         emit Mint(revnetId, stage.id, beneficiary, count, msg.sender);
-    }
-
-    /// @notice Point from a revnet to an ENS node.
-    /// @dev The `parts` ["jbx", "dao", "foo"] represents foo.dao.jbx.eth.
-    /// @dev The split operator must call this function to set its ENS name parts.
-    /// @param chainId The chain ID of the network the project is on.
-    /// @param revnetId The ID of the revnet to set an ENS handle for.
-    /// @param parts The parts of the ENS domain to use as the project handle, excluding the trailing .eth.
-    function setEnsNamePartsFor(uint256 chainId, uint256 revnetId, string[] memory parts) external override {
-        /// Make sure the message sender is the current split operator.
-        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
-
-        PROJECT_HANDLES.setEnsNamePartsFor(chainId, revnetId, parts);
     }
 
     //*********************************************************************//
@@ -415,34 +553,6 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
             extraHookMetadata: 0,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
-    }
-
-    /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
-    /// @param revnetId The ID of the revnet having new suckers deployed.
-    /// @param encodedConfiguration A bytes representation of the revnet's configuration.
-    /// @param suckerDeploymentConfiguration The specifics about the suckers being deployed.
-    function deploySuckersFor(
-        uint256 revnetId,
-        bytes memory encodedConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
-    )
-        public
-        override
-    {
-        // Make sure the message sender is the current split operator.
-        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
-
-        // Compose the salt.
-        bytes32 salt = keccak256(abi.encode(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
-
-        // Deploy the suckers.
-        SUCKER_REGISTRY.deploySuckersFor({
-            projectId: revnetId,
-            salt: salt,
-            configurations: suckerDeploymentConfiguration.deployerConfigurations
-        });
-
-        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, _msgSender());
     }
 
     //*********************************************************************//
@@ -533,10 +643,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         });
 
         // Give the operator its permissions.
-        IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
-            account: address(this),
-            permissionsData: permissionsData
-        });
+        _permissions().setPermissionsFor({account: address(this), permissionsData: permissionsData});
 
         // Give the sucker registry permission to map tokens.
         uint256[] memory registryPermissions = new uint256[](1);
@@ -550,10 +657,7 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
         });
 
         // Give the operator permission to change the recipients of the operator's split.
-        IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
-            account: address(this),
-            permissionsData: permissionsData
-        });
+        _permissions().setPermissionsFor({account: address(this), permissionsData: permissionsData});
 
         // Deploy the suckers if needed.
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
@@ -865,6 +969,12 @@ contract REVBasicDeployer is ERC165, ERC2771Context, IREVBasicDeployer, IJBRules
     /// @return encodedMintConfig The encoded mint config.
     function _encodedMintConfig(REVMintConfig memory mintConfig) internal pure returns (bytes memory) {
         return abi.encode(mintConfig.chainId, mintConfig.beneficiary, mintConfig.count);
+    }
+
+    /// @notice A reference to the controller's permissions contract.
+    /// @return permissions The permissions contract.
+    function _permissions() internal view returns (IJBPermissions) {
+        return IJBPermissioned(address(CONTROLLER)).PERMISSIONS();
     }
 
     /// @notice Returns the sender, prefered to use over `msg.sender`

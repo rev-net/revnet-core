@@ -41,6 +41,8 @@ interface IREVBasicDeployer {
         uint256 indexed revnetId, uint256 indexed stageId, address indexed beneficiary, uint256 count, address caller
     );
 
+    event SetAdditionalOperator(uint256 revnetId, address additionalOperator, uint256[] permissionIds, address caller);
+
     function EXIT_DELAY() external view returns (uint256);
     function CONTROLLER() external view returns (IJBController);
     function SUCKER_REGISTRY() external view returns (IBPSuckerRegistry);
@@ -54,6 +56,14 @@ interface IREVBasicDeployer {
     function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external;
     function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
     function setEnsNamePartsFor(uint256 chainId, uint256 revnetId, string[] memory parts) external;
+    function allowedMintCountOf(
+        uint256 revnetId,
+        uint256 stageId,
+        address beneficiary
+    )
+        external
+        view
+        returns (uint256);
 
     function launchRevnetFor(
         uint256 revnetId,
