@@ -373,18 +373,16 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
     /// @param revnetId The ID of the revnet having its operator replaced.
     /// @param newSplitOperator The address of the new split operator.
     function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external override {
-        // Keep a reference to the message sender.
-        address msgSender = _msgSender();
 
         /// Make sure the message sender is the current split operator.
-        if (!isSplitOperatorOf(revnetId, msgSender)) revert REVBasicDeployer_Unauthorized();
+        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
 
         // Keep a reference to the split operator permission indexes.
         uint256[] memory splitOperatorPermissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
 
         // Setup the permission data for the old split operator.
         JBPermissionsData memory permissionData =
-            JBPermissionsData({operator: msgSender, projectId: revnetId, permissionIds: new uint256[](0)});
+            JBPermissionsData({operator: _msgSender(), projectId: revnetId, permissionIds: new uint256[](0)});
 
         // Remove operator permission from the old split operator.
         _permissions().setPermissionsFor({account: address(this), permissionsData: permissionData});
@@ -399,7 +397,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         // Give the new split operator its permissions.
         _permissions().setPermissionsFor({account: address(this), permissionsData: permissionData});
 
-        emit ReplaceSplitOperator(revnetId, newSplitOperator, msgSender);
+        emit ReplaceSplitOperator(revnetId, newSplitOperator, _msgSender());
     }
 
     /// @notice Allow the split operat
@@ -549,7 +547,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         CONTROLLER.setSplitGroupsOf({
             projectId: revnetId,
             rulesetId: 0,
-            splitGroups: _makeOperatorSplitGroupWith(configuration.initialSplitOperator)
+            splitGroups: _makeOperatorSplitGroupWith(configuration.splitOperator)
         });
 
         // Store the mint amounts.
@@ -558,7 +556,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         // Keep a reference to permissions being set. Give the operator permission to change the recipients of the
         // operator's split.
         JBPermissionsData memory permissionsData = JBPermissionsData({
-            operator: configuration.initialSplitOperator,
+            operator: configuration.splitOperator,
             projectId: revnetId,
             permissionIds: _splitOperatorPermissionIndexesOf(revnetId)
         });
@@ -756,15 +754,15 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
             }
 
             rulesetConfigurations[i].mustStartAtOrAfter = stageConfiguration.startsAtOrAfter;
-            rulesetConfigurations[i].duration = stageConfiguration.priceCeilingIncreaseFrequency;
+            rulesetConfigurations[i].duration = stageConfiguration.priceIncreaseFrequency;
             // Set the initial issuance for the first ruleset, otherwise pass 0 to inherit from the previous
             // ruleset.
-            rulesetConfigurations[i].weight = stageConfiguration.initialIssuanceRate;
-            rulesetConfigurations[i].decayRate = stageConfiguration.priceCeilingIncreasePercentage;
+            rulesetConfigurations[i].weight = mulDiv(1, 10 ** 18, stageConfiguration.initialPrice);
+            rulesetConfigurations[i].decayRate = stageConfiguration.priceIncreasePercentage;
             rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
             rulesetConfigurations[i].metadata = JBRulesetMetadata({
-                reservedRate: stageConfiguration.splitRate,
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.priceFloorTaxIntensity,
+                reservedRate: stageConfiguration.splitPercent,
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.cashOutTaxIntensity,
                 baseCurrency: configuration.baseCurrency,
                 pausePay: false,
                 pauseCreditTransfers: false,
@@ -861,11 +859,11 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
             (stageNumber == 0 && stageConfiguration.startsAtOrAfter == 0)
                 ? block.timestamp
                 : stageConfiguration.startsAtOrAfter,
-            stageConfiguration.splitRate,
-            stageConfiguration.initialIssuanceRate,
-            stageConfiguration.priceCeilingIncreaseFrequency,
-            stageConfiguration.priceCeilingIncreasePercentage,
-            stageConfiguration.priceFloorTaxIntensity
+            stageConfiguration.splitPercent,
+            stageConfiguration.initialPrice,
+            stageConfiguration.priceIncreaseFrequency,
+            stageConfiguration.priceIncreasePercentage,
+            stageConfiguration.cashOutTaxIntensity
         );
 
         // Get a reference to the mint configs.

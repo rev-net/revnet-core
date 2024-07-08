@@ -5,27 +5,25 @@ import {REVMintConfig} from "./REVMintConfig.sol";
 
 /// @custom:member startsAtOrAfter The timestamp to start a stage at the given rate at or after.
 /// @custom:member mintConfigs The configurations of mints during this stage.
-/// @custom:member splitRate The percentage of newly issued tokens that should be split with the operator, out
+/// @custom:member splitPercent The percentage of newly issued tokens that should be split with the operator, out
 /// of
 /// 10_000 (JBConstants.MAX_RESERVED_RATE).
-/// @custom:member initialIssuanceRate The number of tokens that should be minted initially per 1 unit of the base
-/// currency contributed to the revnet.
-/// @custom:member priceCeilingIncreaseFrequency The number of seconds between applied price ceiling increases. This
+/// @custom:member initialPrice The price that one unit of the revnet's base currency will buy, as a fixed point number
+/// with 18 decimals.
+/// @custom:member priceIncreaseFrequency The number of seconds between applied price increases. This
 /// should be at least 24 hours.
-/// @custom:member priceCeilingIncreasePercentage The rate at which the price ceiling should increase over time, thus
+/// @custom:member priceIncreasePercentage The rate at which the price ceiling should increase over time, thus
 /// decreasing the rate of issuance. This percentage is out
 /// of 1_000_000_000 (JBConstants.MAX_DECAY_RATE). 0% corresponds to no price ceiling increase, everyone is treated
 /// equally over time.
-/// @custom:member priceFloorTaxIntensity The factor determining how much each token can reclaim from the revnet once
-/// redeemed.
-/// This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no floor tax when
-/// redemptions are made, everyone's redemptions are treated equally. The higher the intensity, the higher the tax.
+/// @custom:member cashOutTaxIntensity The factor determining how much each token can cash out from the revnet once
+/// redeemed. This percentage is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no floor tax when
 struct REVStageConfig {
     uint40 startsAtOrAfter;
     REVMintConfig[] mintConfigs;
-    uint16 splitRate;
-    uint112 initialIssuanceRate;
-    uint40 priceCeilingIncreaseFrequency;
-    uint32 priceCeilingIncreasePercentage;
-    uint16 priceFloorTaxIntensity;
+    uint16 splitPercent;
+    uint112 initialPrice;
+    uint40 priceIncreaseFrequency;
+    uint32 priceIncreasePercentage;
+    uint16 cashOutTaxIntensity;
 }

@@ -9,7 +9,7 @@ import {REVDescription} from "./REVDescription.sol";
 /// @custom:member premintTokenAmount The number of tokens that should be preminted to the initial operator.
 /// @custom:member premintChainId The ID of the chain on which the premint should be honored.
 /// @custom:member premintStage The stage during which the premint should be honored.
-/// @custom:member initialSplitOperator The address that will receive the token premint and initial production split,
+/// @custom:member splitOperator The address that will receive the token premint and initial production split,
 /// and who
 /// is
 /// allowed to change who the operator is. Only the operator can replace itself after deployment.
@@ -17,6 +17,6 @@ import {REVDescription} from "./REVDescription.sol";
 struct REVConfig {
     REVDescription description;
     uint32 baseCurrency;
-    address initialSplitOperator;
+    address splitOperator;
     REVStageConfig[] stageConfigurations;
 }
