@@ -298,9 +298,8 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
 
     /// @notice Indicates if this contract adheres to the specified interface.
     /// @dev See {IERC165-supportsInterface}.
-    /// @param interfaceId The ID of the interface to check for adherence to.
     /// @return A flag indicating if the provided interface ID is supported.
-    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+    function supportsInterface(bytes4) public view virtual override returns (bool) {
         return false;
     }
 
