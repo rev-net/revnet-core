@@ -2,17 +2,19 @@
 pragma solidity 0.8.23;
 
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
-import {Context} from "@openzeppelin/contracts/utils/Context.sol";
-import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {JBPermissioned} from "@bananapus/core/src/abstract/JBPermissioned.sol";
+import {mulDiv} from "@prb/math/src/Common.sol";
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
+import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
 import {IJBRulesetApprovalHook} from "@bananapus/core/src/interfaces/IJBRulesetApprovalHook.sol";
 import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
 import {IJBSplitHook} from "@bananapus/core/src/interfaces/IJBSplitHook.sol";
+import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
+import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
+import {JBRedemptions} from "@bananapus/core/src/libraries/JBRedemptions.sol";
 import {JBSplitGroupIds} from "@bananapus/core/src/libraries/JBSplitGroupIds.sol";
+import {JBAfterRedeemRecordedContext} from "@bananapus/core/src/structs/JBAfterRedeemRecordedContext.sol";
 import {JBRulesetMetadata} from "@bananapus/core/src/structs/JBRulesetMetadata.sol";
 import {JBRulesetConfig} from "@bananapus/core/src/structs/JBRulesetConfig.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
@@ -24,6 +26,7 @@ import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.s
 import {JBBeforeRedeemRecordedContext} from "@bananapus/core/src/structs/JBBeforeRedeemRecordedContext.sol";
 import {JBBeforePayRecordedContext} from "@bananapus/core/src/structs/JBBeforePayRecordedContext.sol";
 import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
+import {IJBRedeemHook} from "@bananapus/core/src/interfaces/IJBRedeemHook.sol";
 import {IJBRulesetDataHook} from "@bananapus/core/src/interfaces/IJBRulesetDataHook.sol";
 import {JBRedeemHookSpecification} from "@bananapus/core/src/structs/JBRedeemHookSpecification.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
@@ -40,14 +43,7 @@ import {REVBuybackPoolConfig} from "./../structs/REVBuybackPoolConfig.sol";
 import {REVSuckerDeploymentConfig} from "./../structs/REVSuckerDeploymentConfig.sol";
 
 /// @notice A contract that facilitates deploying a basic Revnet.
-abstract contract REVBasic is
-    JBPermissioned,
-    ERC165,
-    ERC2771Context,
-    IREVBasic,
-    IJBRulesetDataHook,
-    IERC721Receiver
-{
+abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC721Receiver {
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
@@ -65,17 +61,18 @@ abstract contract REVBasic is
 
     /// @notice The amount of time from a sucker being deployed to when it can facilitate exits.
     /// @dev 30 days.
-    uint256 public constant EXIT_DELAY = 2_592_000;
+    uint256 public constant override EXIT_DELAY = 2_592_000;
 
-    /// @notice The permission ID that this contract checks to allow setting a revnet's ENS handle.
-    uint256 public constant SET_ENS_HANDLE_PERMISSION = 100;
-
-    /// @notice The permission ID that this contract checks to allow deploying suckers for a revnet.
-    uint256 public constant DEPLOY_SUCKERS_PERMISSION = 101;
+    /// @notice Revnets' fee (as a fraction out of `JBConstants.MAX_FEE`).
+    /// @dev Fees are charged on redemptions while the redemption rate is less than 100%.
+    uint256 public constant override FEE = 25; // 2.5%
 
     //*********************************************************************//
     // --------------- public immutable stored properties ---------------- //
     //*********************************************************************//
+
+    /// @notice The ID of the revnet that will receive fees.
+    uint256 public immutable override FEE_REVNET_ID;
 
     /// @notice The controller that networks are made from.
     IJBController public immutable override CONTROLLER;
@@ -109,10 +106,6 @@ abstract contract REVBasic is
     // ------------------- internal stored properties -------------------- //
     //*********************************************************************//
 
-    /// @notice The permissions that the provided operator should be granted. This is set once in the constructor
-    /// @dev This should only be set in the constructor.
-    uint256[] internal _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES;
-
     /// @notice The permissions that the provided operator should be granted if the revnet was deployed with that
     /// intent. This is set once for each revnet when deployed.
     /// @dev This should only be set in the deployment process for each revnet.
@@ -121,15 +114,6 @@ abstract contract REVBasic is
     /// @notice The pay hooks to include during payments to networks.
     /// @custom:param revnetId The ID of the revnet to which the extensions apply.
     mapping(uint256 revnetId => JBPayHookSpecification[] payHooks) internal _payHookSpecificationsOf;
-
-    /// @notice The additional operators of each revnet.
-    /// @custom:param revnetId The ID of the revnet to which the additional operators apply.
-    /// @custom:param operator The address of the operator that may be an additional operator.
-    mapping(uint256 revnetId => mapping(address operator => bool)) internal _isAdditionalOperatorOf;
-
-    /// @notice The additional operators of each revnet.
-    /// @custom:param revnetId The ID of the revnet to which the additional operators apply.
-    mapping(uint256 revnetId => address[]) internal _additionalOperatorsOf;
 
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
@@ -155,10 +139,9 @@ abstract contract REVBasic is
     /// customizing how many tokens are issued per payment.
     /// @return hookSpecifications Amount to be sent to pay hooks instead of adding to local balance. Useful for
     /// auto-routing funds from a treasury as payment come in.
-    function beforePayRecordedWith(JBBeforePayRecordedContext calldata context)
+    function beforePayRecordedWith(JBBeforePayRecordedContext memory context)
         external
         view
-        virtual
         override
         returns (uint256 weight, JBPayHookSpecification[] memory hookSpecifications)
     {
@@ -197,17 +180,24 @@ abstract contract REVBasic is
         if (usesBuybackHook) hookSpecifications[numberOfStoredPayHookSpecifications] = buybackHookSpecifications[0];
     }
 
-    /// @notice This function is never called, it needs to be included to adhere to the interface.
+    /// @notice Determines how much to redeem.
+    /// @dev If a sucker is redeeming, there should be no tax imposed.
+    /// @dev Charge a fee on redemptions if there is an exit tax.
+    /// @param context The redemption context passed to this contract by the `redeemTokensOf(...)` function.
+    /// @return redemptionRate The redemption rate influencing the reclaim amount.
+    /// @return redeemCount The amount of tokens that should be considered redeemed.
+    /// @return totalSupply The total amount of tokens that are considered to be existing.
+    /// @return hookSpecifications The amount and data to send to redeem hooks (this contract) instead of returning to
+    /// the beneficiary.
     function beforeRedeemRecordedWith(JBBeforeRedeemRecordedContext calldata context)
         external
         view
-        virtual
         override
-        returns (uint256, uint256, uint256, JBRedeemHookSpecification[] memory specifications)
+        returns (uint256, uint256, uint256, JBRedeemHookSpecification[] memory hookSpecifications)
     {
         // If the holder is a sucker, do not impose a tax.
         if (SUCKER_REGISTRY.isSuckerOf({projectId: context.projectId, suckerAddress: context.holder})) {
-            return (JBConstants.MAX_REDEMPTION_RATE, context.redeemCount, context.totalSupply, specifications);
+            return (JBConstants.MAX_REDEMPTION_RATE, context.redeemCount, context.totalSupply, hookSpecifications);
         }
 
         // If there's an exit delay, do not allow exits until the delay has passed.
@@ -215,7 +205,32 @@ abstract contract REVBasic is
             revert REVBasicDeployer_ExitDelayInEffect();
         }
 
-        return (context.redemptionRate, context.redeemCount, context.totalSupply, specifications);
+        // Get the terminal that'll receive the fee if one wasn't provided.
+        IJBTerminal feeTerminal = _directory().primaryTerminalOf(FEE_REVNET_ID, context.surplus.token);
+
+        // Do not charge a fee if the redemption rate is 100% or if there isn't a fee terminal.
+        if (context.redemptionRate == JBConstants.MAX_REDEMPTION_RATE || address(feeTerminal) == address(0)) {
+            return (context.redemptionRate, context.redeemCount, context.totalSupply, hookSpecifications);
+        }
+
+        // Get a reference to the amount of tokens that are used to cover the fee.
+        uint256 feeRedeemCount = mulDiv(context.redeemCount, FEE, JBConstants.MAX_FEE);
+
+        // Keep a reference to the hook specifications that invokes this hook to process the fee.
+        hookSpecifications = new JBRedeemHookSpecification[](1);
+        hookSpecifications[0] = JBRedeemHookSpecification({
+            hook: IJBRedeemHook(address(this)),
+            amount: JBRedemptions.reclaimFrom({
+                surplus: context.surplus.value,
+                tokensRedeemed: feeRedeemCount,
+                totalSupply: context.totalSupply,
+                redemptionRate: context.redemptionRate
+            }),
+            metadata: abi.encode(feeTerminal)
+        });
+
+        // Return the reclaimed amount with the fee charged.
+        return (context.redemptionRate, context.redeemCount - feeRedeemCount, context.totalSupply, hookSpecifications);
     }
 
     /// @notice Required by the IJBRulesetDataHook interfaces.
@@ -257,7 +272,7 @@ abstract contract REVBasic is
         operator;
 
         // Make sure the 721 received is the JBProjects contract.
-        if (msg.sender != address(CONTROLLER.PROJECTS())) revert();
+        if (msg.sender != address(_projects())) revert();
 
         return IERC721Receiver.onERC721Received.selector;
     }
@@ -278,15 +293,15 @@ abstract contract REVBasic is
             permissionIds: _splitOperatorPermissionIndexesOf(revnetId),
             includeRoot: false,
             includeWildcardProjectId: false
-        }) && !_isAdditionalOperatorOf[revnetId][addr];
+        });
     }
 
     /// @notice Indicates if this contract adheres to the specified interface.
     /// @dev See {IERC165-supportsInterface}.
     /// @param interfaceId The ID of the interface to check for adherence to.
     /// @return A flag indicating if the provided interface ID is supported.
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
-        return interfaceId == type(IJBRulesetDataHook).interfaceId || super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return false;
     }
 
     //*********************************************************************//
@@ -296,29 +311,62 @@ abstract contract REVBasic is
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param projectHandles The contract that stores ENS project handles.
+    /// @param feeRevnetId The ID of the revnet that will receive fees.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     constructor(
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
         IJBProjectHandles projectHandles,
+        uint256 feeRevnetId,
         address trustedForwarder
     )
-        JBPermissioned(IJBPermissioned(address(controller)).PERMISSIONS())
         ERC2771Context(trustedForwarder)
     {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
+        FEE_REVNET_ID = feeRevnetId;
         PROJECT_HANDLES = projectHandles;
-        _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_SPLIT_GROUPS);
-        _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_BUYBACK_POOL);
-        _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(JBPermissionIds.SET_PROJECT_URI);
-        _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(SET_ENS_HANDLE_PERMISSION);
-        _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES.push(DEPLOY_SUCKERS_PERMISSION);
     }
 
     //*********************************************************************//
     // --------------------- external transactions ----------------------- //
     //*********************************************************************//
+
+    /// @notice Processes the fee for the redemption.
+    /// @param context The redemption context passed in by the terminal.
+    function afterRedeemRecordedWith(JBAfterRedeemRecordedContext calldata context) external payable {
+        // Make sure only the project's payment terminals can access this function.
+        if (!_directory().isTerminalOf(context.projectId, IJBTerminal(msg.sender))) {
+            revert REVBasicDeployer_Unauthorized();
+        }
+
+        // Parse the metadata forwarded from the data hook to get the fee terminal.
+        (IJBTerminal feeTerminal) = abi.decode(context.hookMetadata, (IJBTerminal));
+
+        // Keep a reference to the amount that'll be paid in the native currency.
+        uint256 payValue = context.forwardedAmount.token == JBConstants.NATIVE_TOKEN ? context.forwardedAmount.value : 0;
+
+        // Send the fee.
+        try feeTerminal.pay{value: payValue}({
+            projectId: FEE_REVNET_ID,
+            token: context.forwardedAmount.token,
+            amount: context.forwardedAmount.value,
+            beneficiary: context.holder,
+            minReturnedTokens: 0,
+            memo: "",
+            metadata: bytes(abi.encodePacked(context.projectId))
+        }) {} catch (bytes memory) {
+            // Return funds to the project if the fee couldn't be processed.
+            IJBTerminal(msg.sender).addToBalanceOf{value: payValue}({
+                projectId: context.projectId,
+                token: context.forwardedAmount.token,
+                amount: context.forwardedAmount.value,
+                shouldReturnHeldFees: false,
+                memo: "",
+                metadata: bytes(abi.encodePacked(FEE_REVNET_ID))
+            });
+        }
+    }
 
     /// @notice A revnet's operator can replace itself.
     /// @dev Only the revnet's split operator can replace itself.
@@ -334,114 +382,27 @@ abstract contract REVBasic is
         // Keep a reference to the split operator permission indexes.
         uint256[] memory splitOperatorPermissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
 
+        // Setup the permission data for the old split operator.
+        JBPermissionsData memory permissionData =
+            JBPermissionsData({operator: msgSender, projectId: revnetId, permissionIds: new uint256[](0)});
+
         // Remove operator permission from the old split operator.
-        _permissions().setPermissionsFor({
-            account: address(this),
-            permissionsData: JBPermissionsData({operator: msgSender, projectId: revnetId, permissionIds: new uint256[](0)})
+        _permissions().setPermissionsFor({account: address(this), permissionsData: permissionData});
+
+        // Setup the permission data for the new split operator.
+        permissionData = JBPermissionsData({
+            operator: newSplitOperator,
+            projectId: revnetId,
+            permissionIds: splitOperatorPermissionIndexes
         });
-
-        // Keep a reference to the additional operators of the split operator being removed.
-        address[] storage additionalOperators = _additionalOperatorsOf[revnetId];
-
-        // Keep a reference to the number of operators there are.
-        uint256 numberOfAdditionalOperators = additionalOperators.length;
-
-        if (numberOfAdditionalOperators != 0) {
-            // Keep a reference to the additional operator being iterated on.
-            address additionalOperator;
-
-            // Remove each operator.
-            for (uint256 i; i < numberOfAdditionalOperators; i++) {
-                // Set the reference to the additional operator being iterated on.
-                additionalOperator = additionalOperators[i];
-
-                // Remove the additional operator.
-                _isAdditionalOperatorOf[revnetId][additionalOperator] = false;
-
-                // Remove operator permission from the old additional operator.
-                _permissions().setPermissionsFor({
-                    account: address(this),
-                    permissionsData: JBPermissionsData({
-                        operator: additionalOperator,
-                        projectId: revnetId,
-                        permissionIds: new uint256[](0)
-                    })
-                });
-            }
-
-            // Delete the operators from storage.
-            delete _additionalOperatorsOf[revnetId];
-        }
 
         // Give the new split operator its permissions.
-        _permissions().setPermissionsFor({
-            account: address(this),
-            permissionsData: JBPermissionsData({
-                operator: newSplitOperator,
-                projectId: revnetId,
-                permissionIds: splitOperatorPermissionIndexes
-            })
-        });
+        _permissions().setPermissionsFor({account: address(this), permissionsData: permissionData});
 
         emit ReplaceSplitOperator(revnetId, newSplitOperator, msgSender);
     }
 
-    /// @notice Allow the split operator to set other operators that can operate the revnet on its behalf.
-    /// @dev Only the revnet's split operator can set additional operators.
-    /// @param revnetId The ID of the revnet that is having operators added.
-    /// @param additionalSplitOperator The address of the additional operator.
-    /// @param permissionIds The IDs of the permissions being set, which must be a subset of the split operator's
-    /// permissions.
-    function setAdditionalOperatorFor(
-        uint256 revnetId,
-        address additionalSplitOperator,
-        uint256[] memory permissionIds
-    )
-        external
-    {
-        // Keep a reference to the message sender.
-        address msgSender = _msgSender();
-
-        // Make sure the message sender is the current split operator.
-        if (!isSplitOperatorOf(revnetId, msgSender)) revert REVBasicDeployer_Unauthorized();
-
-        // Make sure the split operator isn't setting itself as the additional operator.
-        if (additionalSplitOperator == msgSender) revert REVBasicDeploy_SplitOperatorCantBeAdditionalOperator();
-
-        // Make sure the split operator has the permissions being set.
-        if (
-            _permissions().hasPermissions({
-                operator: msgSender,
-                account: address(this),
-                projectId: revnetId,
-                permissionIds: permissionIds,
-                includeRoot: false,
-                includeWildcardProjectId: false
-            })
-        ) revert REVBasicDeployer_PermissionCantBeSet();
-
-        // Give the additional operator the permissions.
-        _permissions().setPermissionsFor({
-            account: address(this),
-            permissionsData: JBPermissionsData({
-                operator: additionalSplitOperator,
-                projectId: revnetId,
-                permissionIds: permissionIds
-            })
-        });
-
-        // Keep a reference to if the additional operator is already an operator of the revnet.
-        bool isAdditionalOperator = _isAdditionalOperatorOf[revnetId][additionalSplitOperator];
-
-        // Store the additional operator if needed.
-        if (!isAdditionalOperator) {
-            _additionalOperatorsOf[revnetId].push(additionalSplitOperator);
-            _isAdditionalOperatorOf[revnetId][additionalSplitOperator] = true;
-        }
-
-        emit SetAdditionalOperator(revnetId, additionalSplitOperator, permissionIds, msgSender);
-    }
-
+    /// @notice Allow the split operat
     /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
     /// @dev Only the revnet's split operator can deploy new suckers.
     /// @param revnetId The ID of the revnet having new suckers deployed.
@@ -456,7 +417,7 @@ abstract contract REVBasic is
         override
     {
         // Enforce permissions.
-        _requirePermissionFrom({account: address(this), projectId: revnetId, permissionId: DEPLOY_SUCKERS_PERMISSION});
+        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
 
         // Compose the salt.
         bytes32 salt = keccak256(abi.encode(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
@@ -480,7 +441,7 @@ abstract contract REVBasic is
     /// @param parts The parts of the ENS domain to use as the project handle, excluding the trailing .eth.
     function setEnsNamePartsFor(uint256 chainId, uint256 revnetId, string[] memory parts) external override {
         // Enforce permissions.
-        _requirePermissionFrom({account: address(this), projectId: revnetId, permissionId: SET_ENS_HANDLE_PERMISSION});
+        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
 
         PROJECT_HANDLES.setEnsNamePartsFor(chainId, revnetId, parts);
     }
@@ -513,7 +474,7 @@ abstract contract REVBasic is
             useReservedRate: false
         });
 
-        emit Mint(revnetId, stage.id, beneficiary, count, msg.sender);
+        emit Mint(revnetId, stage.id, beneficiary, count, _msgSender());
     }
 
     //*********************************************************************//
@@ -540,7 +501,6 @@ abstract contract REVBasic is
         REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
     )
         internal
-        virtual
         returns (uint256)
     {
         // Normalize the configurations.
@@ -554,7 +514,7 @@ abstract contract REVBasic is
                 projectUri: configuration.description.uri,
                 rulesetConfigurations: rulesetConfigurations,
                 terminalConfigurations: terminalConfigurations,
-                memo: string.concat("$", configuration.description.ticker, " revnet deployed")
+                memo: ""
             });
         } else {
             // Launch rulesets for a pre-existing juicebox.
@@ -562,7 +522,7 @@ abstract contract REVBasic is
                 projectId: revnetId,
                 rulesetConfigurations: rulesetConfigurations,
                 terminalConfigurations: terminalConfigurations,
-                memo: string.concat("$", configuration.description.ticker, " revnet deployed")
+                memo: ""
             });
         }
 
@@ -644,6 +604,116 @@ abstract contract REVBasic is
         return revnetId;
     }
 
+    /// @notice Stores the amount of tokens that can be minted during each stage from this chain.
+    /// @param revnetId The ID of the revnet to which the mints should apply.
+    /// @param configuration The data that defines the revnet's characteristics.
+    function _storeMintAmounts(uint256 revnetId, REVConfig memory configuration) internal {
+        // Keep a reference to the number of stages to schedule.
+        uint256 numberOfStages = configuration.stageConfigurations.length;
+
+        // Keep a reference to the stage configuration being iterated on.
+        REVStageConfig memory stageConfiguration;
+
+        // Loop through each stage to set up its ruleset configuration.
+        for (uint256 i; i < numberOfStages; i++) {
+            // Set the stage configuration being iterated on.
+            stageConfiguration = configuration.stageConfigurations[i];
+
+            // Keep a reference to the number of mints to store.
+            uint256 numberOfMints = stageConfiguration.mintConfigs.length;
+
+            // Keep a reference to the mint config being iterated on.
+            REVMintConfig memory mintConfig;
+
+            // Loop through each mint to store its amount.
+            for (uint256 j; j < numberOfMints; j++) {
+                // Set the mint config being iterated on.
+                mintConfig = stageConfiguration.mintConfigs[j];
+
+                // Only deal with mint specification for this chain.
+                if (mintConfig.chainId != block.chainid) continue;
+
+                // Mint right away if its the first stage or its any stage that has started.
+                if (i == 0 || stageConfiguration.startsAtOrAfter <= block.timestamp) {
+                    CONTROLLER.mintTokensOf({
+                        projectId: revnetId,
+                        tokenCount: mintConfig.count,
+                        beneficiary: mintConfig.beneficiary,
+                        memo: "",
+                        useReservedRate: false
+                    });
+                    emit Mint(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, _msgSender());
+                }
+                // Store the amount of tokens that can be minted during this stage from this chain.
+                else {
+                    // Stage IDs are indexed incrementally from the timestamp of this transaction.
+                    allowedMintCountOf[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.count;
+
+                    emit StoreMintPotential(
+                        revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, _msgSender()
+                    );
+                }
+            }
+        }
+    }
+
+    /// @notice Sets up a buyback hook.
+    /// @param revnetId The ID of the revnet to which the buybacks should apply.
+    /// @param buybackHookConfiguration Data used to setup pools that'll be used to buyback tokens from if an optimal
+    /// price
+    /// is presented.
+    function _setupBuybackHookOf(uint256 revnetId, REVBuybackHookConfig memory buybackHookConfiguration) internal {
+        // Get a reference to the number of pools that need setting up.
+        uint256 numberOfPoolsToSetup = buybackHookConfiguration.poolConfigurations.length;
+
+        // Keep a reference to the pool being iterated on.
+        REVBuybackPoolConfig memory poolConfig;
+
+        for (uint256 i; i < numberOfPoolsToSetup; i++) {
+            // Get a reference to the pool being iterated on.
+            poolConfig = buybackHookConfiguration.poolConfigurations[i];
+
+            // Set the pool for the buyback contract.
+            buybackHookConfiguration.hook.setPoolFor({
+                projectId: revnetId,
+                fee: poolConfig.fee,
+                twapWindow: poolConfig.twapWindow,
+                twapSlippageTolerance: poolConfig.twapSlippageTolerance,
+                terminalToken: poolConfig.token
+            });
+        }
+
+        // Store the hook.
+        buybackHookOf[revnetId] = buybackHookConfiguration.hook;
+    }
+
+    /// @notice The permissions that the split operator should be granted for a revnet.
+    /// @param revnetId The ID of the revnet to check operator permissions for.
+    /// @return allOperatorPermissions The permissions that the split operator should be granted for the revnet,
+    /// including default and custom permissions.
+    function _splitOperatorPermissionIndexesOf(uint256 revnetId)
+        internal
+        view
+        returns (uint256[] memory allOperatorPermissions)
+    {
+        // Keep a reference to the custom split operator permissions.
+        uint256[] memory customSplitOperatorPermissionIndexes = _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId];
+
+        // Keep a reference to the number of custom permissions.
+        uint256 numberOfCustomPermissionIndexes = customSplitOperatorPermissionIndexes.length;
+
+        // Make the array that merges the default operator permissions and the custom ones.
+        allOperatorPermissions = new uint256[](3 + numberOfCustomPermissionIndexes);
+        allOperatorPermissions[0] = JBPermissionIds.SET_SPLIT_GROUPS;
+        allOperatorPermissions[1] = JBPermissionIds.SET_BUYBACK_POOL;
+        allOperatorPermissions[2] = JBPermissionIds.SET_PROJECT_URI;
+
+        // Copy elements from the custom permissions.
+        for (uint256 i; i < numberOfCustomPermissionIndexes; i++) {
+            allOperatorPermissions[3 + i] = customSplitOperatorPermissionIndexes[i];
+        }
+    }
+
     /// @notice Schedules the initial ruleset for the revnet, and queues all subsequent rulesets that define the stages.
     /// @notice configuration The data that defines the revnet's characteristics.
     /// @notice dataHook The address of the data hook.
@@ -658,7 +728,6 @@ abstract contract REVBasic is
     )
         internal
         view
-        virtual
         returns (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration, bool isInProgress)
     {
         // Keep a reference to the number of stages to schedule.
@@ -733,59 +802,6 @@ abstract contract REVBasic is
         }
     }
 
-    /// @notice Stores the amount of tokens that can be minted during each stage from this chain.
-    /// @param revnetId The ID of the revnet to which the mints should apply.
-    /// @param configuration The data that defines the revnet's characteristics.
-    function _storeMintAmounts(uint256 revnetId, REVConfig memory configuration) internal {
-        // Keep a reference to the number of stages to schedule.
-        uint256 numberOfStages = configuration.stageConfigurations.length;
-
-        // Keep a reference to the stage configuration being iterated on.
-        REVStageConfig memory stageConfiguration;
-
-        // Loop through each stage to set up its ruleset configuration.
-        for (uint256 i; i < numberOfStages; i++) {
-            // Set the stage configuration being iterated on.
-            stageConfiguration = configuration.stageConfigurations[i];
-
-            // Keep a reference to the number of mints to store.
-            uint256 numberOfMints = stageConfiguration.mintConfigs.length;
-
-            // Keep a reference to the mint config being iterated on.
-            REVMintConfig memory mintConfig;
-
-            // Loop through each mint to store its amount.
-            for (uint256 j; j < numberOfMints; j++) {
-                // Set the mint config being iterated on.
-                mintConfig = stageConfiguration.mintConfigs[j];
-
-                // Only deal with mint specification for this chain.
-                if (mintConfig.chainId != block.chainid) continue;
-
-                // Mint right away if its the first stage or its any stage that has started.
-                if (i == 0 || stageConfiguration.startsAtOrAfter <= block.timestamp) {
-                    CONTROLLER.mintTokensOf({
-                        projectId: revnetId,
-                        tokenCount: mintConfig.count,
-                        beneficiary: mintConfig.beneficiary,
-                        memo: "",
-                        useReservedRate: false
-                    });
-                    emit Mint(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender);
-                }
-                // Store the amount of tokens that can be minted during this stage from this chain.
-                else {
-                    // Stage IDs are indexed incrementally from the timestamp of this transaction.
-                    allowedMintCountOf[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.count;
-
-                    emit StoreMintPotential(
-                        revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender
-                    );
-                }
-            }
-        }
-    }
-
     /// @notice Creates a group of splits that goes entirely to the provided split operator.
     /// @param splitOperator The address to send the entire split amount to.
     /// @return splitGroups The split groups representing operator's split.
@@ -814,71 +830,6 @@ abstract contract REVBasic is
 
         // Set the item in the splits group.
         splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: splits});
-    }
-
-    /// @notice Sets up a buyback hook.
-    /// @param revnetId The ID of the revnet to which the buybacks should apply.
-    /// @param buybackHookConfiguration Data used to setup pools that'll be used to buyback tokens from if an optimal
-    /// price
-    /// is presented.
-    function _setupBuybackHookOf(uint256 revnetId, REVBuybackHookConfig memory buybackHookConfiguration) internal {
-        // Get a reference to the number of pools that need setting up.
-        uint256 numberOfPoolsToSetup = buybackHookConfiguration.poolConfigurations.length;
-
-        // Keep a reference to the pool being iterated on.
-        REVBuybackPoolConfig memory poolConfig;
-
-        for (uint256 i; i < numberOfPoolsToSetup; i++) {
-            // Get a reference to the pool being iterated on.
-            poolConfig = buybackHookConfiguration.poolConfigurations[i];
-
-            // Set the pool for the buyback contract.
-            buybackHookConfiguration.hook.setPoolFor({
-                projectId: revnetId,
-                fee: poolConfig.fee,
-                twapWindow: poolConfig.twapWindow,
-                twapSlippageTolerance: poolConfig.twapSlippageTolerance,
-                terminalToken: poolConfig.token
-            });
-        }
-
-        // Store the hook.
-        buybackHookOf[revnetId] = buybackHookConfiguration.hook;
-    }
-
-    /// @notice The permissions that the split operator should be granted for a revnet.
-    /// @param revnetId The ID of the revnet to check operator permissions for.
-    /// @return allOperatorPermissions The permissions that the split operator should be granted for the revnet,
-    /// including default and custom permissions.
-    function _splitOperatorPermissionIndexesOf(uint256 revnetId)
-        internal
-        view
-        returns (uint256[] memory allOperatorPermissions)
-    {
-        // Keep a reference to the default split operator permissions.
-        uint256[] memory defaultSplitOperatorPermissionIndexes = _DEFAULT_SPLIT_OPERATOR_PERMISSIONS_INDEXES;
-
-        // Keep a reference to the number of default permissions.
-        uint256 numberOfDefaultPermissionIndexes = defaultSplitOperatorPermissionIndexes.length;
-
-        // Keep a reference to the custom split operator permissions.
-        uint256[] memory customSplitOperatorPermissionIndexes = _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId];
-
-        // Keep a reference to the number of custom permissions.
-        uint256 numberOfCustomPermissionIndexes = customSplitOperatorPermissionIndexes.length;
-
-        // Make the array that merges the default operator permissions and the custom ones.
-        allOperatorPermissions = new uint256[](numberOfDefaultPermissionIndexes + numberOfCustomPermissionIndexes);
-
-        // Copy elements from the default permissions.
-        for (uint256 i; i < numberOfDefaultPermissionIndexes; i++) {
-            allOperatorPermissions[i] = defaultSplitOperatorPermissionIndexes[i];
-        }
-
-        // Copy elements from the custom permissions.
-        for (uint256 i; i < numberOfCustomPermissionIndexes; i++) {
-            allOperatorPermissions[numberOfDefaultPermissionIndexes + i] = customSplitOperatorPermissionIndexes[i];
-        }
     }
 
     /// @notice Encodes a configuration into a hash.
@@ -930,7 +881,7 @@ abstract contract REVBasic is
     /// @notice Encodes a mint configuration into a hash.
     /// @notice mintConfig The data that defines how many tokens are allowed to be minted at a stage.
     /// @return encodedMintConfig The encoded mint config.
-    function _encodedMintConfig(REVMintConfig memory mintConfig) internal pure returns (bytes memory) {
+    function _encodedMintConfig(REVMintConfig memory mintConfig) private pure returns (bytes memory) {
         return abi.encode(mintConfig.chainId, mintConfig.beneficiary, mintConfig.count);
     }
 
@@ -940,20 +891,32 @@ abstract contract REVBasic is
         return IJBPermissioned(address(CONTROLLER)).PERMISSIONS();
     }
 
+    /// @notice A reference to the controller's directory contract.
+    /// @return directory The directory contract.
+    function _directory() internal view returns (IJBDirectory) {
+        return CONTROLLER.DIRECTORY();
+    }
+
+    /// @notice A reference to the controller's projects contract.
+    /// @return projects The projects contract.
+    function _projects() internal view returns (IJBProjects) {
+        return CONTROLLER.PROJECTS();
+    }
+
     /// @notice Returns the sender, prefered to use over `msg.sender`
     /// @return sender the sender address of this call.
-    function _msgSender() internal view override(Context, ERC2771Context) returns (address sender) {
+    function _msgSender() internal view override returns (address sender) {
         return ERC2771Context._msgSender();
     }
 
     /// @notice Returns the calldata, prefered to use over `msg.data`
     /// @return calldata the `msg.data` of this call
-    function _msgData() internal view override(Context, ERC2771Context) returns (bytes calldata) {
+    function _msgData() internal view override returns (bytes calldata) {
         return ERC2771Context._msgData();
     }
 
     /// @dev ERC-2771 specifies the context as being a single address (20 bytes).
-    function _contextSuffixLength() internal view virtual override(Context, ERC2771Context) returns (uint256) {
+    function _contextSuffixLength() internal view override returns (uint256) {
         return super._contextSuffixLength();
     }
 }

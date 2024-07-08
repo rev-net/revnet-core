@@ -19,23 +19,25 @@ import {REVBuybackHookConfig} from "./../structs/REVBuybackHookConfig.sol";
 import {REVSuckerDeploymentConfig} from "./../structs/REVSuckerDeploymentConfig.sol";
 
 /// @notice A contract that facilitates deploying a basic revnet that also can mint tiered 721s.
-contract REVTiered721Hook is REVPayHook, IREVTiered721Hook  {
+contract REVTiered721Hook is REVPayHook, IREVTiered721Hook {
     /// @notice The contract responsible for deploying the tiered 721 hook.
     IJB721TiersHookDeployer public immutable override HOOK_DEPLOYER;
 
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param projectHandles The contract that stores ENS project handles.
+    /// @param feeRevnetId The ID of the revnet that will receive fees.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     /// @param hookDeployer The 721 tiers hook deployer.
     constructor(
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
         IJBProjectHandles projectHandles,
+        uint256 feeRevnetId,
         address trustedForwarder,
         IJB721TiersHookDeployer hookDeployer
     )
-        REVPayHook(controller, suckerRegistry, projectHandles, trustedForwarder)
+        REVPayHook(controller, suckerRegistry, projectHandles, feeRevnetId, trustedForwarder)
     {
         HOOK_DEPLOYER = hookDeployer;
     }
@@ -67,14 +69,14 @@ contract REVTiered721Hook is REVPayHook, IREVTiered721Hook  {
         JBPayHookSpecification[] memory otherPayHooksSpecifications,
         uint16 extraHookMetadata
     )
-        internal 
+        internal
         returns (uint256, IJB721TiersHook hook)
     {
         // Keep a reference to the original revnet ID passed in.
         uint256 originalRevnetId = revnetId;
 
         // Get the revnet ID, optimistically knowing it will be one greater than the current count.
-        if (revnetId == 0) revnetId = CONTROLLER.PROJECTS().count() + 1;
+        if (revnetId == 0) revnetId = _projects().count() + 1;
 
         // Keep a reference to the number of pay hooks passed in.
         uint256 numberOfOtherPayHooks = otherPayHooksSpecifications.length;

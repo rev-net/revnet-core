@@ -28,14 +28,10 @@ contract REVCroptop is REVTiered721Hook, IREVCroptop {
     /// @notice The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     CTPublisher public override PUBLISHER;
 
-    /// @notice The permissions that the croptop publisher should be granted. This is set once in the constructor to
-    /// contain only the ADJUST_TIERS operation.
-    /// @dev This should only be set in the constructor.
-    uint256[] internal _CROPTOP_PERMISSIONS_INDEXES;
-
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param projectHandles The contract that stores ENS project handles.
+    /// @param feeRevnetId The ID of the revnet that will receive fees.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     /// @param hookDeployer The 721 tiers hook deployer.
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
@@ -43,14 +39,14 @@ contract REVCroptop is REVTiered721Hook, IREVCroptop {
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
         IJBProjectHandles projectHandles,
+        uint256 feeRevnetId,
         address trustedForwarder,
         IJB721TiersHookDeployer hookDeployer,
         CTPublisher publisher
     )
-        REVTiered721Hook(controller, suckerRegistry, projectHandles, trustedForwarder, hookDeployer)
+        REVTiered721Hook(controller, suckerRegistry, projectHandles, feeRevnetId, trustedForwarder, hookDeployer)
     {
         PUBLISHER = publisher;
-        _CROPTOP_PERMISSIONS_INDEXES.push(JBPermissionIds.ADJUST_721_TIERS);
     }
 
     //*********************************************************************//
@@ -81,7 +77,7 @@ contract REVCroptop is REVTiered721Hook, IREVCroptop {
         uint16 extraHookMetadata,
         REVCroptopAllowedPost[] memory allowedPosts
     )
-        internal 
+        internal
         returns (uint256, IJB721TiersHook hook)
     {
         // Deploy the revnet with tiered 721 hooks.
@@ -99,15 +95,15 @@ contract REVCroptop is REVTiered721Hook, IREVCroptop {
         // Format the posts.
         _configurePostingCriteriaFor({hook: address(hook), allowedPosts: allowedPosts});
 
+        // Define the permissions to set.
+        uint256[] memory permissionIndexes = new uint256[](1);
+        permissionIndexes[0] = JBPermissionIds.ADJUST_721_TIERS;
+
+        JBPermissionsData memory permissionData =
+            JBPermissionsData({operator: address(PUBLISHER), projectId: revnetId, permissionIds: permissionIndexes});
+
         // Give the croptop publisher permission to post on this contract's behalf.
-        IJBPermissioned(address(CONTROLLER)).PERMISSIONS().setPermissionsFor({
-            account: address(this),
-            permissionsData: JBPermissionsData({
-                operator: address(PUBLISHER),
-                projectId: revnetId,
-                permissionIds: _CROPTOP_PERMISSIONS_INDEXES
-            })
-        });
+        _permissions().setPermissionsFor({account: address(this), permissionsData: permissionData});
 
         return (revnetId, hook);
     }
@@ -118,6 +114,9 @@ contract REVCroptop is REVTiered721Hook, IREVCroptop {
     function _configurePostingCriteriaFor(address hook, REVCroptopAllowedPost[] memory allowedPosts) internal {
         // Keep a reference to the number of allowed posts.
         uint256 numberOfAllowedPosts = allowedPosts.length;
+
+        // Exit if there are no post criteria to configure.
+        if (allowedPosts.length == 0) return;
 
         // Keep a reference to the formatted allowed posts.
         CTAllowedPost[] memory formattedAllowedPosts = new CTAllowedPost[](numberOfAllowedPosts);
@@ -142,8 +141,6 @@ contract REVCroptop is REVTiered721Hook, IREVCroptop {
         }
 
         // Configure allowed posts.
-        if (allowedPosts.length != 0) {
-            PUBLISHER.configurePostingCriteriaFor({allowedPosts: formattedAllowedPosts});
-        }
+        PUBLISHER.configurePostingCriteriaFor({allowedPosts: formattedAllowedPosts});
     }
 }

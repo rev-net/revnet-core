@@ -24,6 +24,7 @@ contract REVCroptopDeployer is REVCroptop, IREVCroptopDeployer {
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param projectHandles The contract that stores ENS project handles.
+    /// @param feeRevnetId The ID of the revnet that will receive fees.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     /// @param hookDeployer The 721 tiers hook deployer.
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
@@ -31,11 +32,12 @@ contract REVCroptopDeployer is REVCroptop, IREVCroptopDeployer {
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
         IJBProjectHandles projectHandles,
+        uint256 feeRevnetId,
         address trustedForwarder,
         IJB721TiersHookDeployer hookDeployer,
         CTPublisher publisher
     )
-        REVCroptop(controller, suckerRegistry, projectHandles, trustedForwarder, hookDeployer, publisher)
+        REVCroptop(controller, suckerRegistry, projectHandles, feeRevnetId, trustedForwarder, hookDeployer, publisher)
     {}
 
     //*********************************************************************//
@@ -66,7 +68,7 @@ contract REVCroptopDeployer is REVCroptop, IREVCroptopDeployer {
         uint16 extraHookMetadata,
         REVCroptopAllowedPost[] memory allowedPosts
     )
-        external 
+        external
         override
         returns (uint256, IJB721TiersHook hook)
     {

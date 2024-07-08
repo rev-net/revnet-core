@@ -68,14 +68,23 @@ contract DeployScript is Script, Sphinx {
     }
 
     function deploy() public sphinx {
+        // TODO deploy a new project to collect fees through iff needed. remove hardcoded 2.
+        uint256 FEE_PROJECT_ID = 2;
+
         // Check if the contracts are already deployed or if there are any changes.
         if (
             !_isDeployed(
                 BASIC_DEPLOYER,
                 type(REVBasicDeployer).creationCode,
-                abi.encode(core.controller, suckers.registry, TRUSTED_FORWARDER)
+                abi.encode(
+                    core.controller, suckers.registry, projectHandles.project_handles, FEE_PROJECT_ID, TRUSTED_FORWARDER
+                )
             )
-        ) new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, projectHandles.project_handles, TRUSTED_FORWARDER);
+        ) {
+            new REVBasicDeployer{salt: BASIC_DEPLOYER}(
+                core.controller, suckers.registry, projectHandles.project_handles, FEE_PROJECT_ID, TRUSTED_FORWARDER
+            );
+        }
 
         if (
             !_isDeployed(
@@ -85,6 +94,7 @@ contract DeployScript is Script, Sphinx {
                     core.controller,
                     suckers.registry,
                     projectHandles.project_handles,
+                    FEE_PROJECT_ID,
                     TRUSTED_FORWARDER,
                     hook.hook_deployer,
                     croptop.publisher
@@ -95,6 +105,7 @@ contract DeployScript is Script, Sphinx {
                 core.controller,
                 suckers.registry,
                 projectHandles.project_handles,
+                FEE_PROJECT_ID,
                 TRUSTED_FORWARDER,
                 hook.hook_deployer,
                 croptop.publisher

@@ -46,8 +46,10 @@ interface IREVBasic {
 
     function EXIT_DELAY() external view returns (uint256);
     function CONTROLLER() external view returns (IJBController);
+    function FEE() external view returns (uint256);
     function SUCKER_REGISTRY() external view returns (IBPSuckerRegistry);
     function PROJECT_HANDLES() external view returns (IJBProjectHandles);
+    function FEE_REVNET_ID() external view returns (uint256);
 
     function buybackHookOf(uint256 revnetId) external view returns (IJBRulesetDataHook);
     function exitDelayOf(uint256 revnetId) external view returns (uint256);

@@ -23,14 +23,16 @@ contract REVBasicDeployer is REVBasic, IREVBasicDeployer {
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param projectHandles The contract that stores ENS project handles.
+    /// @param feeRevnetId The ID of the revnet that will receive fees.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     constructor(
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
         IJBProjectHandles projectHandles,
+        uint256 feeRevnetId,
         address trustedForwarder
     )
-        REVBasic(controller, suckerRegistry, projectHandles, trustedForwarder)
+        REVBasic(controller, suckerRegistry, projectHandles, feeRevnetId, trustedForwarder)
     {}
 
     //*********************************************************************//
@@ -52,7 +54,7 @@ contract REVBasicDeployer is REVBasic, IREVBasicDeployer {
         REVBuybackHookConfig memory buybackHookConfiguration,
         REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
     )
-        external 
+        external
         override
         returns (uint256)
     {

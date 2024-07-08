@@ -18,15 +18,16 @@ import {REVSuckerDeploymentConfig} from "./../structs/REVSuckerDeploymentConfig.
 abstract contract REVPayHook is REVBasic, IREVPayHook {
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
-    /// @param projectHandles The contract that stores ENS project handles.
+    /// @param feeRevnetId The ID of the revnet that will receive fees.
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     constructor(
         IJBController controller,
         IBPSuckerRegistry suckerRegistry,
         IJBProjectHandles projectHandles,
+        uint256 feeRevnetId,
         address trustedForwarder
     )
-        REVBasic(controller, suckerRegistry, projectHandles, trustedForwarder)
+        REVBasic(controller, suckerRegistry, projectHandles, feeRevnetId, trustedForwarder)
     {}
 
     //*********************************************************************//
@@ -52,7 +53,7 @@ abstract contract REVPayHook is REVBasic, IREVPayHook {
         JBPayHookSpecification[] memory payHookSpecifications,
         uint16 extraHookMetadata
     )
-        internal 
+        internal
         returns (uint256)
     {
         // Deploy the revnet
