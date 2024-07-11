@@ -48,12 +48,12 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
-    error REVBasicDeployer_BadStageTimes();
-    error REVBasicDeployer_ExitDelayInEffect();
-    error REVBasicDeployer_PermissionCantBeSet();
-    error REVBasicDeploy_SplitOperatorCantBeAdditionalOperator();
-    error REVBasicDeployer_StageNotStarted();
-    error REVBasicDeployer_Unauthorized();
+    error REVBasic_BadStageTimes();
+    error REVBasic_ExitDelayInEffect();
+    error REVBasic_PermissionCantBeSet();
+    error REVBasic_SplitOperatorCantBeAdditionalOperator();
+    error REVBasic_StageNotStarted();
+    error REVBasic_Unauthorized();
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
