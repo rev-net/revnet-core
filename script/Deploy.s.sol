@@ -11,6 +11,7 @@ import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
 import {Script} from "forge-std/Script.sol";
 
 import {REVBasicDeployer} from "./../src/REVBasicDeployer.sol";
+import {REVTiered721HookDeployer} from "./../src/REVTiered721HookDeployer.sol";
 import {REVCroptopDeployer} from "./../src/REVCroptopDeployer.sol";
 
 contract DeployScript is Script, Sphinx {
@@ -30,6 +31,7 @@ contract DeployScript is Script, Sphinx {
 
     /// @notice the salts that are used to deploy the contracts.
     bytes32 BASIC_DEPLOYER = "REVBasicDeployer";
+    bytes32 NFT_HOOK_DEPLOYER = "REVTiered721HookDeployer";
     bytes32 CROPTOP_DEPLOYER = "REVCroptopDeployer";
 
     function configureSphinx() public override {
@@ -68,9 +70,9 @@ contract DeployScript is Script, Sphinx {
     }
 
     function deploy() public sphinx {
-        // TODO deploy a new project to collect fees through iff needed. remove hardcoded 2.
-        uint256 FEE_PROJECT_ID = 2;
-
+        // TODO figure out how to reference project ID if the contracts are already deployed.
+        uint256 FEE_PROJECT_ID = core.projects.createFor(address(this));
+        
         // Check if the contracts are already deployed or if there are any changes.
         if (
             !_isDeployed(
@@ -83,6 +85,30 @@ contract DeployScript is Script, Sphinx {
         ) {
             new REVBasicDeployer{salt: BASIC_DEPLOYER}(
                 core.controller, suckers.registry, projectHandles.project_handles, FEE_PROJECT_ID, TRUSTED_FORWARDER
+            );
+        }
+
+        if (
+            !_isDeployed(
+                NFT_HOOK_DEPLOYER,
+                type(REVTiered721HookDeployer).creationCode,
+                abi.encode(
+                    core.controller,
+                    suckers.registry,
+                    projectHandles.project_handles,
+                    FEE_PROJECT_ID,
+                    TRUSTED_FORWARDER,
+                    hook.hook_deployer
+                )
+            )
+        ) {
+            new REVTiered721HookDeployer{salt: NFT_HOOK_DEPLOYER}(
+                core.controller,
+                suckers.registry,
+                projectHandles.project_handles,
+                FEE_PROJECT_ID,
+                TRUSTED_FORWARDER,
+                hook.hook_deployer
             );
         }
 
@@ -111,6 +137,9 @@ contract DeployScript is Script, Sphinx {
                 croptop.publisher
             );
         }
+        
+        // TODO get a reference to the $REV revnet specifications that will be set.
+        // core.projects.transferOwnership(FEE_PROJECT_ID);
     }
 
     function _isDeployed(

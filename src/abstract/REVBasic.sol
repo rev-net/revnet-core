@@ -3,6 +3,7 @@ pragma solidity 0.8.23;
 
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {mulDiv} from "@prb/math/src/Common.sol";
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
@@ -202,7 +203,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
 
         // If there's an exit delay, do not allow exits until the delay has passed.
         if (exitDelayOf[context.projectId] > block.timestamp) {
-            revert REVBasicDeployer_ExitDelayInEffect();
+            revert REVBasic_ExitDelayInEffect();
         }
 
         // Get the terminal that'll receive the fee if one wasn't provided.
@@ -336,7 +337,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
     function afterRedeemRecordedWith(JBAfterRedeemRecordedContext calldata context) external payable {
         // Make sure only the project's payment terminals can access this function.
         if (!_directory().isTerminalOf(context.projectId, IJBTerminal(msg.sender))) {
-            revert REVBasicDeployer_Unauthorized();
+            revert REVBasic_Unauthorized();
         }
 
         // Parse the metadata forwarded from the data hook to get the fee terminal.
@@ -374,7 +375,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
     function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external override {
 
         /// Make sure the message sender is the current split operator.
-        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
+        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasic_Unauthorized();
 
         // Keep a reference to the split operator permission indexes.
         uint256[] memory splitOperatorPermissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
@@ -414,7 +415,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         override
     {
         // Enforce permissions.
-        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
+        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasic_Unauthorized();
 
         // Compose the salt.
         bytes32 salt = keccak256(abi.encode(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
@@ -438,7 +439,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
     /// @param parts The parts of the ENS domain to use as the project handle, excluding the trailing .eth.
     function setEnsNamePartsFor(uint256 chainId, uint256 revnetId, string[] memory parts) external override {
         // Enforce permissions.
-        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasicDeployer_Unauthorized();
+        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasic_Unauthorized();
 
         PROJECT_HANDLES.setEnsNamePartsFor(chainId, revnetId, parts);
     }
@@ -452,7 +453,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         JBRuleset memory stage = CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId);
 
         // Make sure the stage has started.
-        if (stage.start > block.timestamp) revert REVBasicDeployer_StageNotStarted();
+        if (stage.start > block.timestamp) revert REVBasic_StageNotStarted();
 
         // Get a reference to the amount that should be minted.
         uint256 count = allowedMintCountOf[revnetId][stage.id][beneficiary];
@@ -514,6 +515,9 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
                 memo: ""
             });
         } else {
+            // Transfer the revnet to be owned by this deployer.
+            IERC721(CONTROLLER.PROJECTS()).safeTransferFrom(CONTROLLER.PROJECTS().ownerOf(revnetId), address(this), revnetId);
+
             // Launch rulesets for a pre-existing juicebox.
             CONTROLLER.launchRulesetsFor({
                 projectId: revnetId,
@@ -749,7 +753,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
 
             // Make sure the start time of this stage is after the previous stage.
             if (stageConfiguration.startsAtOrAfter <= previousStartTime) {
-                revert REVBasicDeployer_BadStageTimes();
+                revert REVBasic_BadStageTimes();
             }
 
             rulesetConfigurations[i].mustStartAtOrAfter = stageConfiguration.startsAtOrAfter;
