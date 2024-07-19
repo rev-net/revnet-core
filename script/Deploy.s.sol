@@ -78,9 +78,7 @@ contract DeployScript is Script, Sphinx {
                 abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID)
             )
         ) {
-            new REVBasicDeployer{salt: BASIC_DEPLOYER}(
-                core.controller, suckers.registry, FEE_PROJECT_ID
-            );
+            new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, FEE_PROJECT_ID);
         }
 
         if (
@@ -116,11 +114,7 @@ contract DeployScript is Script, Sphinx {
             )
         ) {
             new REVCroptopDeployer{salt: CROPTOP_DEPLOYER}(
-                core.controller,
-                suckers.registry,
-                FEE_PROJECT_ID,
-                hook.hook_deployer,
-                croptop.publisher
+                core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher
             );
         }
 

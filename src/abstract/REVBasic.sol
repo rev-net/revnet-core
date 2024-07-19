@@ -307,12 +307,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
     /// @param feeRevnetId The ID of the revnet that will receive fees.
-    constructor(
-        IJBController controller,
-        IJBSuckerRegistry suckerRegistry,
-        uint256 feeRevnetId
-    )
-    {
+    constructor(IJBController controller, IJBSuckerRegistry suckerRegistry, uint256 feeRevnetId) {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
         FEE_REVNET_ID = feeRevnetId;
