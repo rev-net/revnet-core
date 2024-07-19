@@ -19,7 +19,6 @@
         "@bananapus/core": "^0.0.22",
         "@bananapus/ownable": "^0.0.6",
         "@bananapus/permission-ids": "^0.0.11",
-        "@bananapus/project-handles": "^0.0.5",
         "@bananapus/suckers": "^0.0.18",
         "@croptop/core": "^0.0.13",
         "@openzeppelin/contracts": "^5.0.2"
