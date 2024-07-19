@@ -26,9 +26,6 @@ contract DeployScript is Script, Sphinx {
     /// @notice tracks the deploymet of the project handles contracts for the chain we are deploying to.
     ProjectHandlesDeployment projectHandles;
 
-    /// @notice The address that is allowed to forward calls to the terminal and controller on a users behalf.
-    address private constant TRUSTED_FORWARDER = 0xB2b5841DBeF766d4b521221732F9B618fCf34A87;
-
     /// @notice the salts that are used to deploy the contracts.
     bytes32 BASIC_DEPLOYER = "REVBasicDeployer";
     bytes32 NFT_HOOK_DEPLOYER = "REVTiered721HookDeployer";
@@ -72,19 +69,17 @@ contract DeployScript is Script, Sphinx {
     function deploy() public sphinx {
         // TODO figure out how to reference project ID if the contracts are already deployed.
         uint256 FEE_PROJECT_ID = core.projects.createFor(address(this));
-        
+
         // Check if the contracts are already deployed or if there are any changes.
         if (
             !_isDeployed(
                 BASIC_DEPLOYER,
                 type(REVBasicDeployer).creationCode,
-                abi.encode(
-                    core.controller, suckers.registry, projectHandles.project_handles, FEE_PROJECT_ID, TRUSTED_FORWARDER
-                )
+                abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID)
             )
         ) {
             new REVBasicDeployer{salt: BASIC_DEPLOYER}(
-                core.controller, suckers.registry, projectHandles.project_handles, FEE_PROJECT_ID, TRUSTED_FORWARDER
+                core.controller, suckers.registry, FEE_PROJECT_ID
             );
         }
 
@@ -97,18 +92,12 @@ contract DeployScript is Script, Sphinx {
                     suckers.registry,
                     projectHandles.project_handles,
                     FEE_PROJECT_ID,
-                    TRUSTED_FORWARDER,
                     hook.hook_deployer
                 )
             )
         ) {
             new REVTiered721HookDeployer{salt: NFT_HOOK_DEPLOYER}(
-                core.controller,
-                suckers.registry,
-                projectHandles.project_handles,
-                FEE_PROJECT_ID,
-                TRUSTED_FORWARDER,
-                hook.hook_deployer
+                core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer
             );
         }
 
@@ -121,7 +110,6 @@ contract DeployScript is Script, Sphinx {
                     suckers.registry,
                     projectHandles.project_handles,
                     FEE_PROJECT_ID,
-                    TRUSTED_FORWARDER,
                     hook.hook_deployer,
                     croptop.publisher
                 )
@@ -130,14 +118,12 @@ contract DeployScript is Script, Sphinx {
             new REVCroptopDeployer{salt: CROPTOP_DEPLOYER}(
                 core.controller,
                 suckers.registry,
-                projectHandles.project_handles,
                 FEE_PROJECT_ID,
-                TRUSTED_FORWARDER,
                 hook.hook_deployer,
                 croptop.publisher
             );
         }
-        
+
         // TODO get a reference to the $REV revnet specifications that will be set.
         // core.projects.transferOwnership(FEE_PROJECT_ID);
     }

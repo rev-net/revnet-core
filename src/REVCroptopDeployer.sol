@@ -8,7 +8,6 @@ import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpeci
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
-import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
 import {REVCroptop} from "./abstract/REVCroptop.sol";
 import {IREVCroptopDeployer} from "./interfaces/IREVCroptopDeployer.sol";
@@ -23,21 +22,17 @@ import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol
 contract REVCroptopDeployer is REVCroptop, IREVCroptopDeployer {
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
-    /// @param projectHandles The contract that stores ENS project handles.
     /// @param feeRevnetId The ID of the revnet that will receive fees.
-    /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     /// @param hookDeployer The 721 tiers hook deployer.
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
-        IJBProjectHandles projectHandles,
         uint256 feeRevnetId,
-        address trustedForwarder,
         IJB721TiersHookDeployer hookDeployer,
         CTPublisher publisher
     )
-        REVCroptop(controller, suckerRegistry, projectHandles, feeRevnetId, trustedForwarder, hookDeployer, publisher)
+        REVCroptop(controller, suckerRegistry, feeRevnetId, hookDeployer, publisher)
     {}
 
     //*********************************************************************//

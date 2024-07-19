@@ -5,7 +5,6 @@ import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
-import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
 import {REVPayHook} from "./abstract/REVPayHook.sol";
 import {IREVPayHookDeployer} from "./interfaces/IREVPayHookDeployer.sol";
@@ -17,17 +16,13 @@ import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol
 contract REVPayHookDeployer is REVPayHook, IREVPayHookDeployer {
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
-    /// @param projectHandles The contract that stores ENS project handles.
     /// @param feeRevnetId The ID of the revnet that will receive fees.
-    /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
-        IJBProjectHandles projectHandles,
-        uint256 feeRevnetId,
-        address trustedForwarder
+        uint256 feeRevnetId
     )
-        REVPayHook(controller, suckerRegistry, projectHandles, feeRevnetId, trustedForwarder)
+        REVPayHook(controller, suckerRegistry, feeRevnetId)
     {}
 
     //*********************************************************************//

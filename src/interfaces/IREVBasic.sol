@@ -6,7 +6,6 @@ import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpeci
 import {JBRulesetConfig} from "@bananapus/core/src/structs/JBRulesetConfig.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
-import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
 import {REVBuybackHookConfig} from "../structs/REVBuybackHookConfig.sol";
 import {REVConfig} from "../structs/REVConfig.sol";
@@ -24,6 +23,7 @@ interface IREVBasic {
 
     event DeployRevnet(
         uint256 indexed revnetId,
+        bytes32 indexed salt,
         REVConfig configuration,
         JBTerminalConfig[] terminalConfigurations,
         REVBuybackHookConfig buybackHookConfiguration,
@@ -48,7 +48,6 @@ interface IREVBasic {
     function CONTROLLER() external view returns (IJBController);
     function FEE() external view returns (uint256);
     function SUCKER_REGISTRY() external view returns (IJBSuckerRegistry);
-    function PROJECT_HANDLES() external view returns (IJBProjectHandles);
     function FEE_REVNET_ID() external view returns (uint256);
 
     function buybackHookOf(uint256 revnetId) external view returns (IJBRulesetDataHook);
@@ -58,7 +57,6 @@ interface IREVBasic {
 
     function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external;
     function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
-    function setEnsNamePartsFor(uint256 chainId, uint256 revnetId, string[] memory parts) external;
     function allowedMintCountOf(
         uint256 revnetId,
         uint256 stageId,

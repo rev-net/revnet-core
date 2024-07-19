@@ -49,8 +49,9 @@ library RevnetCoreDeploymentLib {
         deployment.basic_deployer =
             REVBasicDeployer(_getDeploymentAddress(path, "revnet-core-testnet", network_name, "REVBasicDeployer"));
 
-        deployment.nft_hook_deployer =
-            REVTiered721HookDeployer(_getDeploymentAddress(path, "revnet-core-testnet", network_name, "REVTiered721HookDeployer"));
+        deployment.nft_hook_deployer = REVTiered721HookDeployer(
+            _getDeploymentAddress(path, "revnet-core-testnet", network_name, "REVTiered721HookDeployer")
+        );
 
         deployment.croptop_deployer =
             REVCroptopDeployer(_getDeploymentAddress(path, "revnet-core-testnet", network_name, "REVCroptopDeployer"));

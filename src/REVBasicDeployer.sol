@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackHook.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
-import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
 import {REVBasic} from "./abstract/REVBasic.sol";
 import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
@@ -22,17 +20,13 @@ contract REVBasicDeployer is REVBasic, IREVBasicDeployer {
 
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
-    /// @param projectHandles The contract that stores ENS project handles.
     /// @param feeRevnetId The ID of the revnet that will receive fees.
-    /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
-        IJBProjectHandles projectHandles,
-        uint256 feeRevnetId,
-        address trustedForwarder
+        uint256 feeRevnetId
     )
-        REVBasic(controller, suckerRegistry, projectHandles, feeRevnetId, trustedForwarder)
+        REVBasic(controller, suckerRegistry, feeRevnetId)
     {}
 
     //*********************************************************************//

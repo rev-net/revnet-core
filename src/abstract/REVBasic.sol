@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {mulDiv} from "@prb/math/src/Common.sol";
@@ -33,7 +32,7 @@ import {JBRedeemHookSpecification} from "@bananapus/core/src/structs/JBRedeemHoo
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
 import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackHook.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
-import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
+import {JBSuckerDeployerConfig} from "@bananapus/suckers/src/structs/JBSuckerDeployerConfig.sol";
 
 import {REVConfig} from "./../structs/REVConfig.sol";
 import {IREVBasic} from "./../interfaces/IREVBasic.sol";
@@ -44,7 +43,7 @@ import {REVBuybackPoolConfig} from "./../structs/REVBuybackPoolConfig.sol";
 import {REVSuckerDeploymentConfig} from "./../structs/REVSuckerDeploymentConfig.sol";
 
 /// @notice A contract that facilitates deploying a basic Revnet.
-abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC721Receiver {
+abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC721Receiver {
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
@@ -78,9 +77,6 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
 
     /// @notice The registry that deploys and tracks each project's suckers.
     IJBSuckerRegistry public immutable override SUCKER_REGISTRY;
-
-    /// @notice The contract that stores ENS project handles.
-    IJBProjectHandles public immutable override PROJECT_HANDLES;
 
     //*********************************************************************//
     // --------------------- public stored properties -------------------- //
@@ -215,16 +211,18 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         // Get a reference to the amount of tokens that are used to cover the fee.
         uint256 feeRedeemCount = mulDiv(context.redeemCount, FEE, JBConstants.MAX_FEE);
 
+        uint256 amount = JBRedemptions.reclaimFrom({
+            surplus: context.surplus.value,
+            tokensRedeemed: feeRedeemCount,
+            totalSupply: context.totalSupply,
+            redemptionRate: context.redemptionRate
+        });
+
         // Keep a reference to the hook specifications that invokes this hook to process the fee.
         hookSpecifications = new JBRedeemHookSpecification[](1);
         hookSpecifications[0] = JBRedeemHookSpecification({
             hook: IJBRedeemHook(address(this)),
-            amount: JBRedemptions.reclaimFrom({
-                surplus: context.surplus.value,
-                tokensRedeemed: feeRedeemCount,
-                totalSupply: context.totalSupply,
-                redemptionRate: context.redemptionRate
-            }),
+            amount: amount,
             metadata: abi.encode(feeTerminal)
         });
 
@@ -308,22 +306,16 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
 
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
-    /// @param projectHandles The contract that stores ENS project handles.
     /// @param feeRevnetId The ID of the revnet that will receive fees.
-    /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
-        IJBProjectHandles projectHandles,
-        uint256 feeRevnetId,
-        address trustedForwarder
+        uint256 feeRevnetId
     )
-        ERC2771Context(trustedForwarder)
     {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
         FEE_REVNET_ID = feeRevnetId;
-        PROJECT_HANDLES = projectHandles;
     }
 
     //*********************************************************************//
@@ -381,33 +373,19 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         override
     {
         // Enforce permissions.
-        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasic_Unauthorized();
+        if (!isSplitOperatorOf(revnetId, msg.sender)) revert REVBasic_Unauthorized();
 
         // Compose the salt.
-        bytes32 salt = keccak256(abi.encode(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt));
+        bytes32 salt = keccak256(abi.encode(msg.sender, encodedConfiguration, suckerDeploymentConfiguration.salt));
 
         // Deploy the suckers.
-        SUCKER_REGISTRY.deploySuckersFor({
-            projectId: revnetId,
+        _deploySuckersFor({
+            revnetId: revnetId,
             salt: salt,
             configurations: suckerDeploymentConfiguration.deployerConfigurations
         });
 
-        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, _msgSender());
-    }
-
-    /// @notice Point from a revnet to an ENS node.
-    /// @dev Only the revnet's split operator can set its ENS name parts.
-    /// @dev The `parts` ["jbx", "dao", "foo"] represents foo.dao.jbx.eth.
-    /// @dev The split operator must call this function to set its ENS name parts.
-    /// @param chainId The chain ID of the network the project is on.
-    /// @param revnetId The ID of the revnet to set an ENS handle for.
-    /// @param parts The parts of the ENS domain to use as the project handle, excluding the trailing .eth.
-    function setEnsNamePartsFor(uint256 chainId, uint256 revnetId, string[] memory parts) external override {
-        // Enforce permissions.
-        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasic_Unauthorized();
-
-        PROJECT_HANDLES.setEnsNamePartsFor(chainId, revnetId, parts);
+        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, msg.sender);
     }
 
     /// @notice Mint tokens from a revnet to a specified beneficiary according to the rules set for the revnet.
@@ -426,10 +404,10 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
 
         // Premint tokens to the split operator if needed.
         if (count == 0) return;
-   
+
         // Reset the mint amount.
         allowedMintCountOf[revnetId][stageId][beneficiary] = 0;
-   
+
         CONTROLLER.mintTokensOf({
             projectId: revnetId,
             tokenCount: count,
@@ -438,7 +416,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
             useReservedRate: false
         });
 
-        emit Mint(revnetId, stage.id, beneficiary, count, _msgSender());
+        emit Mint(revnetId, stage.id, beneficiary, count, msg.sender);
     }
 
     /// @notice A revnet's operator can replace itself.
@@ -447,21 +425,20 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
     /// @param newSplitOperator The address of the new split operator.
     function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external override {
         /// Make sure the message sender is the current split operator.
-        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasic_Unauthorized();
+        if (!isSplitOperatorOf(revnetId, msg.sender)) revert REVBasic_Unauthorized();
 
         // Setup the permission data for the old split operator.
         JBPermissionsData memory permissionData =
-            JBPermissionsData({operator: _msgSender(), projectId: uint56(revnetId), permissionIds: new uint8[](0)});
+            JBPermissionsData({operator: msg.sender, projectId: uint56(revnetId), permissionIds: new uint8[](0)});
 
         // Remove operator permission from the old split operator.
         _permissions().setPermissionsFor({account: address(this), permissionsData: permissionData});
-        
+
         // Set the new split operator.
-        _setSplitOperatorOf({revnetId: revnetId, operator: newSplitOperator });
+        _setSplitOperatorOf({revnetId: revnetId, operator: newSplitOperator});
 
-        emit ReplaceSplitOperator(revnetId, newSplitOperator, _msgSender());
+        emit ReplaceSplitOperator(revnetId, newSplitOperator, msg.sender);
     }
-
 
     //*********************************************************************//
     // --------------------- itnernal transactions ----------------------- //
@@ -504,7 +481,9 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
             });
         } else {
             // Transfer the revnet to be owned by this deployer.
-            IERC721(CONTROLLER.PROJECTS()).safeTransferFrom(CONTROLLER.PROJECTS().ownerOf(revnetId), address(this), revnetId);
+            IERC721(CONTROLLER.PROJECTS()).safeTransferFrom(
+                CONTROLLER.PROJECTS().ownerOf(revnetId), address(this), revnetId
+            );
 
             // Launch rulesets for a pre-existing juicebox.
             CONTROLLER.launchRulesetsFor({
@@ -561,17 +540,21 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         // Give the operator permission to change the recipients of the operator's split.
         _permissions().setPermissionsFor({account: address(this), permissionsData: permissionsData});
 
+        // Compose the salt.
+        bytes32 salt = keccak256(abi.encode(msg.sender, encodedConfiguration, suckerDeploymentConfiguration.salt));
+
         // Deploy the suckers if needed.
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
-            SUCKER_REGISTRY.deploySuckersFor({
-                projectId: revnetId,
-                salt: keccak256(abi.encode(_msgSender(), encodedConfiguration, suckerDeploymentConfiguration.salt)),
+            _deploySuckersFor({
+                revnetId: revnetId,
+                salt: salt,
                 configurations: suckerDeploymentConfiguration.deployerConfigurations
             });
         }
 
         emit DeployRevnet(
             revnetId,
+            salt,
             configuration,
             terminalConfigurations,
             buybackHookConfiguration,
@@ -579,7 +562,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
             rulesetConfigurations,
             encodedConfiguration,
             isInProgress,
-            _msgSender()
+            msg.sender
         );
 
         return revnetId;
@@ -599,7 +582,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         uint8[] memory downcastSplitOperatorPermissionIndexes = new uint8[](numberOfSplitOperatorPermissionIndexes);
 
         // Downcast each permission.
-        for(uint256 i; i < numberOfSplitOperatorPermissionIndexes; i++) {
+        for (uint256 i; i < numberOfSplitOperatorPermissionIndexes; i++) {
             downcastSplitOperatorPermissionIndexes[i] = uint8(splitOperatorPermissionIndexes[i]);
         }
 
@@ -652,7 +635,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
                         memo: "",
                         useReservedRate: false
                     });
-                    emit Mint(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, _msgSender());
+                    emit Mint(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender);
                 }
                 // Store the amount of tokens that can be minted during this stage from this chain.
                 else {
@@ -660,7 +643,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
                     allowedMintCountOf[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.count;
 
                     emit StoreMintPotential(
-                        revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, _msgSender()
+                        revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender
                     );
                 }
             }
@@ -913,20 +896,17 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         return CONTROLLER.PROJECTS();
     }
 
-    /// @notice Returns the sender, prefered to use over `msg.sender`
-    /// @return sender the sender address of this call.
-    function _msgSender() internal view override returns (address sender) {
-        return ERC2771Context._msgSender();
-    }
-
-    /// @notice Returns the calldata, prefered to use over `msg.data`
-    /// @return calldata the `msg.data` of this call
-    function _msgData() internal view override returns (bytes calldata) {
-        return ERC2771Context._msgData();
-    }
-
-    /// @dev ERC-2771 specifies the context as being a single address (20 bytes).
-    function _contextSuffixLength() internal view override returns (uint256) {
-        return super._contextSuffixLength();
+    /// @notice Deploy suckers for a revnet.
+    /// @param revnetId The ID of the revnet to deploy suckers for.
+    /// @param salt The salt to use for the deployment.
+    /// @param configurations The configurations that specify the deployment.
+    function _deploySuckersFor(
+        uint256 revnetId,
+        bytes32 salt,
+        JBSuckerDeployerConfig[] memory configurations
+    )
+        internal
+    {
+        SUCKER_REGISTRY.deploySuckersFor({projectId: revnetId, salt: salt, configurations: configurations});
     }
 }

@@ -12,7 +12,6 @@ import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
-import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
 import {REVTiered721Hook} from "./REVTiered721Hook.sol";
 import {IREVCroptop} from "../interfaces/IREVCroptop.sol";
@@ -30,21 +29,17 @@ contract REVCroptop is REVTiered721Hook, IREVCroptop {
 
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
-    /// @param projectHandles The contract that stores ENS project handles.
     /// @param feeRevnetId The ID of the revnet that will receive fees.
-    /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     /// @param hookDeployer The 721 tiers hook deployer.
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
-        IJBProjectHandles projectHandles,
         uint256 feeRevnetId,
-        address trustedForwarder,
         IJB721TiersHookDeployer hookDeployer,
         CTPublisher publisher
     )
-        REVTiered721Hook(controller, suckerRegistry, projectHandles, feeRevnetId, trustedForwarder, hookDeployer)
+        REVTiered721Hook(controller, suckerRegistry, feeRevnetId, hookDeployer)
     {
         PUBLISHER = publisher;
     }
@@ -99,8 +94,11 @@ contract REVCroptop is REVTiered721Hook, IREVCroptop {
         uint8[] memory permissionIndexes = new uint8[](1);
         permissionIndexes[0] = JBPermissionIds.ADJUST_721_TIERS;
 
-        JBPermissionsData memory permissionData =
-            JBPermissionsData({operator: address(PUBLISHER), projectId: uint56(revnetId), permissionIds: permissionIndexes});
+        JBPermissionsData memory permissionData = JBPermissionsData({
+            operator: address(PUBLISHER),
+            projectId: uint56(revnetId),
+            permissionIds: permissionIndexes
+        });
 
         // Give the croptop publisher permission to post on this contract's behalf.
         _permissions().setPermissionsFor({account: address(this), permissionsData: permissionData});
