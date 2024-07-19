@@ -116,7 +116,7 @@ contract REVCroptop is REVTiered721Hook, IREVCroptop {
         uint256 numberOfAllowedPosts = allowedPosts.length;
 
         // Exit if there are no post criteria to configure.
-        if (allowedPosts.length == 0) return;
+        if (numberOfAllowedPosts == 0) return;
 
         // Keep a reference to the formatted allowed posts.
         CTAllowedPost[] memory formattedAllowedPosts = new CTAllowedPost[](numberOfAllowedPosts);

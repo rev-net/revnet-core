@@ -76,7 +76,7 @@ contract REVTiered721Hook is REVPayHook, IREVTiered721Hook {
         uint256 originalRevnetId = revnetId;
 
         // Get the revnet ID, optimistically knowing it will be one greater than the current count.
-        if (revnetId == 0) revnetId = _projects().count() + 1;
+        if (originalRevnetId == 0) revnetId = _projects().count() + 1;
 
         // Keep a reference to the number of pay hooks passed in.
         uint256 numberOfOtherPayHooks = otherPayHooksSpecifications.length;

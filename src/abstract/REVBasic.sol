@@ -51,8 +51,6 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
 
     error REVBasic_BadStageTimes();
     error REVBasic_ExitDelayInEffect();
-    error REVBasic_PermissionCantBeSet();
-    error REVBasic_SplitOperatorCantBeAdditionalOperator();
     error REVBasic_StageNotStarted();
     error REVBasic_Unauthorized();
 
@@ -110,7 +108,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
     /// @notice The permissions that the provided operator should be granted if the revnet was deployed with that
     /// intent. This is set once for each revnet when deployed.
     /// @dev This should only be set in the deployment process for each revnet.
-    mapping(uint256 => uint8[]) internal _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES;
+    mapping(uint256 => uint256[]) internal _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES;
 
     /// @notice The pay hooks to include during payments to networks.
     /// @custom:param revnetId The ID of the revnet to which the extensions apply.
@@ -287,22 +285,11 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
     /// @param addr The address to check if is the split operator.
     /// @return flag The flag indicating if the address is the split operator.
     function isSplitOperatorOf(uint256 revnetId, address addr) public view override returns (bool) {
-        // Get a reference to the split operator permission indexes.
-        uint8[] memory splitOperatorPermissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
-
-        // Create an array that'll contain upcast values.
-        uint256[] memory upcastSplitOperatorPermissionIndexes = new uint256[](splitOperatorPermissionIndexes.length);
-
-        // Upcast each value.
-        for (uint256 i; i < splitOperatorPermissionIndexes.length; i++) {
-            upcastSplitOperatorPermissionIndexes[i] = uint256(splitOperatorPermissionIndexes[i]);
-        }
-
         return _permissions().hasPermissions({
             operator: addr,
             account: address(this),
             projectId: revnetId,
-            permissionIds: upcastSplitOperatorPermissionIndexes,
+            permissionIds: _splitOperatorPermissionIndexesOf(revnetId),
             includeRoot: false,
             includeWildcardProjectId: false
         });
@@ -379,38 +366,6 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         }
     }
 
-    /// @notice A revnet's operator can replace itself.
-    /// @dev Only the revnet's split operator can replace itself.
-    /// @param revnetId The ID of the revnet having its operator replaced.
-    /// @param newSplitOperator The address of the new split operator.
-    function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external override {
-
-        /// Make sure the message sender is the current split operator.
-        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasic_Unauthorized();
-
-        // Keep a reference to the split operator permission indexes.
-        uint8[] memory splitOperatorPermissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
-
-        // Setup the permission data for the old split operator.
-        JBPermissionsData memory permissionData =
-            JBPermissionsData({operator: _msgSender(), projectId: uint56(revnetId), permissionIds: new uint8[](0)});
-
-        // Remove operator permission from the old split operator.
-        _permissions().setPermissionsFor({account: address(this), permissionsData: permissionData});
-
-        // Setup the permission data for the new split operator.
-        permissionData = JBPermissionsData({
-            operator: newSplitOperator,
-            projectId: uint56(revnetId),
-            permissionIds: splitOperatorPermissionIndexes
-        });
-
-        // Give the new split operator its permissions.
-        _permissions().setPermissionsFor({account: address(this), permissionsData: permissionData});
-
-        emit ReplaceSplitOperator(revnetId, newSplitOperator, _msgSender());
-    }
-
     /// @notice Allow the split operat
     /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
     /// @dev Only the revnet's split operator can deploy new suckers.
@@ -471,10 +426,10 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
 
         // Premint tokens to the split operator if needed.
         if (count == 0) return;
-
+   
         // Reset the mint amount.
         allowedMintCountOf[revnetId][stageId][beneficiary] = 0;
-
+   
         CONTROLLER.mintTokensOf({
             projectId: revnetId,
             tokenCount: count,
@@ -485,6 +440,28 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
 
         emit Mint(revnetId, stage.id, beneficiary, count, _msgSender());
     }
+
+    /// @notice A revnet's operator can replace itself.
+    /// @dev Only the revnet's split operator can replace itself.
+    /// @param revnetId The ID of the revnet having its operator replaced.
+    /// @param newSplitOperator The address of the new split operator.
+    function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external override {
+        /// Make sure the message sender is the current split operator.
+        if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasic_Unauthorized();
+
+        // Setup the permission data for the old split operator.
+        JBPermissionsData memory permissionData =
+            JBPermissionsData({operator: _msgSender(), projectId: uint56(revnetId), permissionIds: new uint8[](0)});
+
+        // Remove operator permission from the old split operator.
+        _permissions().setPermissionsFor({account: address(this), permissionsData: permissionData});
+        
+        // Set the new split operator.
+        _setSplitOperatorOf({revnetId: revnetId, operator: newSplitOperator });
+
+        emit ReplaceSplitOperator(revnetId, newSplitOperator, _msgSender());
+    }
+
 
     //*********************************************************************//
     // --------------------- itnernal transactions ----------------------- //
@@ -567,23 +544,15 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         // Store the mint amounts.
         _storeMintAmounts(revnetId, configuration);
 
-        // Keep a reference to permissions being set. Give the operator permission to change the recipients of the
-        // operator's split.
-        JBPermissionsData memory permissionsData = JBPermissionsData({
-            operator: configuration.splitOperator,
-            projectId: uint56(revnetId),
-            permissionIds: _splitOperatorPermissionIndexesOf(revnetId)
-        });
-
         // Give the operator its permissions.
-        _permissions().setPermissionsFor({account: address(this), permissionsData: permissionsData});
+        _setSplitOperatorOf({revnetId: revnetId, operator: configuration.splitOperator});
 
         // Give the sucker registry permission to map tokens.
         uint8[] memory registryPermissions = new uint8[](1);
         registryPermissions[0] = JBPermissionIds.MAP_SUCKER_TOKEN;
 
         // Give the sucker registry permission to map tokens.
-        permissionsData = JBPermissionsData({
+        JBPermissionsData memory permissionsData = JBPermissionsData({
             operator: address(SUCKER_REGISTRY),
             projectId: uint56(revnetId),
             permissionIds: registryPermissions
@@ -614,6 +583,35 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         );
 
         return revnetId;
+    }
+
+    /// @notice A revnet's operator can replace itself.
+    /// @param revnetId The ID of the revnet having its operator replaced.
+    /// @param operator The address of the new split operator.
+    function _setSplitOperatorOf(uint256 revnetId, address operator) internal {
+        // Keep a reference to the split operator permission indexes.
+        uint256[] memory splitOperatorPermissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
+
+        // Keep a reference to how many split operator permissions there are.
+        uint256 numberOfSplitOperatorPermissionIndexes = splitOperatorPermissionIndexes.length;
+
+        // Keep a reference to an array where downcast permissions will go.
+        uint8[] memory downcastSplitOperatorPermissionIndexes = new uint8[](numberOfSplitOperatorPermissionIndexes);
+
+        // Downcast each permission.
+        for(uint256 i; i < numberOfSplitOperatorPermissionIndexes; i++) {
+            downcastSplitOperatorPermissionIndexes[i] = uint8(splitOperatorPermissionIndexes[i]);
+        }
+
+        // Setup the permission data for the new split operator.
+        JBPermissionsData memory permissionData = JBPermissionsData({
+            operator: operator,
+            projectId: uint56(revnetId),
+            permissionIds: downcastSplitOperatorPermissionIndexes
+        });
+
+        // Give the new split operator its permissions.
+        _permissions().setPermissionsFor({account: address(this), permissionsData: permissionData});
     }
 
     /// @notice Stores the amount of tokens that can be minted during each stage from this chain.
@@ -706,16 +704,16 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
     function _splitOperatorPermissionIndexesOf(uint256 revnetId)
         internal
         view
-        returns (uint8[] memory allOperatorPermissions)
+        returns (uint256[] memory allOperatorPermissions)
     {
         // Keep a reference to the custom split operator permissions.
-        uint8[] memory customSplitOperatorPermissionIndexes = _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId];
+        uint256[] memory customSplitOperatorPermissionIndexes = _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId];
 
         // Keep a reference to the number of custom permissions.
         uint256 numberOfCustomPermissionIndexes = customSplitOperatorPermissionIndexes.length;
 
         // Make the array that merges the default operator permissions and the custom ones.
-        allOperatorPermissions = new uint8[](3 + numberOfCustomPermissionIndexes);
+        allOperatorPermissions = new uint256[](3 + numberOfCustomPermissionIndexes);
         allOperatorPermissions[0] = JBPermissionIds.SET_SPLIT_GROUPS;
         allOperatorPermissions[1] = JBPermissionIds.SET_BUYBACK_POOL;
         allOperatorPermissions[2] = JBPermissionIds.SET_PROJECT_URI;
