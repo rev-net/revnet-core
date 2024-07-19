@@ -11,7 +11,7 @@ import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.s
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
-import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
+import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
 import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
 import {REVTiered721Hook} from "./REVTiered721Hook.sol";
@@ -37,7 +37,7 @@ contract REVCroptop is REVTiered721Hook, IREVCroptop {
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     constructor(
         IJBController controller,
-        IBPSuckerRegistry suckerRegistry,
+        IJBSuckerRegistry suckerRegistry,
         IJBProjectHandles projectHandles,
         uint256 feeRevnetId,
         address trustedForwarder,
@@ -96,11 +96,11 @@ contract REVCroptop is REVTiered721Hook, IREVCroptop {
         _configurePostingCriteriaFor({hook: address(hook), allowedPosts: allowedPosts});
 
         // Define the permissions to set.
-        uint256[] memory permissionIndexes = new uint256[](1);
+        uint8[] memory permissionIndexes = new uint8[](1);
         permissionIndexes[0] = JBPermissionIds.ADJUST_721_TIERS;
 
         JBPermissionsData memory permissionData =
-            JBPermissionsData({operator: address(PUBLISHER), projectId: revnetId, permissionIds: permissionIndexes});
+            JBPermissionsData({operator: address(PUBLISHER), projectId: uint56(revnetId), permissionIds: permissionIndexes});
 
         // Give the croptop publisher permission to post on this contract's behalf.
         _permissions().setPermissionsFor({account: address(this), permissionsData: permissionData});

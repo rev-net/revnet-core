@@ -5,7 +5,7 @@ import {IJBRulesetDataHook} from "@bananapus/core/src/interfaces/IJBRulesetDataH
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
 import {JBRulesetConfig} from "@bananapus/core/src/structs/JBRulesetConfig.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
-import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
+import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
 import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
 import {REVBuybackHookConfig} from "../structs/REVBuybackHookConfig.sol";
@@ -47,7 +47,7 @@ interface IREVBasic {
     function EXIT_DELAY() external view returns (uint256);
     function CONTROLLER() external view returns (IJBController);
     function FEE() external view returns (uint256);
-    function SUCKER_REGISTRY() external view returns (IBPSuckerRegistry);
+    function SUCKER_REGISTRY() external view returns (IJBSuckerRegistry);
     function PROJECT_HANDLES() external view returns (IJBProjectHandles);
     function FEE_REVNET_ID() external view returns (uint256);
 

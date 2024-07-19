@@ -23,7 +23,7 @@ struct REVStageConfig {
     REVMintConfig[] mintConfigs;
     uint16 splitPercent;
     uint112 initialPrice;
-    uint40 priceIncreaseFrequency;
+    uint32 priceIncreaseFrequency;
     uint32 priceIncreasePercentage;
     uint16 cashOutTaxIntensity;
 }

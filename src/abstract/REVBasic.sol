@@ -32,7 +32,7 @@ import {IJBRulesetDataHook} from "@bananapus/core/src/interfaces/IJBRulesetDataH
 import {JBRedeemHookSpecification} from "@bananapus/core/src/structs/JBRedeemHookSpecification.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
 import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackHook.sol";
-import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
+import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
 import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
 import {REVConfig} from "./../structs/REVConfig.sol";
@@ -79,7 +79,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
     IJBController public immutable override CONTROLLER;
 
     /// @notice The registry that deploys and tracks each project's suckers.
-    IBPSuckerRegistry public immutable override SUCKER_REGISTRY;
+    IJBSuckerRegistry public immutable override SUCKER_REGISTRY;
 
     /// @notice The contract that stores ENS project handles.
     IJBProjectHandles public immutable override PROJECT_HANDLES;
@@ -110,7 +110,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
     /// @notice The permissions that the provided operator should be granted if the revnet was deployed with that
     /// intent. This is set once for each revnet when deployed.
     /// @dev This should only be set in the deployment process for each revnet.
-    mapping(uint256 => uint256[]) internal _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES;
+    mapping(uint256 => uint8[]) internal _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES;
 
     /// @notice The pay hooks to include during payments to networks.
     /// @custom:param revnetId The ID of the revnet to which the extensions apply.
@@ -287,11 +287,22 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
     /// @param addr The address to check if is the split operator.
     /// @return flag The flag indicating if the address is the split operator.
     function isSplitOperatorOf(uint256 revnetId, address addr) public view override returns (bool) {
+        // Get a reference to the split operator permission indexes.
+        uint8[] memory splitOperatorPermissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
+
+        // Create an array that'll contain upcast values.
+        uint256[] memory upcastSplitOperatorPermissionIndexes = new uint256[](splitOperatorPermissionIndexes.length);
+
+        // Upcast each value.
+        for (uint256 i; i < splitOperatorPermissionIndexes.length; i++) {
+            upcastSplitOperatorPermissionIndexes[i] = uint256(splitOperatorPermissionIndexes[i]);
+        }
+
         return _permissions().hasPermissions({
             operator: addr,
             account: address(this),
             projectId: revnetId,
-            permissionIds: _splitOperatorPermissionIndexesOf(revnetId),
+            permissionIds: upcastSplitOperatorPermissionIndexes,
             includeRoot: false,
             includeWildcardProjectId: false
         });
@@ -315,7 +326,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     constructor(
         IJBController controller,
-        IBPSuckerRegistry suckerRegistry,
+        IJBSuckerRegistry suckerRegistry,
         IJBProjectHandles projectHandles,
         uint256 feeRevnetId,
         address trustedForwarder
@@ -378,11 +389,11 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         if (!isSplitOperatorOf(revnetId, _msgSender())) revert REVBasic_Unauthorized();
 
         // Keep a reference to the split operator permission indexes.
-        uint256[] memory splitOperatorPermissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
+        uint8[] memory splitOperatorPermissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
 
         // Setup the permission data for the old split operator.
         JBPermissionsData memory permissionData =
-            JBPermissionsData({operator: _msgSender(), projectId: revnetId, permissionIds: new uint256[](0)});
+            JBPermissionsData({operator: _msgSender(), projectId: uint56(revnetId), permissionIds: new uint8[](0)});
 
         // Remove operator permission from the old split operator.
         _permissions().setPermissionsFor({account: address(this), permissionsData: permissionData});
@@ -390,7 +401,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         // Setup the permission data for the new split operator.
         permissionData = JBPermissionsData({
             operator: newSplitOperator,
-            projectId: revnetId,
+            projectId: uint56(revnetId),
             permissionIds: splitOperatorPermissionIndexes
         });
 
@@ -560,7 +571,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         // operator's split.
         JBPermissionsData memory permissionsData = JBPermissionsData({
             operator: configuration.splitOperator,
-            projectId: revnetId,
+            projectId: uint56(revnetId),
             permissionIds: _splitOperatorPermissionIndexesOf(revnetId)
         });
 
@@ -568,13 +579,13 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
         _permissions().setPermissionsFor({account: address(this), permissionsData: permissionsData});
 
         // Give the sucker registry permission to map tokens.
-        uint256[] memory registryPermissions = new uint256[](1);
+        uint8[] memory registryPermissions = new uint8[](1);
         registryPermissions[0] = JBPermissionIds.MAP_SUCKER_TOKEN;
 
         // Give the sucker registry permission to map tokens.
         permissionsData = JBPermissionsData({
             operator: address(SUCKER_REGISTRY),
-            projectId: revnetId,
+            projectId: uint56(revnetId),
             permissionIds: registryPermissions
         });
 
@@ -695,16 +706,16 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
     function _splitOperatorPermissionIndexesOf(uint256 revnetId)
         internal
         view
-        returns (uint256[] memory allOperatorPermissions)
+        returns (uint8[] memory allOperatorPermissions)
     {
         // Keep a reference to the custom split operator permissions.
-        uint256[] memory customSplitOperatorPermissionIndexes = _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId];
+        uint8[] memory customSplitOperatorPermissionIndexes = _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId];
 
         // Keep a reference to the number of custom permissions.
         uint256 numberOfCustomPermissionIndexes = customSplitOperatorPermissionIndexes.length;
 
         // Make the array that merges the default operator permissions and the custom ones.
-        allOperatorPermissions = new uint256[](3 + numberOfCustomPermissionIndexes);
+        allOperatorPermissions = new uint8[](3 + numberOfCustomPermissionIndexes);
         allOperatorPermissions[0] = JBPermissionIds.SET_SPLIT_GROUPS;
         allOperatorPermissions[1] = JBPermissionIds.SET_BUYBACK_POOL;
         allOperatorPermissions[2] = JBPermissionIds.SET_PROJECT_URI;
@@ -760,7 +771,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
             rulesetConfigurations[i].duration = stageConfiguration.priceIncreaseFrequency;
             // Set the initial issuance for the first ruleset, otherwise pass 0 to inherit from the previous
             // ruleset.
-            rulesetConfigurations[i].weight = mulDiv(1, 10 ** 18, stageConfiguration.initialPrice);
+            rulesetConfigurations[i].weight = uint112(mulDiv(1, 10 ** 18, stageConfiguration.initialPrice));
             rulesetConfigurations[i].decayRate = stageConfiguration.priceIncreasePercentage;
             rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
             rulesetConfigurations[i].metadata = JBRulesetMetadata({
@@ -782,7 +793,7 @@ abstract contract REVBasic is ERC2771Context, IREVBasic, IJBRulesetDataHook, IJB
                 useDataHookForPay: true, // Use the buyback hook data source.
                 useDataHookForRedeem: false,
                 dataHook: dataHook,
-                metadata: extraMetadata
+                metadata: uint16(extraMetadata)
             });
 
             // If the first stage has a start time in the past, mark the revnet as being in progress.

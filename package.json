@@ -15,7 +15,7 @@
     },
     "dependencies": {
         "@bananapus/721-hook": "^0.0.19",
-        "@bananapus/buyback-hook": "^0.0.14",
+        "@bananapus/buyback-hook": "^0.0.15",
         "@bananapus/core": "^0.0.22",
         "@bananapus/ownable": "^0.0.6",
         "@bananapus/permission-ids": "^0.0.11",

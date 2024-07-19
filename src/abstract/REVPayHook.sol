@@ -5,7 +5,7 @@ import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackHook.sol";
-import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
+import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
 import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
 import {REVBasic} from "./REVBasic.sol";
@@ -22,7 +22,7 @@ abstract contract REVPayHook is REVBasic, IREVPayHook {
     /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     constructor(
         IJBController controller,
-        IBPSuckerRegistry suckerRegistry,
+        IJBSuckerRegistry suckerRegistry,
         IJBProjectHandles projectHandles,
         uint256 feeRevnetId,
         address trustedForwarder

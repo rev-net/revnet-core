@@ -7,7 +7,7 @@ import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
-import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
+import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
 import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
 import {REVCroptop} from "./abstract/REVCroptop.sol";
@@ -30,7 +30,7 @@ contract REVCroptopDeployer is REVCroptop, IREVCroptopDeployer {
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     constructor(
         IJBController controller,
-        IBPSuckerRegistry suckerRegistry,
+        IJBSuckerRegistry suckerRegistry,
         IJBProjectHandles projectHandles,
         uint256 feeRevnetId,
         address trustedForwarder,

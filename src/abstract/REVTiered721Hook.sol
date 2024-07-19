@@ -7,7 +7,7 @@ import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpeci
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
-import {IBPSuckerRegistry} from "@bananapus/suckers/src/interfaces/IBPSuckerRegistry.sol";
+import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
 import {IJBProjectHandles} from "@bananapus/project-handles/src/interfaces/IJBProjectHandles.sol";
 
@@ -31,7 +31,7 @@ contract REVTiered721Hook is REVPayHook, IREVTiered721Hook {
     /// @param hookDeployer The 721 tiers hook deployer.
     constructor(
         IJBController controller,
-        IBPSuckerRegistry suckerRegistry,
+        IJBSuckerRegistry suckerRegistry,
         IJBProjectHandles projectHandles,
         uint256 feeRevnetId,
         address trustedForwarder,
