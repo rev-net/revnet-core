@@ -54,7 +54,7 @@ contract REVCroptopDeployer is REVCroptop, IREVCroptopDeployer {
     /// @return hook The address of the 721 hook that was deployed on the revnet.
     function deployFor(
         uint256 revnetId,
-        REVConfig calldata configuration,
+        REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
         REVSuckerDeploymentConfig memory suckerDeploymentConfiguration,

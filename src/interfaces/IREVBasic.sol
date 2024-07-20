@@ -23,16 +23,17 @@ interface IREVBasic {
 
     event DeployRevnet(
         uint256 indexed revnetId,
-        bytes32 indexed salt,
+        bytes32 indexed suckerSalt,
         REVConfig configuration,
         JBTerminalConfig[] terminalConfigurations,
         REVBuybackHookConfig buybackHookConfiguration,
         REVSuckerDeploymentConfig suckerDeploymentConfiguration,
         JBRulesetConfig[] rulesetConfigurations,
         bytes encodedConfiguration,
-        bool isInProgress,
         address caller
     );
+
+    event SetCashOutDelay(uint256 indexed revnetId, uint256 cashOutDelay, address caller);
 
     event Mint(
         uint256 indexed revnetId, uint256 indexed stageId, address indexed beneficiary, uint256 count, address caller
@@ -44,14 +45,14 @@ interface IREVBasic {
 
     event SetAdditionalOperator(uint256 revnetId, address additionalOperator, uint256[] permissionIds, address caller);
 
-    function EXIT_DELAY() external view returns (uint256);
+    function CASH_OUT_DELAY() external view returns (uint256);
     function CONTROLLER() external view returns (IJBController);
     function FEE() external view returns (uint256);
     function SUCKER_REGISTRY() external view returns (IJBSuckerRegistry);
     function FEE_REVNET_ID() external view returns (uint256);
 
     function buybackHookOf(uint256 revnetId) external view returns (IJBRulesetDataHook);
-    function exitDelayOf(uint256 revnetId) external view returns (uint256);
+    function cashOutDelayOf(uint256 revnetId) external view returns (uint256);
     function payHookSpecificationsOf(uint256 revnetId) external view returns (JBPayHookSpecification[] memory);
     function isSplitOperatorOf(uint256 revnetId, address addr) external view returns (bool);
 
