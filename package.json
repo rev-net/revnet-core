@@ -11,7 +11,7 @@
         "coverage:integration": "forge coverage --match-path \"./src/*.sol\" --report lcov --report summary",
         "deploy:mainnets": "source ./.env && export START_TIME=$(date +%s) && npx sphinx propose ./script/Deploy.s.sol --networks mainnets",
         "deploy:testnets": "source ./.env && export START_TIME=$(date +%s) && npx sphinx propose ./script/Deploy.s.sol --networks testnets",
-        "artifacts": "source ./.env && npx sphinx artifacts --org-id 'cltepuu9u0003j58rjtbd0hvu' --project-name 'revnet-core-testnet'"
+        "artifacts": "source ./.env && npx sphinx artifacts --org-id 'my-org-id' --project-name 'revnet-core-testnet'"
     },
     "dependencies": {
         "@bananapus/721-hook": "^0.0.20",
