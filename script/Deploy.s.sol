@@ -4,15 +4,29 @@ pragma solidity 0.8.23;
 import "@bananapus/core/script/helpers/CoreDeploymentLib.sol";
 import "@bananapus/721-hook/script/helpers/Hook721DeploymentLib.sol";
 import "@bananapus/suckers/script/helpers/SuckerDeploymentLib.sol";
-import "@bananapus/project-handles/script/helpers/ProjectHandlesDeploymentLib.sol";
 import "@croptop/core/script/helpers/CroptopDeploymentLib.sol";
+import "@bananapus/swap-terminal/script/helpers/SwapTerminalDeploymentLib.sol";
+import "@bananapus/buyback-hook/script/helpers/BuybackDeploymentLib.sol";
 
 import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
 import {Script} from "forge-std/Script.sol";
 
-import {REVBasicDeployer} from "./../src/REVBasicDeployer.sol";
+import "./../src/REVBasicDeployer.sol";
+import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
+import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
+import {REVStageConfig, REVMintConfig} from "../src/structs/REVStageConfig.sol";
+import {REVDescription} from "../src/structs/REVDescription.sol";
+import {REVBuybackPoolConfig} from "../src/structs/REVBuybackPoolConfig.sol";
 import {REVTiered721HookDeployer} from "./../src/REVTiered721HookDeployer.sol";
+import {JBSuckerDeployerConfig} from "@bananapus/suckers/src/structs/JBSuckerDeployerConfig.sol";
 import {REVCroptopDeployer} from "./../src/REVCroptopDeployer.sol";
+
+struct FeeProjectConfig {
+    REVConfig configuration;
+    JBTerminalConfig[] terminalConfigurations;
+    REVBuybackHookConfig buybackHookConfiguration;
+    REVSuckerDeploymentConfig suckerDeploymentConfiguration;
+}
 
 contract DeployScript is Script, Sphinx {
     /// @notice tracks the deployment of the core contracts for the chain we are deploying to.
@@ -23,13 +37,18 @@ contract DeployScript is Script, Sphinx {
     CroptopDeployment croptop;
     /// @notice tracks the deployment of the 721 hook contracts for the chain we are deploying to.
     Hook721Deployment hook;
-    /// @notice tracks the deploymet of the project handles contracts for the chain we are deploying to.
-    ProjectHandlesDeployment projectHandles;
+    /// @notice tracks the deployment of the buyback hook.
+    BuybackDeployment buybackHook;
+    /// @notice tracks the deployment of the swap terminal.
+    SwapTerminalDeployment swapTerminal;
 
     /// @notice the salts that are used to deploy the contracts.
     bytes32 BASIC_DEPLOYER = "REVBasicDeployer";
     bytes32 NFT_HOOK_DEPLOYER = "REVTiered721HookDeployer";
     bytes32 CROPTOP_DEPLOYER = "REVCroptopDeployer";
+
+    address OPERATOR = address(this);
+    bytes32 ERC20_SALT = "REV_TOKEN";
 
     function configureSphinx() public override {
         // TODO: Update to contain revnet devs.
@@ -56,19 +75,140 @@ contract DeployScript is Script, Sphinx {
         hook = Hook721DeploymentLib.getDeployment(
             vm.envOr("NANA_721_DEPLOYMENT_PATH", string("node_modules/@bananapus/721-hook/deployments/"))
         );
-        // Get the deployment addresses for the project handles contracts for this chain.
-        projectHandles = ProjectHandlesDeploymentLib.getDeployment(
-            vm.envOr(
-                "NANA_PROJECT_HANDLES_DEPLOYMENT_PATH", string("node_modules/@bananapus/project-handles/deployments/")
-            )
+        // Get the deployment addresses for the 721 hook contracts for this chain.
+        swapTerminal = SwapTerminalDeploymentLib.getDeployment(
+            vm.envOr("NANA_SWAP_TERMINAL_DEPLOYMENT_PATH", string("node_modules/@bananapus/swap-terminal/deployments/"))
         );
+
+        // Since Juicebox has logic dependent on the timestamp we warp time to create a scenario closer to production.
+        // We force simulations to make the assumption that the `START_TIME` has not occured,
+        // and is not the current time.
+        // Because of the cross-chain allowing components of nana-core, all chains require the same start_time,
+        // for this reason we can't rely on the simulations block.time and we need a shared timestamp across all
+        // simulations.
+        uint256 _realTimestamp = vm.envUint("START_TIME");
+        if (_realTimestamp <= block.timestamp - 1 days) {
+            revert("Something went wrong while setting the 'START_TIME' environment variable.");
+        }
+
+        vm.warp(_realTimestamp);
+
         // Perform the deployment transactions.
         deploy();
     }
 
+    function getFeeProjectConfig() internal view returns (FeeProjectConfig memory) {
+        // Define constants
+        string memory name = "Revnet";
+        string memory symbol = "$REV";
+        string memory projectUri = "ipfs://QmNRHT91HcDgMcenebYX7rJigt77cgNcosvuhX21wkF3tx";
+        uint8 decimals = 18;
+        uint256 decimalMultiplier = 10 ** decimals;
+
+        // The tokens that the project accepts and stores.
+        JBAccountingContext[] memory accountingContextsToAccept = new JBAccountingContext[](1);
+
+        // Accept the chain's native currency through the multi terminal.
+        accountingContextsToAccept[0] = JBAccountingContext({
+            token: JBConstants.NATIVE_TOKEN,
+            decimals: 18,
+            currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
+        });
+
+        // The terminals that the project will accept funds through.
+        JBTerminalConfig[] memory terminalConfigurations = new JBTerminalConfig[](2);
+        terminalConfigurations[0] =
+            JBTerminalConfig({terminal: core.terminal, accountingContextsToAccept: accountingContextsToAccept});
+        terminalConfigurations[1] = JBTerminalConfig({
+            terminal: swapTerminal.swap_terminal,
+            accountingContextsToAccept: new JBAccountingContext[](0)
+        });
+
+        // The project's revnet stage configurations.
+        REVStageConfig[] memory stageConfiguration = new REVStageConfig[](4);
+
+        {
+            REVMintConfig[] memory mintConfs = new REVMintConfig[](1);
+            mintConfs[0] = REVMintConfig({
+                chainId: uint32(block.chainid),
+                count: uint104(70_000 * decimalMultiplier),
+                beneficiary: OPERATOR
+            });
+
+            stageConfiguration[0] = REVStageConfig({
+                startsAtOrAfter: uint40(block.timestamp),
+                mintConfigs: mintConfs,
+                splitPercent: 2000, // 20%
+                initialPrice: 0.001 ether,
+                priceIncreaseFrequency: 90 days,
+                priceIncreasePercentage: 0,
+                cashOutTaxIntensity: 6000 // 60%
+            });
+        }
+
+        stageConfiguration[1] = REVStageConfig({
+            startsAtOrAfter: uint40(block.timestamp + 90 days),
+            mintConfigs: new REVMintConfig[](0),
+            splitPercent: 2000, // 20%
+            initialPrice: 0.002 ether,
+            priceIncreaseFrequency: 180 days,
+            priceIncreasePercentage: JBConstants.MAX_DECAY_RATE / 2,
+            cashOutTaxIntensity: 6000 // 60%
+        });
+
+        stageConfiguration[2] = REVStageConfig({
+            startsAtOrAfter: uint40(stageConfiguration[1].startsAtOrAfter + 720 days),
+            mintConfigs: new REVMintConfig[](0),
+            splitPercent: 2000, // 20%
+            initialPrice: 0.002 ether,
+            priceIncreaseFrequency: 360 days,
+            priceIncreasePercentage: JBConstants.MAX_DECAY_RATE / 2,
+            cashOutTaxIntensity: 6000 // 60%
+        });
+
+        stageConfiguration[3] = REVStageConfig({
+            startsAtOrAfter: uint40(stageConfiguration[2].startsAtOrAfter + (20 * 365 days)),
+            mintConfigs: new REVMintConfig[](0),
+            splitPercent: 0,
+            initialPrice: 1, // this is a special number that is as close to max price as we can get.
+            priceIncreaseFrequency: 365 days,
+            priceIncreasePercentage: 0,
+            cashOutTaxIntensity: 6000 // 60%
+        });
+
+        // The project's revnet configuration
+        REVConfig memory revnetConfiguration = REVConfig({
+            description: REVDescription(name, symbol, projectUri, ERC20_SALT),
+            baseCurrency: uint32(uint160(JBConstants.NATIVE_TOKEN)),
+            splitOperator: OPERATOR,
+            stageConfigurations: stageConfiguration
+        });
+
+        // The project's buyback hook configuration.
+        REVBuybackPoolConfig[] memory buybackPoolConfigurations = new REVBuybackPoolConfig[](1);
+        buybackPoolConfigurations[0] = REVBuybackPoolConfig({
+            token: JBConstants.NATIVE_TOKEN,
+            fee: 10_000,
+            twapWindow: 2 days,
+            twapSlippageTolerance: 9000
+        });
+        REVBuybackHookConfig memory buybackHookConfiguration =
+            REVBuybackHookConfig({hook: buybackHook.hook, poolConfigurations: buybackPoolConfigurations});
+
+        return FeeProjectConfig({
+            configuration: revnetConfiguration,
+            terminalConfigurations: terminalConfigurations,
+            buybackHookConfiguration: buybackHookConfiguration,
+            suckerDeploymentConfiguration: REVSuckerDeploymentConfig({
+                deployerConfigurations: new JBSuckerDeployerConfig[](0),
+                salt: keccak256(abi.encodePacked("REV"))
+            })
+        });
+    }
+
     function deploy() public sphinx {
         // TODO figure out how to reference project ID if the contracts are already deployed.
-        uint256 FEE_PROJECT_ID = core.projects.createFor(address(this));
+        uint256 FEE_PROJECT_ID = core.projects.createFor(safeAddress());
 
         // Check if the contracts are already deployed or if there are any changes.
         if (
@@ -78,20 +218,30 @@ contract DeployScript is Script, Sphinx {
                 abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID)
             )
         ) {
-            new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, FEE_PROJECT_ID);
+            REVBasicDeployer _basicDeployer =
+                new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, FEE_PROJECT_ID);
+
+            // Approve the basic deployer to configure the project.
+            core.projects.approve(address(_basicDeployer), FEE_PROJECT_ID);
+
+            // Build the config.
+            FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
+
+            // Configure the project.
+            _basicDeployer.deployFor({
+                revnetId: FEE_PROJECT_ID,
+                configuration: feeProjectConfig.configuration,
+                terminalConfigurations: feeProjectConfig.terminalConfigurations,
+                buybackHookConfiguration: feeProjectConfig.buybackHookConfiguration,
+                suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration
+            });
         }
 
         if (
             !_isDeployed(
                 NFT_HOOK_DEPLOYER,
                 type(REVTiered721HookDeployer).creationCode,
-                abi.encode(
-                    core.controller,
-                    suckers.registry,
-                    projectHandles.project_handles,
-                    FEE_PROJECT_ID,
-                    hook.hook_deployer
-                )
+                abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer)
             )
         ) {
             new REVTiered721HookDeployer{salt: NFT_HOOK_DEPLOYER}(
@@ -103,14 +253,7 @@ contract DeployScript is Script, Sphinx {
             !_isDeployed(
                 CROPTOP_DEPLOYER,
                 type(REVCroptopDeployer).creationCode,
-                abi.encode(
-                    core.controller,
-                    suckers.registry,
-                    projectHandles.project_handles,
-                    FEE_PROJECT_ID,
-                    hook.hook_deployer,
-                    croptop.publisher
-                )
+                abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher)
             )
         ) {
             new REVCroptopDeployer{salt: CROPTOP_DEPLOYER}(
