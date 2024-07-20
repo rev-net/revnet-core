@@ -152,7 +152,7 @@ contract DeployScript is Script, Sphinx {
             splitPercent: 2000, // 20%
             initialPrice: 0.002 ether,
             priceIncreaseFrequency: 180 days,
-            priceIncreasePercentage: JBConstants.MAX_DECAY_RATE,
+            priceIncreasePercentage: JBConstants.MAX_DECAY_RATE / 2,
             cashOutTaxIntensity: 6000 // 60%
         });
 
@@ -162,7 +162,7 @@ contract DeployScript is Script, Sphinx {
             splitPercent: 2000, // 20%
             initialPrice: 0.002 ether,
             priceIncreaseFrequency: 360 days,
-            priceIncreasePercentage: JBConstants.MAX_DECAY_RATE,
+            priceIncreasePercentage: JBConstants.MAX_DECAY_RATE / 2,
             cashOutTaxIntensity: 6000 // 60%
         });
 
