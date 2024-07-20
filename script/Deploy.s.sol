@@ -139,9 +139,9 @@ contract DeployScript is Script, Sphinx {
                 startsAtOrAfter: uint40(block.timestamp),
                 mintConfigs: mintConfs,
                 splitPercent: 2000, // 20%
-                initialPrice: 0.001 ether,
-                priceIncreaseFrequency: 90 days,
-                priceIncreasePercentage: 0,
+                initialIssuance: uint112(1000 * decimalMultiplier),
+                issuanceIncreaseFrequency: 90 days,
+                issuanceIncreasePercentage: 0,
                 cashOutTaxIntensity: 6000 // 60%
             });
         }
@@ -150,9 +150,9 @@ contract DeployScript is Script, Sphinx {
             startsAtOrAfter: uint40(block.timestamp + 90 days),
             mintConfigs: new REVMintConfig[](0),
             splitPercent: 2000, // 20%
-            initialPrice: 0.002 ether,
-            priceIncreaseFrequency: 180 days,
-            priceIncreasePercentage: JBConstants.MAX_DECAY_RATE / 2,
+            initialIssuance: uint112(500 * decimalMultiplier),
+            issuanceIncreaseFrequency: 180 days,
+            issuanceIncreasePercentage: JBConstants.MAX_DECAY_RATE / 2,
             cashOutTaxIntensity: 6000 // 60%
         });
 
@@ -160,9 +160,9 @@ contract DeployScript is Script, Sphinx {
             startsAtOrAfter: uint40(stageConfiguration[1].startsAtOrAfter + 720 days),
             mintConfigs: new REVMintConfig[](0),
             splitPercent: 2000, // 20%
-            initialPrice: 0.002 ether,
-            priceIncreaseFrequency: 360 days,
-            priceIncreasePercentage: JBConstants.MAX_DECAY_RATE / 2,
+            initialIssuance: uint112(375 * decimalMultiplier),
+            issuanceIncreaseFrequency: 360 days,
+            issuanceIncreasePercentage: JBConstants.MAX_DECAY_RATE / 2,
             cashOutTaxIntensity: 6000 // 60%
         });
 
@@ -170,9 +170,9 @@ contract DeployScript is Script, Sphinx {
             startsAtOrAfter: uint40(stageConfiguration[2].startsAtOrAfter + (20 * 365 days)),
             mintConfigs: new REVMintConfig[](0),
             splitPercent: 0,
-            initialPrice: 1, // this is a special number that is as close to max price as we can get.
-            priceIncreaseFrequency: 365 days,
-            priceIncreasePercentage: 0,
+            initialIssuance: 1, // this is a special number that is as close to max price as we can get.
+            issuanceIncreaseFrequency: 365 days,
+            issuanceIncreasePercentage: 0,
             cashOutTaxIntensity: 6000 // 60%
         });
 

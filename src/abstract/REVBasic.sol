@@ -759,16 +759,9 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
             }
 
             rulesetConfigurations[i].mustStartAtOrAfter = stageConfiguration.startsAtOrAfter;
-            rulesetConfigurations[i].duration = stageConfiguration.priceIncreaseFrequency;
-
-            // Set the initial issuance for the first ruleset, otherwise pass 0 to inherit from the previous
-            // ruleset. Or pass 1 to act as a zero value.
-            // TODO: `initialPrice` should become `initialIssuanceRate`
-            rulesetConfigurations[i].weight = stageConfiguration.initialPrice == 0
-                ? 0
-                : stageConfiguration.initialPrice == 1 ? 1 : uint112(mulDiv(1, 10 ** 18, stageConfiguration.initialPrice));
-
-            rulesetConfigurations[i].decayRate = stageConfiguration.priceIncreasePercentage;
+            rulesetConfigurations[i].duration = stageConfiguration.issuanceIncreaseFrequency;
+            rulesetConfigurations[i].weight = stageConfiguration.initialIssuance;
+            rulesetConfigurations[i].decayRate = stageConfiguration.issuanceIncreasePercentage;
             rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
             rulesetConfigurations[i].metadata = JBRulesetMetadata({
                 reservedRate: stageConfiguration.splitPercent,
@@ -862,9 +855,9 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
                 ? block.timestamp
                 : stageConfiguration.startsAtOrAfter,
             stageConfiguration.splitPercent,
-            stageConfiguration.initialPrice,
-            stageConfiguration.priceIncreaseFrequency,
-            stageConfiguration.priceIncreasePercentage,
+            stageConfiguration.initialIssuance,
+            stageConfiguration.issuanceIncreaseFrequency,
+            stageConfiguration.issuanceIncreasePercentage,
             stageConfiguration.cashOutTaxIntensity
         );
 
