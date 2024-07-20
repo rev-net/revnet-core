@@ -170,7 +170,7 @@ contract DeployScript is Script, Sphinx {
             startsAtOrAfter: uint40(stageConfiguration[2].startsAtOrAfter + (20 * 365 days)),
             mintConfigs: new REVMintConfig[](0),
             splitPercent: 0,
-            initialPrice: 0,
+            initialPrice: 1, // this is a special number that is as close to max price as we can get.
             priceIncreaseFrequency: 365 days,
             priceIncreasePercentage: 0,
             cashOutTaxIntensity: 6000 // 60%
