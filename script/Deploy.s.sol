@@ -142,7 +142,7 @@ contract DeployScript is Script, Sphinx {
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceDecayFrequency: 90 days,
                 issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
-                cashOutTaxRate: 6000 // 60%
+                cashOutTaxRate: 6000 // 0.6
             });
         }
 
@@ -153,7 +153,7 @@ contract DeployScript is Script, Sphinx {
             initialIssuance: 0, // inherit from previous cycle.
             issuanceDecayFrequency: 180 days,
             issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
-            cashOutTaxRate: 6000 // 60%
+            cashOutTaxRate: 6000 // 0.6
         });
 
         stageConfiguration[2] = REVStageConfig({
@@ -163,7 +163,7 @@ contract DeployScript is Script, Sphinx {
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
             issuanceDecayFrequency: 365 days,
             issuanceDecayPercent: 0,
-            cashOutTaxRate: 6000 // 60%
+            cashOutTaxRate: 6000 // 0.6
         });
 
         // The project's revnet configuration
