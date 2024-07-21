@@ -79,6 +79,10 @@ contract DeployScript is Script, Sphinx {
         swapTerminal = SwapTerminalDeploymentLib.getDeployment(
             vm.envOr("NANA_SWAP_TERMINAL_DEPLOYMENT_PATH", string("node_modules/@bananapus/swap-terminal/deployments/"))
         );
+        // Get the deployment addresses for the 721 hook contracts for this chain.
+        buybackHook = BuybackDeploymentLib.getDeployment(
+            vm.envOr("NANA_BUYBACK_HOOK_DEPLOYMENT_PATH", string("node_modules/@bananapus/buyback-hook/deployments/"))
+        );
 
         // Since Juicebox has logic dependent on the timestamp we warp time to create a scenario closer to production.
         // We force simulations to make the assumption that the `START_TIME` has not occured,
@@ -171,7 +175,7 @@ contract DeployScript is Script, Sphinx {
             description: REVDescription(name, symbol, projectUri, ERC20_SALT),
             baseCurrency: uint32(uint160(JBConstants.NATIVE_TOKEN)),
             splitOperator: OPERATOR,
-            stageConfigurations: stageConfiguration
+            stageConfigurations: stageConfigurations
         });
 
         // The project's buyback hook configuration.

@@ -86,6 +86,30 @@
         "threshold": "1",
         "saltNonce": "17"
       }
+    },
+    "nana-fee-project": {
+      "projectId": "clyupado1000e67s7ayg92n30",
+      "projectName": "nana-fee-project",
+      "defaultSafe": {
+        "safeName": "nana-fee-project",
+        "owners": [
+          "0xba5ed94ab173e1242638F28d1449b24F1A883292"
+        ],
+        "threshold": "1",
+        "saltNonce": "18"
+      }
+    },
+    "bannyverse-core-testnet": {
+      "projectId": "clyuqpudp000g67s78c926yd8",
+      "projectName": "bannyverse-core-testnet",
+      "defaultSafe": {
+        "safeName": "bannyverse-core-testnet",
+        "owners": [
+          "0xba5ed94ab173e1242638F28d1449b24F1A883292"
+        ],
+        "threshold": "1",
+        "saltNonce": "19"
+      }
     }
   }
 }
