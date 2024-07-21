@@ -125,7 +125,7 @@ contract DeployScript is Script, Sphinx {
         });
 
         // The project's revnet stage configurations.
-        REVStageConfig[] memory stageConfiguration = new REVStageConfig[](3);
+        REVStageConfig[] memory stageConfigurations = new REVStageConfig[](3);
 
         {
             REVMintConfig[] memory mintConfs = new REVMintConfig[](1);
@@ -135,7 +135,7 @@ contract DeployScript is Script, Sphinx {
                 beneficiary: OPERATOR
             });
 
-            stageConfiguration[0] = REVStageConfig({
+            stageConfigurations[0] = REVStageConfig({
                 startsAtOrAfter: uint40(block.timestamp),
                 mintConfigs: mintConfs,
                 splitPercent: 2000, // 20%
@@ -146,8 +146,8 @@ contract DeployScript is Script, Sphinx {
             });
         }
 
-        stageConfiguration[1] = REVStageConfig({
-            startsAtOrAfter: uint40(stageConfiguration[1].startsAtOrAfter + 720 days),
+        stageConfigurations[1] = REVStageConfig({
+            startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 720 days),
             mintConfigs: new REVMintConfig[](0),
             splitPercent: 2000, // 20%
             initialIssuance: 0, // inherit from previous cycle.
@@ -156,8 +156,8 @@ contract DeployScript is Script, Sphinx {
             cashOutTaxRate: 6000 // 0.6
         });
 
-        stageConfiguration[2] = REVStageConfig({
-            startsAtOrAfter: uint40(stageConfiguration[2].startsAtOrAfter + (20 * 365 days)),
+        stageConfigurations[2] = REVStageConfig({
+            startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (20 * 365 days)),
             mintConfigs: new REVMintConfig[](0),
             splitPercent: 0,
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
