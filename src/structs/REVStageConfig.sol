@@ -8,7 +8,8 @@ import {REVMintConfig} from "./REVMintConfig.sol";
 /// @custom:member splitPercent The percentage of newly issued tokens that should be split with the operator, out
 /// of
 /// 10_000 (JBConstants.MAX_RESERVED_PERCENT).
-/// @custom:member initialIssuance The number of revnet tokens that one unit of the revnet's base currency will buy, as a fixed point number
+/// @custom:member initialIssuance The number of revnet tokens that one unit of the revnet's base currency will buy, as
+/// a fixed point number
 /// with 18 decimals.
 /// @custom:member issuanceDecayFrequency The number of seconds between applied issuance increases. This
 /// should be at least 24 hours.
