@@ -759,13 +759,13 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
             }
 
             rulesetConfigurations[i].mustStartAtOrAfter = stageConfiguration.startsAtOrAfter;
-            rulesetConfigurations[i].duration = stageConfiguration.issuanceIncreaseFrequency;
+            rulesetConfigurations[i].duration = stageConfiguration.issuanceDecayFrequency;
             rulesetConfigurations[i].weight = stageConfiguration.initialIssuance;
-            rulesetConfigurations[i].decayRate = stageConfiguration.issuanceIncreasePercentage;
+            rulesetConfigurations[i].decayPercent = stageConfiguration.issuanceDecayPercent;
             rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
             rulesetConfigurations[i].metadata = JBRulesetMetadata({
-                reservedRate: stageConfiguration.splitPercent,
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.cashOutTaxIntensity,
+                reservedPercent: stageConfiguration.splitPercent,
+                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.cashOutTaxRate,
                 baseCurrency: configuration.baseCurrency,
                 pausePay: false,
                 pauseCreditTransfers: false,
@@ -856,9 +856,9 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
                 : stageConfiguration.startsAtOrAfter,
             stageConfiguration.splitPercent,
             stageConfiguration.initialIssuance,
-            stageConfiguration.issuanceIncreaseFrequency,
-            stageConfiguration.issuanceIncreasePercentage,
-            stageConfiguration.cashOutTaxIntensity
+            stageConfiguration.issuanceDecayFrequency,
+            stageConfiguration.issuanceDecayPercent,
+            stageConfiguration.cashOutTaxRate
         );
 
         // Get a reference to the mint configs.
@@ -915,7 +915,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
             tokenCount: tokenCount,
             beneficiary: beneficiary,
             memo: "",
-            useReservedRate: false
+            useReservedPercent: false
         });
     }
 

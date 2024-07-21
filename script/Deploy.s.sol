@@ -125,7 +125,7 @@ contract DeployScript is Script, Sphinx {
         });
 
         // The project's revnet stage configurations.
-        REVStageConfig[] memory stageConfiguration = new REVStageConfig[](4);
+        REVStageConfig[] memory stageConfiguration = new REVStageConfig[](3);
 
         {
             REVMintConfig[] memory mintConfs = new REVMintConfig[](1);
@@ -140,40 +140,30 @@ contract DeployScript is Script, Sphinx {
                 mintConfigs: mintConfs,
                 splitPercent: 2000, // 20%
                 initialIssuance: uint112(1000 * decimalMultiplier),
-                issuanceIncreaseFrequency: 90 days,
-                issuanceIncreasePercentage: 0,
-                cashOutTaxIntensity: 6000 // 60%
+                issuanceDecayFrequency: 90 days,
+                issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+                cashOutTaxRate: 6000 // 60%
             });
         }
 
         stageConfiguration[1] = REVStageConfig({
-            startsAtOrAfter: uint40(block.timestamp + 90 days),
-            mintConfigs: new REVMintConfig[](0),
-            splitPercent: 2000, // 20%
-            initialIssuance: uint112(500 * decimalMultiplier),
-            issuanceIncreaseFrequency: 180 days,
-            issuanceIncreasePercentage: JBConstants.MAX_DECAY_RATE / 2,
-            cashOutTaxIntensity: 6000 // 60%
-        });
-
-        stageConfiguration[2] = REVStageConfig({
             startsAtOrAfter: uint40(stageConfiguration[1].startsAtOrAfter + 720 days),
             mintConfigs: new REVMintConfig[](0),
             splitPercent: 2000, // 20%
-            initialIssuance: uint112(375 * decimalMultiplier),
-            issuanceIncreaseFrequency: 360 days,
-            issuanceIncreasePercentage: JBConstants.MAX_DECAY_RATE / 2,
-            cashOutTaxIntensity: 6000 // 60%
+            initialIssuance: 0, // inherit from previous cycle.
+            issuanceDecayFrequency: 180 days,
+            issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+            cashOutTaxRate: 6000 // 60%
         });
 
-        stageConfiguration[3] = REVStageConfig({
+        stageConfiguration[2] = REVStageConfig({
             startsAtOrAfter: uint40(stageConfiguration[2].startsAtOrAfter + (20 * 365 days)),
             mintConfigs: new REVMintConfig[](0),
             splitPercent: 0,
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
-            issuanceIncreaseFrequency: 365 days,
-            issuanceIncreasePercentage: 0,
-            cashOutTaxIntensity: 6000 // 60%
+            issuanceDecayFrequency: 365 days,
+            issuanceDecayPercent: 0,
+            cashOutTaxRate: 6000 // 60%
         });
 
         // The project's revnet configuration

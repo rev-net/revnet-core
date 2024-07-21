@@ -1,6 +1,6 @@
 {
     "name": "@rev-net/core",
-    "version": "0.0.29",
+    "version": "0.0.31",
     "license": "MIT",
     "repository": {
         "type": "git",
@@ -14,9 +14,9 @@
         "artifacts": "source ./.env && npx sphinx artifacts --org-id 'my-org-id' --project-name 'revnet-core-testnet'"
     },
     "dependencies": {
-        "@bananapus/721-hook": "^0.0.20",
+        "@bananapus/721-hook": "^0.0.21",
         "@bananapus/buyback-hook": "^0.0.16",
-        "@bananapus/core": "^0.0.23",
+        "@bananapus/core": "^0.0.24",
         "@bananapus/ownable": "^0.0.6",
         "@bananapus/permission-ids": "^0.0.11",
         "@bananapus/suckers": "^0.0.19",
