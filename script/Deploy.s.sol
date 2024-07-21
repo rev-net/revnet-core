@@ -161,7 +161,7 @@ contract DeployScript is Script, Sphinx {
             mintConfigs: new REVMintConfig[](0),
             splitPercent: 0,
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
-            issuanceDecayFrequency: 365 days,
+            issuanceDecayFrequency: 0,
             issuanceDecayPercent: 0,
             cashOutTaxRate: 6000 // 0.6
         });
