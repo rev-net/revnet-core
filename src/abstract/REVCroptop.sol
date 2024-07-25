@@ -25,7 +25,7 @@ import {REVSuckerDeploymentConfig} from "./../structs/REVSuckerDeploymentConfig.
 /// publisher.
 contract REVCroptop is REVTiered721Hook, IREVCroptop {
     /// @notice The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
-    CTPublisher public override PUBLISHER;
+    CTPublisher public immutable override PUBLISHER;
 
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.

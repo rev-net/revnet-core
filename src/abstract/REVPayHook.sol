@@ -53,6 +53,7 @@ abstract contract REVPayHook is REVBasic, IREVPayHook {
         returns (uint256)
     {
         // Deploy the revnet
+        // slither-disable-next-line reentrancy-benign,reentrancy-events
         revnetId = _launchRevnetFor({
             revnetId: revnetId,
             configuration: configuration,
@@ -63,6 +64,8 @@ abstract contract REVPayHook is REVBasic, IREVPayHook {
             suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
 
+        emit StoredPayHookSpecifications(revnetId, payHookSpecifications, msg.sender);
+
         // Store the pay hooks.
         // Keep a reference to the number of pay hooks are being stored.
         uint256 numberOfPayHookSpecifications = payHookSpecifications.length;
@@ -72,8 +75,6 @@ abstract contract REVPayHook is REVBasic, IREVPayHook {
             // Store the value.
             _payHookSpecificationsOf[revnetId].push(payHookSpecifications[i]);
         }
-
-        emit StoredPayHookSpecifications(revnetId, payHookSpecifications, msg.sender);
 
         return revnetId;
     }

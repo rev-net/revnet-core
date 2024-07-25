@@ -84,23 +84,24 @@ contract REVTiered721Hook is REVPayHook, IREVTiered721Hook {
             payHookSpecifications[i] = otherPayHooksSpecifications[i];
         }
 
-        // Deploy the tiered 721 hook contract.
-        hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration.baseline721HookConfiguration);
-
         // If needed, give the operator permission to add and remove tiers.
         if (hookConfiguration.splitOperatorCanAdjustTiers) {
-            _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId].push(JBPermissionIds.ADJUST_721_TIERS);
+            _customSplitOperatorPermissionsIndexes[revnetId].push(JBPermissionIds.ADJUST_721_TIERS);
         }
 
         // If needed, give the operator permission to set the 721's metadata.
         if (hookConfiguration.splitOperatorCanUpdateMetadata) {
-            _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId].push(JBPermissionIds.SET_721_METADATA);
+            _customSplitOperatorPermissionsIndexes[revnetId].push(JBPermissionIds.SET_721_METADATA);
         }
 
         // If needed, give the operator permission to mint 721's from tiers that allow it.
         if (hookConfiguration.splitOperatorCanMint) {
-            _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId].push(JBPermissionIds.MINT_721);
+            _customSplitOperatorPermissionsIndexes[revnetId].push(JBPermissionIds.MINT_721);
         }
+
+        // Deploy the tiered 721 hook contract.
+        // slither-disable-next-line reentrancy-benign
+        hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration.baseline721HookConfiguration);
 
         // Add the tiered 721 hook at the end.
         payHookSpecifications[numberOfOtherPayHooks] =

@@ -105,10 +105,12 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     /// @notice The permissions that the provided operator should be granted if the revnet was deployed with that
     /// intent. This is set once for each revnet when deployed.
     /// @dev This should only be set in the deployment process for each revnet.
-    mapping(uint256 => uint256[]) internal _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES;
+    // slither-disable-next-line uninitialized-state
+    mapping(uint256 => uint256[]) internal _customSplitOperatorPermissionsIndexes;
 
     /// @notice The pay hooks to include during payments to networks.
     /// @custom:param revnetId The ID of the revnet to which the extensions apply.
+    // slither-disable-next-line uninitialized-state
     mapping(uint256 revnetId => JBPayHookSpecification[] payHooks) internal _payHookSpecificationsOf;
 
     //*********************************************************************//
@@ -333,6 +335,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         uint256 payValue = context.forwardedAmount.token == JBConstants.NATIVE_TOKEN ? context.forwardedAmount.value : 0;
 
         // Send the fee.
+        // slither-disable-next-line arbitrary-send-eth,unused-return
         try feeTerminal.pay{value: payValue}({
             projectId: FEE_REVNET_ID,
             token: context.forwardedAmount.token,
@@ -343,6 +346,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
             metadata: bytes(abi.encodePacked(context.projectId))
         }) {} catch (bytes memory) {
             // Return funds to the project if the fee couldn't be processed.
+            // slither-disable-next-line arbitrary-send-eth
             IJBTerminal(msg.sender).addToBalanceOf{value: payValue}({
                 projectId: context.projectId,
                 token: context.forwardedAmount.token,
@@ -374,14 +378,14 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         // Compose the salt.
         bytes32 salt = keccak256(abi.encode(msg.sender, encodedConfiguration, suckerDeploymentConfiguration.salt));
 
+        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, msg.sender);
+
         // Deploy the suckers.
         _deploySuckersFor({
             revnetId: revnetId,
             salt: salt,
             configurations: suckerDeploymentConfiguration.deployerConfigurations
         });
-
-        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, msg.sender);
     }
 
     /// @notice Mint tokens from a revnet to a specified beneficiary according to the rules set for the revnet.
@@ -404,9 +408,9 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         // Reset the mint amount.
         allowedMintCountOf[revnetId][stageId][beneficiary] = 0;
 
-        _mintTokensOf({revnetId: revnetId, tokenCount: count, beneficiary: beneficiary});
-
         emit Mint(revnetId, stage.id, beneficiary, count, msg.sender);
+
+        _mintTokensOf({revnetId: revnetId, tokenCount: count, beneficiary: beneficiary});
     }
 
     /// @notice A revnet's operator can replace itself.
@@ -416,6 +420,8 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external override {
         // Enforce permissions.
         _checkIfSplitOperatorOf({revnetId: revnetId, operator: msg.sender});
+
+        emit ReplaceSplitOperator(revnetId, newSplitOperator, msg.sender);
 
         // Remove operator permission from the old split operator.
         _setPermissionsFor({
@@ -427,8 +433,6 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
 
         // Set the new split operator.
         _setSplitOperatorOf({revnetId: revnetId, operator: newSplitOperator});
-
-        emit ReplaceSplitOperator(revnetId, newSplitOperator, msg.sender);
     }
 
     //*********************************************************************//
@@ -463,6 +467,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
 
         if (revnetId == 0) {
             // Deploy a juicebox for the revnet.
+            // slither-disable-next-line reentrancy-benign,reentrancy-events
             revnetId = CONTROLLER.launchProjectFor({
                 owner: address(this),
                 projectUri: configuration.description.uri,
@@ -477,6 +482,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
             );
 
             // Launch rulesets for a pre-existing juicebox.
+            // slither-disable-next-line unused-return
             CONTROLLER.launchRulesetsFor({
                 projectId: revnetId,
                 rulesetConfigurations: rulesetConfigurations,
@@ -491,6 +497,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         _setCashOutDelayIfNeeded(revnetId, configuration.stageConfigurations[0]);
 
         // Issue the network's ERC-20 token.
+        // slither-disable-next-line unused-return
         CONTROLLER.deployERC20For({
             projectId: revnetId,
             name: configuration.description.name,
@@ -638,21 +645,24 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
 
                 // Mint right away if its the first stage or its any stage that has started.
                 if (i == 0 || stageConfiguration.startsAtOrAfter <= block.timestamp) {
+                    emit Mint(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender);
+
+                    // slither-disable-next-line reentrancy-events,reentrancy-no-eth
                     _mintTokensOf({
                         revnetId: revnetId,
                         tokenCount: mintConfig.count,
                         beneficiary: mintConfig.beneficiary
                     });
-                    emit Mint(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender);
                 }
                 // Store the amount of tokens that can be minted during this stage from this chain.
                 else {
-                    // Stage IDs are indexed incrementally from the timestamp of this transaction.
-                    allowedMintCountOf[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.count;
-
                     emit StoreMintPotential(
                         revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender
                     );
+
+                    // Stage IDs are indexed incrementally from the timestamp of this transaction.
+                    // slither-disable-next-line reentrancy-events
+                    allowedMintCountOf[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.count;
                 }
             }
         }
@@ -670,11 +680,15 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         // Keep a reference to the pool being iterated on.
         REVBuybackPoolConfig memory poolConfig;
 
+        // Store the hook.
+        buybackHookOf[revnetId] = buybackHookConfiguration.hook;
+
         for (uint256 i; i < numberOfPoolsToSetup; i++) {
             // Get a reference to the pool being iterated on.
             poolConfig = buybackHookConfiguration.poolConfigurations[i];
 
             // Set the pool for the buyback contract.
+            // slither-disable-next-line unused-return
             buybackHookConfiguration.hook.setPoolFor({
                 projectId: revnetId,
                 fee: poolConfig.fee,
@@ -683,9 +697,6 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
                 terminalToken: poolConfig.token
             });
         }
-
-        // Store the hook.
-        buybackHookOf[revnetId] = buybackHookConfiguration.hook;
     }
 
     /// @notice The permissions that the split operator should be granted for a revnet.
@@ -698,7 +709,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         returns (uint256[] memory allOperatorPermissions)
     {
         // Keep a reference to the custom split operator permissions.
-        uint256[] memory customSplitOperatorPermissionIndexes = _CUSTOM_SPLIT_OPERATOR_PERMISSIONS_INDEXES[revnetId];
+        uint256[] memory customSplitOperatorPermissionIndexes = _customSplitOperatorPermissionsIndexes[revnetId];
 
         // Keep a reference to the number of custom permissions.
         uint256 numberOfCustomPermissionIndexes = customSplitOperatorPermissionIndexes.length;
@@ -910,6 +921,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     /// @param tokenCount The number of tokens to mint.
     /// @param beneficiary The address to send the tokens to.
     function _mintTokensOf(uint256 revnetId, uint256 tokenCount, address beneficiary) internal {
+        // slither-disable-next-line unused-return
         CONTROLLER.mintTokensOf({
             projectId: revnetId,
             tokenCount: tokenCount,
@@ -949,6 +961,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     )
         internal
     {
+        // slither-disable-next-line unused-return
         SUCKER_REGISTRY.deploySuckersFor({projectId: revnetId, salt: salt, configurations: configurations});
     }
 }
