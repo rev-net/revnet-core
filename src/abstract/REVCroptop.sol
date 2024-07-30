@@ -14,6 +14,7 @@ import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHoo
 import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
 
 import {REVTiered721Hook} from "./REVTiered721Hook.sol";
+import {IREVLoans} from "../interfaces/IREVLoans.sol";
 import {IREVCroptop} from "../interfaces/IREVCroptop.sol";
 import {REVDeploy721TiersHookConfig} from "./../structs/REVDeploy721TiersHookConfig.sol";
 import {REVConfig} from "./../structs/REVConfig.sol";
@@ -29,17 +30,19 @@ contract REVCroptop is REVTiered721Hook, IREVCroptop {
 
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
+    /// @param loanShark The loan shark that's allowed to use the allowance to make risk-free money for the revnet.
     /// @param feeRevnetId The ID of the revnet that will receive fees.
     /// @param hookDeployer The 721 tiers hook deployer.
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
+        IREVLoans loanShark,
         uint256 feeRevnetId,
         IJB721TiersHookDeployer hookDeployer,
         CTPublisher publisher
     )
-        REVTiered721Hook(controller, suckerRegistry, feeRevnetId, hookDeployer)
+        REVTiered721Hook(controller, suckerRegistry, loanShark, feeRevnetId, hookDeployer)
     {
         PUBLISHER = publisher;
     }

@@ -7,6 +7,7 @@ import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackH
 import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
 
 import {REVBasic} from "./abstract/REVBasic.sol";
+import {IREVLoans} from "./interfaces/IREVLoans.sol";
 import {IREVBasicDeployer} from "./interfaces/IREVBasicDeployer.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
@@ -24,9 +25,10 @@ contract REVBasicDeployer is REVBasic, IREVBasicDeployer {
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
+        IREVLoans loanShark,
         uint256 feeRevnetId
     )
-        REVBasic(controller, suckerRegistry, feeRevnetId)
+        REVBasic(controller, suckerRegistry, loanShark, feeRevnetId)
     {}
 
     //*********************************************************************//

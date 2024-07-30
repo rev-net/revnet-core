@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {REVStageConfig} from "./REVStageConfig.sol";
 import {REVDescription} from "./REVDescription.sol";
+import {REVLoanAccessGroup} from "./REVLoanAccessGroup.sol";
+import {REVStageConfig} from "./REVStageConfig.sol";
 
 /// @custom:member description The description of the revnet.
 /// @custom:member baseCurrency The currency that the issuance is based on.
@@ -14,9 +15,11 @@ import {REVDescription} from "./REVDescription.sol";
 /// is
 /// allowed to change who the operator is. Only the operator can replace itself after deployment.
 /// @custom:member stageConfigurations The periods of changing constraints.
+/// @custom:member loanAccessGroups The access points for loans during this stage.
 struct REVConfig {
     REVDescription description;
     uint32 baseCurrency;
     address splitOperator;
     REVStageConfig[] stageConfigurations;
+    REVLoanAccessGroup[] loanAccessGroups;
 }

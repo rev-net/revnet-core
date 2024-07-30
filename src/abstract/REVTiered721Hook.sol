@@ -12,6 +12,7 @@ import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol
 
 import {REVPayHook} from "./REVPayHook.sol";
 import {IREVTiered721Hook} from "../interfaces/IREVTiered721Hook.sol";
+import {IREVLoans} from "../interfaces/IREVLoans.sol";
 import {REVDeploy721TiersHookConfig} from "./../structs/REVDeploy721TiersHookConfig.sol";
 import {REVConfig} from "./../structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./../structs/REVBuybackHookConfig.sol";
@@ -24,15 +25,17 @@ contract REVTiered721Hook is REVPayHook, IREVTiered721Hook {
 
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
+    /// @param loanShark The loan shark that's allowed to use the allowance to make risk-free money for the revnet.
     /// @param feeRevnetId The ID of the revnet that will receive fees.
     /// @param hookDeployer The 721 tiers hook deployer.
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
+        IREVLoans loanShark,
         uint256 feeRevnetId,
         IJB721TiersHookDeployer hookDeployer
     )
-        REVPayHook(controller, suckerRegistry, feeRevnetId)
+        REVPayHook(controller, suckerRegistry, loanShark, feeRevnetId)
     {
         HOOK_DEPLOYER = hookDeployer;
     }

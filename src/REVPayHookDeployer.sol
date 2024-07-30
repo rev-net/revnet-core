@@ -8,6 +8,7 @@ import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegi
 
 import {REVPayHook} from "./abstract/REVPayHook.sol";
 import {IREVPayHookDeployer} from "./interfaces/IREVPayHookDeployer.sol";
+import {IREVLoans} from "./interfaces/IREVLoans.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
@@ -16,13 +17,15 @@ import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol
 contract REVPayHookDeployer is REVPayHook, IREVPayHookDeployer {
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
+    /// @param loanShark The loan shark that's allowed to use the allowance to make risk-free money for the revnet.
     /// @param feeRevnetId The ID of the revnet that will receive fees.
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
+        IREVLoans loanShark,
         uint256 feeRevnetId
     )
-        REVPayHook(controller, suckerRegistry, feeRevnetId)
+        REVPayHook(controller, suckerRegistry, loanShark, feeRevnetId)
     {}
 
     //*********************************************************************//

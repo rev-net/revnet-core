@@ -15,8 +15,10 @@ import "./../src/REVBasicDeployer.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
 import {REVStageConfig, REVMintConfig} from "../src/structs/REVStageConfig.sol";
+import {REVLoanAccessGroup} from "../src/structs/REVLoanAccessGroup.sol";
 import {REVDescription} from "../src/structs/REVDescription.sol";
 import {REVBuybackPoolConfig} from "../src/structs/REVBuybackPoolConfig.sol";
+import {IREVLoanShark} from "./../src/interfaces/IREVLoanShark.sol";
 import {REVTiered721HookDeployer} from "./../src/REVTiered721HookDeployer.sol";
 import {JBSuckerDeployerConfig} from "@bananapus/suckers/src/structs/JBSuckerDeployerConfig.sol";
 import {REVCroptopDeployer} from "./../src/REVCroptopDeployer.sol";
@@ -175,7 +177,8 @@ contract DeployScript is Script, Sphinx {
             description: REVDescription(name, symbol, projectUri, ERC20_SALT),
             baseCurrency: uint32(uint160(JBConstants.NATIVE_TOKEN)),
             splitOperator: OPERATOR,
-            stageConfigurations: stageConfigurations
+            stageConfigurations: stageConfigurations,
+            loanAccessGroups: new REVLoanAccessGroup[](0)
         });
 
         // The project's buyback hook configuration.
@@ -212,8 +215,9 @@ contract DeployScript is Script, Sphinx {
                 abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID)
             )
         ) {
-            REVBasicDeployer _basicDeployer =
-                new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, FEE_PROJECT_ID);
+            REVBasicDeployer _basicDeployer = new REVBasicDeployer{salt: BASIC_DEPLOYER}(
+                core.controller, suckers.registry, IREVLoanShark(address(0)), FEE_PROJECT_ID
+            );
 
             // Approve the basic deployer to configure the project.
             core.projects.approve(address(_basicDeployer), FEE_PROJECT_ID);
@@ -235,11 +239,13 @@ contract DeployScript is Script, Sphinx {
             !_isDeployed(
                 NFT_HOOK_DEPLOYER,
                 type(REVTiered721HookDeployer).creationCode,
-                abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer)
+                abi.encode(
+                    core.controller, suckers.registry, IREVLoanShark(address(0)), FEE_PROJECT_ID, hook.hook_deployer
+                )
             )
         ) {
             new REVTiered721HookDeployer{salt: NFT_HOOK_DEPLOYER}(
-                core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer
+                core.controller, suckers.registry, IREVLoanShark(address(0)), FEE_PROJECT_ID, hook.hook_deployer
             );
         }
 
@@ -247,11 +253,23 @@ contract DeployScript is Script, Sphinx {
             !_isDeployed(
                 CROPTOP_DEPLOYER,
                 type(REVCroptopDeployer).creationCode,
-                abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher)
+                abi.encode(
+                    core.controller,
+                    suckers.registry,
+                    IREVLoanShark(address(0)),
+                    FEE_PROJECT_ID,
+                    hook.hook_deployer,
+                    croptop.publisher
+                )
             )
         ) {
             new REVCroptopDeployer{salt: CROPTOP_DEPLOYER}(
-                core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher
+                core.controller,
+                suckers.registry,
+                IREVLoanShark(address(0)),
+                FEE_PROJECT_ID,
+                hook.hook_deployer,
+                croptop.publisher
             );
         }
 

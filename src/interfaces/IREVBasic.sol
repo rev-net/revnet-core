@@ -53,6 +53,7 @@ interface IREVBasic {
 
     function buybackHookOf(uint256 revnetId) external view returns (IJBRulesetDataHook);
     function cashOutDelayOf(uint256 revnetId) external view returns (uint256);
+    function totalPendingAutomintAmountOf(uint256 revnetId) external view returns (uint256);
     function payHookSpecificationsOf(uint256 revnetId) external view returns (JBPayHookSpecification[] memory);
     function isSplitOperatorOf(uint256 revnetId, address addr) external view returns (bool);
 
@@ -67,10 +68,10 @@ interface IREVBasic {
         view
         returns (uint256);
 
-    function deploySuckersFor(
-        uint256 projectId,
-        bytes memory encodedConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
-    )
-        external;
+    // function deploySuckersFor(
+    //     uint256 projectId,
+    //     bytes memory encodedConfiguration,
+    //     REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+    // )
+    //     external;
 }
