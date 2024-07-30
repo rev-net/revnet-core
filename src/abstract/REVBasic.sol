@@ -637,7 +637,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
                 if (i == 0 || stageConfiguration.startsAtOrAfter <= block.timestamp) {
                     emit Mint(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender);
 
-                    // slither-disable-next-line reentrancy-events,reentrancy-no-eth
+                    // slither-disable-next-line reentrancy-events,reentrancy-no-eth,reentrancy-benign
                     _mintTokensOf({
                         revnetId: revnetId,
                         tokenCount: mintConfig.count,

@@ -320,6 +320,7 @@ contract REVLoans is ERC721, IREVLoans {
         totalCollateralOf[loan.revnetId] -= amount;
 
         // Mint the collateral tokens back to the loan payer.
+        // slither-disable-next-line unused-return
         controller.mintTokensOf({
             projectId: loan.revnetId,
             tokenCount: amount,
@@ -395,6 +396,7 @@ contract REVLoans is ERC721, IREVLoans {
         uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? feeAmount : 0;
 
         // Pay the fee.
+        // slither-disable-next-line unused-return
         try loan.source.terminal.pay{value: payValue}({
             projectId: loan.revnetId,
             token: loan.source.token,
@@ -448,6 +450,7 @@ contract REVLoans is ERC721, IREVLoans {
                 loan.source.terminal.accountingContextForTokenOf({projectId: loan.revnetId, token: loan.source.token});
 
             // Pull the amount to be loaned out of the revnet. This will incure the protocol fee.
+            // slither-disable-next-line unused-return
             loan.source.terminal.useAllowanceOf({
                 projectId: loan.revnetId,
                 token: loan.source.token,
@@ -467,6 +470,7 @@ contract REVLoans is ERC721, IREVLoans {
         uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? feeAmount : 0;
 
         // Pay the fee. Send the REV to the msg.sender.
+        // slither-disable-next-line arbitrary-send-eth,unused-return
         try feeTerminal.pay{value: payValue}({
             projectId: FEE_REVNET_ID,
             token: loan.source.token,
