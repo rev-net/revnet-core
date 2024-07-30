@@ -106,6 +106,10 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     /// @custom:param revnetId The ID of the revnet to which the mint applies.
     mapping(uint256 revnetId => uint256) public totalPendingAutomintAmountOf;
 
+    /// @notice The loans contract for each revnet.
+    /// @custom:param revnetId The ID of the revnet to which the loans contract applies.
+    mapping(uint256 revnetId => IREVLoans) public loansOf;
+
     //*********************************************************************//
     // ------------------- internal stored properties -------------------- //
     //*********************************************************************//
@@ -202,7 +206,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         returns (uint256, uint256, uint256, JBRedeemHookSpecification[] memory hookSpecifications)
     {
         // If the holder is a sucker, do not impose a tax.
-        if (SUCKER_REGISTRY.isSuckerOf({projectId: context.projectId, suckerAddress: context.holder})) {
+        if (_isSuckerOf({revnetId: context.projectId, addr: context.holder})) {
             return (JBConstants.MAX_REDEMPTION_RATE, context.redeemCount, context.totalSupply, hookSpecifications);
         }
 
@@ -222,18 +226,16 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         // Get a reference to the amount of tokens that are used to cover the fee.
         uint256 feeRedeemCount = mulDiv(context.redeemCount, FEE, JBConstants.MAX_FEE);
 
-        uint256 amount = JBRedemptions.reclaimFrom({
-            surplus: context.surplus.value,
-            tokensRedeemed: feeRedeemCount,
-            totalSupply: context.totalSupply,
-            redemptionRate: context.redemptionRate
-        });
-
         // Keep a reference to the hook specifications that invokes this hook to process the fee.
         hookSpecifications = new JBRedeemHookSpecification[](1);
         hookSpecifications[0] = JBRedeemHookSpecification({
             hook: IJBRedeemHook(address(this)),
-            amount: amount,
+            amount: JBRedemptions.reclaimFrom({
+                surplus: context.surplus.value,
+                tokensRedeemed: feeRedeemCount,
+                totalSupply: context.totalSupply,
+                redemptionRate: context.redemptionRate
+            }),
             metadata: abi.encode(feeTerminal)
         });
 
@@ -247,30 +249,12 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     /// @return flag The flag indicating if the address has permissions to mint on the revnet's behalf.
     function hasMintPermissionFor(uint256 revnetId, address addr) external view override returns (bool) {
         // The buyback hook is allowed to mint on the project's behalf.
-        if (addr == address(buybackHookOf[revnetId])) return true;
-
-        // A registered sucker is allowed to mint on the project's behalf.
-        if (SUCKER_REGISTRY.isSuckerOf(revnetId, addr)) return true;
-
-        // No other contract has minting permissions.
-        return false;
+        return addr == address(buybackHookOf[revnetId]) || IREVLoans(addr) == loansOf[revnetId]
+            || _isSuckerOf({revnetId: revnetId, addr: addr});
     }
 
     /// @dev Make sure only mints can be received.
-    function onERC721Received(
-        address operator,
-        address,
-        uint256 tokenId,
-        bytes calldata data
-    )
-        external
-        view
-        returns (bytes4)
-    {
-        data;
-        tokenId;
-        operator;
-
+    function onERC721Received(address, address, uint256 tokenId, bytes calldata) external view returns (bytes4) {
         // Make sure the 721 received is the JBProjects contract.
         if (msg.sender != address(_projects())) revert();
 
@@ -299,8 +283,9 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     /// @notice Indicates if this contract adheres to the specified interface.
     /// @dev See {IERC165-supportsInterface}.
     /// @return A flag indicating if the provided interface ID is supported.
-    function supportsInterface(bytes4) public view virtual override returns (bool) {
-        return false;
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == type(IREVBasic).interfaceId || interfaceId == type(IJBRulesetDataHook).interfaceId
+            || interfaceId == type(IJBRedeemHook).interfaceId || interfaceId == type(IERC721Receiver).interfaceId;
     }
 
     //*********************************************************************//
@@ -309,16 +294,14 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
 
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
-    /// @param loanShark The loan shark that's allowed to use the allowance to make risk-free money for the revnet.
     /// @param feeRevnetId The ID of the revnet that will receive fees.
-    constructor(IJBController controller, IJBSuckerRegistry suckerRegistry, IREVLoans loanShark, uint256 feeRevnetId) {
+    constructor(IJBController controller, IJBSuckerRegistry suckerRegistry, uint256 feeRevnetId) {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
         FEE_REVNET_ID = feeRevnetId;
 
         // Give the sucker registry permission to map tokens.
-        _setSuckerRegistryPermissions();
-        _setLoanSharkPermissions(address(loanShark));
+        _setPermission({operator: address(SUCKER_REGISTRY), revnetId: 0, permissionId: JBPermissionIds.MAP_SUCKER_TOKEN});
     }
 
     //*********************************************************************//
@@ -427,7 +410,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     /// @param newSplitOperator The address of the new split operator.
     function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external override {
         // Enforce permissions.
-        _checkIfSplitOperatorOf({revnetId: revnetId, operator: msg.sender});
+        if (!isSplitOperatorOf(revnetId, msg.sender)) revert REVBasic_Unauthorized();
 
         emit ReplaceSplitOperator(revnetId, newSplitOperator, msg.sender);
 
@@ -518,6 +501,16 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
             _setupBuybackHookOf(revnetId, buybackHookConfiguration);
         }
 
+        // Configure the loan broker if needed.
+        if (configuration.loans != IREVLoans(address(0))) {
+            _setPermission({
+                operator: address(configuration.loans),
+                revnetId: revnetId,
+                permissionId: JBPermissionIds.USE_ALLOWANCE
+            });
+            loansOf[revnetId] = configuration.loans;
+        }
+
         // Set the operator splits at the default ruleset of 0.
         CONTROLLER.setSplitGroupsOf({
             projectId: revnetId,
@@ -538,8 +531,9 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
 
         // Deploy the suckers if needed.
         if (suckerSalt != bytes32(0)) {
-            _deploySuckersFor({
-                revnetId: revnetId,
+            // slither-disable-next-line unused-return
+            SUCKER_REGISTRY.deploySuckersFor({
+                projectId: revnetId,
                 salt: suckerSalt,
                 configurations: suckerDeploymentConfiguration.deployerConfigurations
             });
@@ -576,27 +570,21 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         emit SetCashOutDelay(revnetId, cashOutDelay, msg.sender);
     }
 
-    /// @notice Gives the sucker registry permission to map tokens for all revnets owned by this contract.
-    function _setSuckerRegistryPermissions() internal {
-        _setPermission(address(SUCKER_REGISTRY), JBPermissionIds.MAP_SUCKER_TOKEN);
-    }
-
-    /// @notice Gives the sucker registry permission to map tokens for all revnets owned by this contract.
-    function _setLoanSharkPermissions(address loanSharkAddress) internal {
-        _setPermission(loanSharkAddress, JBPermissionIds.USE_ALLOWANCE);
-    }
-
-    function _setPermission(address addr, uint8 permission) internal {
+    /// @notice Sets a permission for an operator.
+    /// @param operator The operator to give a permission.
+    /// @param revnetId The ID of the revnet to set the permission for.
+    /// @param permissionId The ID of the permission to set.
+    function _setPermission(address operator, uint256 revnetId, uint8 permissionId) internal {
         // Give the address the permission.
-        uint8[] memory permissions = new uint8[](1);
-        permissions[0] = permission;
+        uint8[] memory permissionsIds = new uint8[](1);
+        permissionsIds[0] = permissionId;
 
         // Give the operator permission to change the recipients of the operator's split.
         _setPermissionsFor({
             account: address(this),
-            operator: addr,
-            revnetId: 0, // Wildcard, allow for any revnet owned by this contract.
-            permissionIds: permissions
+            operator: operator,
+            revnetId: revnetId,
+            permissionIds: permissionsIds
         });
     }
 
@@ -604,26 +592,12 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     /// @param revnetId The ID of the revnet having its operator replaced.
     /// @param operator The address of the new split operator.
     function _setSplitOperatorOf(uint256 revnetId, address operator) internal {
-        // Keep a reference to the split operator permission indexes.
-        uint256[] memory splitOperatorPermissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
-
-        // Keep a reference to how many split operator permissions there are.
-        uint256 numberOfSplitOperatorPermissionIndexes = splitOperatorPermissionIndexes.length;
-
-        // Keep a reference to an array where downcast permissions will go.
-        uint8[] memory downcastSplitOperatorPermissionIndexes = new uint8[](numberOfSplitOperatorPermissionIndexes);
-
-        // Downcast each permission.
-        for (uint256 i; i < numberOfSplitOperatorPermissionIndexes; i++) {
-            downcastSplitOperatorPermissionIndexes[i] = uint8(splitOperatorPermissionIndexes[i]);
-        }
-
         // Give the new split operator its permissions.
         _setPermissionsFor({
             account: address(this),
             operator: operator,
             revnetId: uint56(revnetId),
-            permissionIds: downcastSplitOperatorPermissionIndexes
+            permissionIds: _uint256ArrayToUint8Array(_splitOperatorPermissionIndexesOf(revnetId))
         });
     }
 
@@ -737,15 +711,15 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         uint256 numberOfCustomPermissionIndexes = customSplitOperatorPermissionIndexes.length;
 
         // Make the array that merges the default operator permissions and the custom ones.
-        allOperatorPermissions = new uint256[](3 + numberOfCustomPermissionIndexes);
+        allOperatorPermissions = new uint256[](4 + numberOfCustomPermissionIndexes);
         allOperatorPermissions[0] = JBPermissionIds.SET_SPLIT_GROUPS;
         allOperatorPermissions[1] = JBPermissionIds.SET_BUYBACK_POOL;
         allOperatorPermissions[2] = JBPermissionIds.SET_PROJECT_URI;
-        allOperatorPermissions[2] = JBPermissionIds.DEPLOY_SUCKERS;
+        allOperatorPermissions[3] = JBPermissionIds.DEPLOY_SUCKERS;
 
         // Copy elements from the custom permissions.
         for (uint256 i; i < numberOfCustomPermissionIndexes; i++) {
-            allOperatorPermissions[3 + i] = customSplitOperatorPermissionIndexes[i];
+            allOperatorPermissions[4 + i] = customSplitOperatorPermissionIndexes[i];
         }
     }
 
@@ -789,6 +763,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         // Keep a reference to the number of loan access groups there are.
         uint256 numberOfLoanSources = configuration.loanSources.length;
 
+        // Keep a reference to the loan source that'll be iterated on.
         REVLoanSource memory loanSource;
 
         // Loop through each stage to set up its ruleset configuration.
@@ -801,40 +776,42 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
                 revert REVBasic_BadStageTimes();
             }
 
-            rulesetConfigurations[i].mustStartAtOrAfter = stageConfiguration.startsAtOrAfter;
-            rulesetConfigurations[i].duration = stageConfiguration.issuanceDecayFrequency;
-            rulesetConfigurations[i].weight = stageConfiguration.initialIssuance;
-            rulesetConfigurations[i].decayPercent = stageConfiguration.issuanceDecayPercent;
-            rulesetConfigurations[i].approvalHook = IJBRulesetApprovalHook(address(0));
-            rulesetConfigurations[i].metadata = JBRulesetMetadata({
-                reservedPercent: stageConfiguration.splitPercent,
-                redemptionRate: JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.cashOutTaxRate,
-                baseCurrency: configuration.baseCurrency,
-                pausePay: false,
-                pauseCreditTransfers: false,
-                allowOwnerMinting: true, // Allow this contract to auto mint tokens as the network owner.
-                allowSetCustomToken: false,
-                allowTerminalMigration: false,
-                allowSetTerminals: false,
-                allowSetController: false,
-                allowAddAccountingContext: false,
-                allowAddPriceFeed: false,
-                ownerMustSendPayouts: false,
-                holdFees: false,
-                useTotalSurplusForRedemptions: false,
-                useDataHookForPay: true, // Use the buyback hook data source.
-                useDataHookForRedeem: false,
-                dataHook: dataHook,
-                metadata: uint16(extraMetadata)
+            // Specify the ruleset.
+            rulesetConfigurations[i] = JBRulesetConfig({
+                mustStartAtOrAfter: stageConfiguration.startsAtOrAfter,
+                duration: stageConfiguration.issuanceDecayFrequency,
+                weight: stageConfiguration.initialIssuance,
+                decayPercent: stageConfiguration.issuanceDecayPercent,
+                approvalHook: IJBRulesetApprovalHook(address(0)),
+                metadata: JBRulesetMetadata({
+                    reservedPercent: stageConfiguration.splitPercent,
+                    redemptionRate: JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.cashOutTaxRate,
+                    baseCurrency: configuration.baseCurrency,
+                    pausePay: false,
+                    pauseCreditTransfers: false,
+                    allowOwnerMinting: true, // Allow this contract to auto mint tokens as the network owner.
+                    allowSetCustomToken: false,
+                    allowTerminalMigration: false,
+                    allowSetTerminals: false,
+                    allowSetController: false,
+                    allowAddAccountingContext: false,
+                    allowAddPriceFeed: false,
+                    ownerMustSendPayouts: false,
+                    holdFees: false,
+                    useTotalSurplusForRedemptions: false,
+                    useDataHookForPay: true, // Use the buyback hook data source.
+                    useDataHookForRedeem: false,
+                    dataHook: dataHook,
+                    metadata: uint16(extraMetadata)
+                }),
+                splitGroups: new JBSplitGroup[](0),
+                fundAccessLimitGroups: new JBFundAccessLimitGroup[](numberOfLoanSources)
             });
 
             // Append the encoded stage properties.
             encodedConfiguration = abi.encode(
                 encodedConfiguration, _encodedStageConfig({stageConfiguration: stageConfiguration, stageNumber: i})
             );
-
-            // Initialize the rulesets fund access limit.
-            rulesetConfigurations[i].fundAccessLimitGroups = new JBFundAccessLimitGroup[](numberOfLoanSources);
 
             // Set the fund access limits for the loans.
             for (uint256 j; j < numberOfLoanSources; j++) {
@@ -965,6 +942,14 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         _permissions().setPermissionsFor({account: account, permissionsData: permissionData});
     }
 
+    /// @notice A flag indicating if an address is a sucker for a revnet.
+    /// @param revnetId The ID of the revnet to check sucker status for.
+    /// @param addr The address to check sucker status for.
+    /// @return isSucker A flag indicating if the address is a sucker for the revnet.
+    function _isSuckerOf(uint256 revnetId, address addr) internal view returns (bool) {
+        return SUCKER_REGISTRY.isSuckerOf(revnetId, addr);
+    }
+
     /// @notice Mints tokens for a revnet.
     /// @param revnetId The ID of the revnet to mint tokens for.
     /// @param tokenCount The number of tokens to mint.
@@ -980,13 +965,6 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         });
     }
 
-    /// @notice Enforces that the message sender is the current split operator.
-    /// @param revnetId The ID of the revnet to check operator permissions for.
-    /// @param operator The address of the operator to check permissions for.
-    function _checkIfSplitOperatorOf(uint256 revnetId, address operator) internal view {
-        if (!isSplitOperatorOf(revnetId, operator)) revert REVBasic_Unauthorized();
-    }
-
     /// @notice A reference to the controller's directory contract.
     /// @return directory The directory contract.
     function _directory() internal view returns (IJBDirectory) {
@@ -999,18 +977,13 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         return CONTROLLER.PROJECTS();
     }
 
-    /// @notice Deploy suckers for a revnet.
-    /// @param revnetId The ID of the revnet to deploy suckers for.
-    /// @param salt The salt to use for the deployment.
-    /// @param configurations The configurations that specify the deployment.
-    function _deploySuckersFor(
-        uint256 revnetId,
-        bytes32 salt,
-        JBSuckerDeployerConfig[] memory configurations
-    )
-        internal
-    {
-        // slither-disable-next-line unused-return
-        SUCKER_REGISTRY.deploySuckersFor({projectId: revnetId, salt: salt, configurations: configurations});
+    /// @notice Converts a uint256 array to a uint8 array.
+    /// @param array The array to convert.
+    /// @return result The converted array.
+    function _uint256ArrayToUint8Array(uint256[] memory array) internal returns (uint8[] memory result) {
+        result = new uint8[](array.length);
+        for (uint256 i; i < array.length; i++) {
+            result[i] = uint8(array[i]);
+        }
     }
 }

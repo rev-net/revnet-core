@@ -23,19 +23,17 @@ import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol
 contract REVCroptopDeployer is REVCroptop, IREVCroptopDeployer {
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
-    /// @param loanShark The loan shark that's allowed to use the allowance to make risk-free money for the revnet.
     /// @param feeRevnetId The ID of the revnet that will receive fees.
     /// @param hookDeployer The 721 tiers hook deployer.
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
-        IREVLoans loanShark,
         uint256 feeRevnetId,
         IJB721TiersHookDeployer hookDeployer,
         CTPublisher publisher
     )
-        REVCroptop(controller, suckerRegistry, loanShark, feeRevnetId, hookDeployer, publisher)
+        REVCroptop(controller, suckerRegistry, feeRevnetId, hookDeployer, publisher)
     {}
 
     //*********************************************************************//

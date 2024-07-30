@@ -268,6 +268,7 @@ contract REVLoans is ERC721, IREVLoans {
                 loan: loan,
                 newAmount: newAmount,
                 newCollateral: newCollateral,
+                pendingAutomintTokens: revnetOwner.totalPendingAutomintAmountOf(loan.revnetId),
                 terminals: directory.terminalsOf(loan.revnetId),
                 currentStage: controller.RULESETS().currentOf(loan.revnetId),
                 prices: controller.PRICES(),
@@ -508,6 +509,7 @@ contract REVLoans is ERC721, IREVLoans {
     /// @param loan The loan to check for collateralization.
     /// @param newAmount The new total amount being borrowed from the loan.
     /// @param newCollateral The new amount of collateral that the loan will be collateralized with.
+    /// @param pendingAutomintTokens The amount of tokens pending automint from the revnet.
     /// @param terminals The terminals that the funds are being borrowed from.
     /// @param currentStage The current stage of the revnet.
     /// @param prices A contract that stores prices for each project.
@@ -515,6 +517,7 @@ contract REVLoans is ERC721, IREVLoans {
         REVLoan memory loan,
         uint256 newAmount,
         uint256 newCollateral,
+        uint256 pendingAutomintTokens,
         IJBTerminal[] memory terminals,
         JBRuleset memory currentStage,
         IJBPrices prices,
@@ -551,7 +554,7 @@ contract REVLoans is ERC721, IREVLoans {
         uint256 borrowableAmount = JBRedemptions.reclaimFrom({
             surplus: totalSurplus + totalBorrowed,
             tokensRedeemed: newCollateral,
-            totalSupply: totalSupply + totalCollateral,
+            totalSupply: totalSupply + totalCollateral + pendingAutomintTokens,
             redemptionRate: currentStage.redemptionRate()
         });
 

@@ -28,21 +28,26 @@ contract REVCroptop is REVTiered721Hook, IREVCroptop {
     /// @notice The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     CTPublisher public immutable override PUBLISHER;
 
+    /// @notice Indicates if this contract adheres to the specified interface.
+    /// @dev See {IERC165-supportsInterface}.
+    /// @return A flag indicating if the provided interface ID is supported.
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == type(IREVCroptop).interfaceId || super.supportsInterface(interfaceId);
+    }
+
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
-    /// @param loanShark The loan shark that's allowed to use the allowance to make risk-free money for the revnet.
     /// @param feeRevnetId The ID of the revnet that will receive fees.
     /// @param hookDeployer The 721 tiers hook deployer.
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
-        IREVLoans loanShark,
         uint256 feeRevnetId,
         IJB721TiersHookDeployer hookDeployer,
         CTPublisher publisher
     )
-        REVTiered721Hook(controller, suckerRegistry, loanShark, feeRevnetId, hookDeployer)
+        REVTiered721Hook(controller, suckerRegistry, feeRevnetId, hookDeployer)
     {
         PUBLISHER = publisher;
     }
@@ -93,18 +98,12 @@ contract REVCroptop is REVTiered721Hook, IREVCroptop {
         // Format the posts.
         _configurePostingCriteriaFor({hook: address(hook), allowedPosts: allowedPosts});
 
-        // Define the permissions to set.
-        uint8[] memory permissionIndexes = new uint8[](1);
-        permissionIndexes[0] = JBPermissionIds.ADJUST_721_TIERS;
-
-        JBPermissionsData memory permissionData = JBPermissionsData({
-            operator: address(PUBLISHER),
-            projectId: uint56(revnetId),
-            permissionIds: permissionIndexes
-        });
-
         // Give the croptop publisher permission to post on this contract's behalf.
-        _permissions().setPermissionsFor({account: address(this), permissionsData: permissionData});
+        _setPermission({
+            operator: address(PUBLISHER),
+            revnetId: revnetId,
+            permissionId: JBPermissionIds.MAP_SUCKER_TOKEN
+        });
 
         return (revnetId, hook);
     }

@@ -17,15 +17,13 @@ import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol
 contract REVPayHookDeployer is REVPayHook, IREVPayHookDeployer {
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
-    /// @param loanShark The loan shark that's allowed to use the allowance to make risk-free money for the revnet.
     /// @param feeRevnetId The ID of the revnet that will receive fees.
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
-        IREVLoans loanShark,
         uint256 feeRevnetId
     )
-        REVPayHook(controller, suckerRegistry, loanShark, feeRevnetId)
+        REVPayHook(controller, suckerRegistry, feeRevnetId)
     {}
 
     //*********************************************************************//

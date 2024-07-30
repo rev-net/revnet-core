@@ -16,17 +16,22 @@ import {REVSuckerDeploymentConfig} from "./../structs/REVSuckerDeploymentConfig.
 
 /// @notice A contract that facilitates deploying a basic revnet that also calls other hooks when paid.
 abstract contract REVPayHook is REVBasic, IREVPayHook {
+    /// @notice Indicates if this contract adheres to the specified interface.
+    /// @dev See {IERC165-supportsInterface}.
+    /// @return A flag indicating if the provided interface ID is supported.
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == type(IREVPayHook).interfaceId || super.supportsInterface(interfaceId);
+    }
+
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
-    /// @param loanShark The loan shark that's allowed to use the allowance to make risk-free money for the revnet.
     /// @param feeRevnetId The ID of the revnet that will receive fees.
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
-        IREVLoans loanShark,
         uint256 feeRevnetId
     )
-        REVBasic(controller, suckerRegistry, loanShark, feeRevnetId)
+        REVBasic(controller, suckerRegistry, feeRevnetId)
     {}
 
     //*********************************************************************//

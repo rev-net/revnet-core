@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {REVDescription} from "./REVDescription.sol";
 import {REVLoanSource} from "./REVLoanSource.sol";
 import {REVStageConfig} from "./REVStageConfig.sol";
+import {IREVLoans} from "../interfaces/IREVLoans.sol";
 
 /// @custom:member description The description of the revnet.
 /// @custom:member baseCurrency The currency that the issuance is based on.
@@ -16,10 +17,12 @@ import {REVStageConfig} from "./REVStageConfig.sol";
 /// allowed to change who the operator is. Only the operator can replace itself after deployment.
 /// @custom:member stageConfigurations The periods of changing constraints.
 /// @custom:member loanSources The sources for loans.
+/// @custom:member loans The loans contract for each revnet.
 struct REVConfig {
     REVDescription description;
     uint32 baseCurrency;
     address splitOperator;
     REVStageConfig[] stageConfigurations;
     REVLoanSource[] loanSources;
+    IREVLoans loans;
 }

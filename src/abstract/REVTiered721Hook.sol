@@ -23,19 +23,24 @@ contract REVTiered721Hook is REVPayHook, IREVTiered721Hook {
     /// @notice The contract responsible for deploying the tiered 721 hook.
     IJB721TiersHookDeployer public immutable override HOOK_DEPLOYER;
 
+    /// @notice Indicates if this contract adheres to the specified interface.
+    /// @dev See {IERC165-supportsInterface}.
+    /// @return A flag indicating if the provided interface ID is supported.
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == type(IREVTiered721Hook).interfaceId || super.supportsInterface(interfaceId);
+    }
+
     /// @param controller The controller that revnets are made from.
     /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
-    /// @param loanShark The loan shark that's allowed to use the allowance to make risk-free money for the revnet.
     /// @param feeRevnetId The ID of the revnet that will receive fees.
     /// @param hookDeployer The 721 tiers hook deployer.
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
-        IREVLoans loanShark,
         uint256 feeRevnetId,
         IJB721TiersHookDeployer hookDeployer
     )
-        REVPayHook(controller, suckerRegistry, loanShark, feeRevnetId)
+        REVPayHook(controller, suckerRegistry, feeRevnetId)
     {
         HOOK_DEPLOYER = hookDeployer;
     }
@@ -56,7 +61,6 @@ contract REVTiered721Hook is REVPayHook, IREVTiered721Hook {
     /// @param extraHookMetadata Extra metadata to attach to the cycle for the delegates to use.
     /// @return revnetId The ID of the newly created revnet.
     /// @return hook The address of the 721 hook that was deployed on the revnet.
-
     function _launchTiered721RevnetFor(
         uint256 revnetId,
         REVConfig memory configuration,

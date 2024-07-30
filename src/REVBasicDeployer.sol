@@ -25,10 +25,9 @@ contract REVBasicDeployer is REVBasic, IREVBasicDeployer {
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
-        IREVLoans loanShark,
         uint256 feeRevnetId
     )
-        REVBasic(controller, suckerRegistry, loanShark, feeRevnetId)
+        REVBasic(controller, suckerRegistry, feeRevnetId)
     {}
 
     //*********************************************************************//

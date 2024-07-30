@@ -178,7 +178,8 @@ contract DeployScript is Script, Sphinx {
             baseCurrency: uint32(uint160(JBConstants.NATIVE_TOKEN)),
             splitOperator: OPERATOR,
             stageConfigurations: stageConfigurations,
-            loanSources: new REVLoanSource[](0)
+            loanSources: new REVLoanSource[](0),
+            loans: IREVLoans(address(0))
         });
 
         // The project's buyback hook configuration.
@@ -215,9 +216,8 @@ contract DeployScript is Script, Sphinx {
                 abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID)
             )
         ) {
-            REVBasicDeployer _basicDeployer = new REVBasicDeployer{salt: BASIC_DEPLOYER}(
-                core.controller, suckers.registry, IREVLoans(address(0)), FEE_PROJECT_ID
-            );
+            REVBasicDeployer _basicDeployer =
+                new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, FEE_PROJECT_ID);
 
             // Approve the basic deployer to configure the project.
             core.projects.approve(address(_basicDeployer), FEE_PROJECT_ID);
@@ -239,11 +239,11 @@ contract DeployScript is Script, Sphinx {
             !_isDeployed(
                 NFT_HOOK_DEPLOYER,
                 type(REVTiered721HookDeployer).creationCode,
-                abi.encode(core.controller, suckers.registry, IREVLoans(address(0)), FEE_PROJECT_ID, hook.hook_deployer)
+                abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer)
             )
         ) {
             new REVTiered721HookDeployer{salt: NFT_HOOK_DEPLOYER}(
-                core.controller, suckers.registry, IREVLoans(address(0)), FEE_PROJECT_ID, hook.hook_deployer
+                core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer
             );
         }
 
@@ -251,23 +251,11 @@ contract DeployScript is Script, Sphinx {
             !_isDeployed(
                 CROPTOP_DEPLOYER,
                 type(REVCroptopDeployer).creationCode,
-                abi.encode(
-                    core.controller,
-                    suckers.registry,
-                    IREVLoans(address(0)),
-                    FEE_PROJECT_ID,
-                    hook.hook_deployer,
-                    croptop.publisher
-                )
+                abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher)
             )
         ) {
             new REVCroptopDeployer{salt: CROPTOP_DEPLOYER}(
-                core.controller,
-                suckers.registry,
-                IREVLoans(address(0)),
-                FEE_PROJECT_ID,
-                hook.hook_deployer,
-                croptop.publisher
+                core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher
             );
         }
 
