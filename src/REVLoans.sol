@@ -15,29 +15,31 @@ import {REVLoanSource} from "./structs/REVLoanSource.sol";
 
 /// @notice A contract for borrowing from revnets.
 contract REVLoans is IREVLoans {
-    
     error MISSING_VALUES();
     error NOT_ENOUGH_COLLATERAL();
     error PERMIT_ALLOWANCE_NOT_ENOUGH();
     error NO_MSG_VALUE_ALLOWED();
 
-    /// @dev A fee of 10% is charged at the time a loan is created. 2.5% is charged by the underlying protocol, 2.5% is charged by REV, 5% is charge by the revnet issuing the loan.
+    /// @dev A fee of 10% is charged at the time a loan is created. 2.5% is charged by the underlying protocol, 2.5% is
+    /// charged by REV, 5% is charge by the revnet issuing the loan.
     uint256 public constant override REV_PREPAID_FEE = 25; // 2.5%
-    
+
     /// @dev The initial fee taken by the revnet issuing the loan.
     uint256 public constant override SELF_PREPAID_FEE = 50; // 5%
-    
-    /// @dev The initial fee covers the loan for 2 years. The loan can be repaid at anytime within this time frame for no additional charge.
+
+    /// @dev The initial fee covers the loan for 2 years. The loan can be repaid at anytime within this time frame for
+    /// no additional charge.
     uint256 public constant override LOAN_PREPAID_DURATION = 2 years;
 
-    /// @dev After 2 years, the loan will increasingly cost more to pay off. After 10 years, the loan collateral cannot be recouped. 
+    /// @dev After 2 years, the loan will increasingly cost more to pay off. After 10 years, the loan collateral cannot
+    /// be recouped.
     uint256 public constant override LOAN_LIQUIDATION_DURATION = 10 years;
 
     //*********************************************************************//
     // --------------- public immutable stored properties ---------------- //
     //*********************************************************************//
 
-    /// @notice Mints ERC-721s that represent project ownership and transfers. 
+    /// @notice Mints ERC-721s that represent project ownership and transfers.
     IJBProjects public immutable override PROJECTS;
 
     /// @notice The ID of the REV revnet that will receive the fees.
@@ -45,11 +47,12 @@ contract REVLoans is IREVLoans {
 
     /// @notice The amount of loans that have been created.
     uint256 public numberOfLoans;
-    
+
     /// @notice The ID of the last revnet that has been successfully liquiditated after passing the duration.
-    uint256 public lastLoanIdLiquidated;    
-    
-    /// @notice An indication if a revnet currently has outstanding loans from the specified terminal in the specified token.
+    uint256 public lastLoanIdLiquidated;
+
+    /// @notice An indication if a revnet currently has outstanding loans from the specified terminal in the specified
+    /// token.
     /// @custom:member revnetId The ID of the revnet issuing the loan.
     /// @custom:member terminal The terminal that the loan is issued from.
     /// @custom:member token The token being loaned.
@@ -58,21 +61,20 @@ contract REVLoans is IREVLoans {
     /// @notice The sources of each revnet's loan.
     /// @custom:member revnetId The ID of the revnet issuing the loan.
     mapping(uint256 revnetId => REVLoanSource[]) public loanSourcesOf;
-    
+
     /// @notice The loans.
     /// @custom:member The ID of the loan.
     mapping(uint256 loanId => REVLoan) loanOf;
-    
+
     /// @notice The total amount loaned out by a revnet from a specified terminal in a specified token.
     /// @custom:member revnetId The ID of the revnet issuing the loan.
     /// @custom:member terminal The terminal that the loan is issued from.
     /// @custom:member token The token being loaned.
     mapping(uint256 revnetId => mapping(IJBTerminal terminal => mapping(address token => uint256))) totalBorrowedFrom;
-    
+
     /// @notice The total amount of collateral supporting a revnet's loans.
     /// @custom:member revnetId The ID of the revnet issuing the loan.
     mapping(uint256 revnetId => uint256) totalCollateralOf;
-    
 
     /// @notice Checks this contract's balance of a specific token.
     /// @param token The address of the token to get this contract's balance of.
@@ -88,7 +90,7 @@ contract REVLoans is IREVLoans {
         PROJECTS = projects;
         FEE_REVNET_ID = feeRevnetId;
     }
-    
+
     /// @notice Open a loan by borrowing from a revnet.
     /// @param revnetId The ID of the revnet being borrowed from.
     /// @param terminal The terminal where the funds will be borrowed from.
@@ -123,10 +125,7 @@ contract REVLoans is IREVLoans {
 
         // Set the loan's values.
         loan.revnetId = revnetId;
-        loan.source = REVLoanSource({
-            terminal: terminal,
-            token: token
-        });
+        loan.source = REVLoanSource({terminal: terminal, token: token});
         loan.createdAt = block.timestamp;
 
         // Make an empty allowance to satisfy the function.
@@ -141,8 +140,9 @@ contract REVLoans is IREVLoans {
             allowance: allowance
         });
     }
-    
-    /// @notice Allows the owner of a loan to pay it back, add more, or receive returned collateral no longer necessary to support the loan.
+
+    /// @notice Allows the owner of a loan to pay it back, add more, or receive returned collateral no longer necessary
+    /// to support the loan.
     /// @param loanId The ID of the loan being managed.
     /// @param amountToPayBack The amount being paid back.
     /// @param amountOfCollateralToReturn The amount of collateral to returned.
@@ -173,17 +173,26 @@ contract REVLoans is IREVLoans {
             totalAmount: newAmount,
             totalCollateral: newCollateral,
             beneficiary: beneficiary,
-            allowance
+            allowance: allowance
         });
 
-        if (loan.amount == 0 && loan.collateral == 0){
+        if (loan.amount == 0 && loan.collateral == 0) {
             // Burn the loan.
             _burn(loanId);
         }
     }
- 
-    function _refinance(REVLoan storage loan, uint256 newAmount, uint256 newCollateral, address beneficiary, JBSingleAllowance memory allowance) internal returns (uint256 netNewBorrowedAmount) {
-        // Keep a reference to the revnet's owner. 
+
+    function _refinance(
+        REVLoan storage loan,
+        uint256 newAmount,
+        uint256 newCollateral,
+        address beneficiary,
+        JBSingleAllowance memory allowance
+    )
+        internal
+        returns (uint256 netNewBorrowedAmount)
+    {
+        // Keep a reference to the revnet's owner.
         IREVBasic revnetOwner = IREVBasic(PROJECTS.ownerOf(loan.revnetId));
 
         // Keep a reference to the revnet's controller.
@@ -192,7 +201,8 @@ contract REVLoans is IREVLoans {
         // Keep a reference to the revnet's directory.
         IJBController directory = controller.DIRECTORY();
 
-        // If the borrowed amount is increasing or the collateral is changing, check that the loan will still be properly collateralized.
+        // If the borrowed amount is increasing or the collateral is changing, check that the loan will still be
+        // properly collateralized.
         if (newAmount > loan.amount || loan.collateral != newCollateral) {
             // Get the surplus of all the revnet's terminals in terms of the native currency.
             uint256 totalSurplus = JBSurplus.currentSurplusOf({
@@ -205,12 +215,16 @@ contract REVLoans is IREVLoans {
             // Get the revnet's current stage.
             JBRuleset memory currentStage = controller.RULESETS().currentOf(loan.revnetId);
 
-            // Get the total amount the revnet currently has loaned out, in terms of the native currency with 18 decimals.
-            uint256 totalBorrowed =
-                _totalBorrowedFrom({revnetId: loan.revnetId, decimals: 18, currency: uint32(uint160(JBConstants.NATIVE_TOKEN))});
+            // Get the total amount the revnet currently has loaned out, in terms of the native currency with 18
+            // decimals.
+            uint256 totalBorrowed = _totalBorrowedFrom({
+                revnetId: loan.revnetId,
+                decimals: 18,
+                currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
+            });
 
             // Get the total amount of tokens in circulation.
-            uint256 totalSupply = controller.TOKENS().totalSupplyOf(loan.revnetId) 
+            uint256 totalSupply = controller.TOKENS().totalSupplyOf(loan.revnetId);
 
             // Get a refeerence to the collateral being used to secure loans.
             uint256 totalCollateral = totalCollateralOf[loan.revnetId];
@@ -276,7 +290,7 @@ contract REVLoans is IREVLoans {
                 memo: "Fee from loan",
                 metadata: bytes(abi.encodePacked(revnetId))
             }) {} catch (bytes memory) {}
-        
+
             // Get the amount of additional fee to take for the revnet issuing the loan.
             feeAmount = mulDiv(amountDiff, SELF_PREPAID_FEE, JBConstants.MAX_FEE);
 
@@ -284,7 +298,7 @@ contract REVLoans is IREVLoans {
             payValue = token == JBConstants.NATIVE_TOKEN ? feeAmount : 0;
 
             // Pay the fee. Add the tokens generated as collateral.
-            newCollateral += try terminal.pay{value: payValue}({
+            try terminal.pay{value: payValue}({
                 projectId: loan.revnetId,
                 token: token,
                 amount: feeAmount,
@@ -292,12 +306,14 @@ contract REVLoans is IREVLoans {
                 minReturnedTokens: 0,
                 memo: "Fee from loan",
                 metadata: bytes(abi.encodePacked(FEE_REVNET_ID))
-            }) {} catch (bytes memory) {}
+            }) returns (uint256 beneficiaryTokenAmount) {
+                newCollateral += beneficiaryTokenAmount;
+            } catch (bytes memory) {}
 
             // Transfer the remaining balance to the borrower.
             _transferFor({from: address(this), to: beneficiary, token: token, amount: _balanceOf(token)});
 
-        // Pay off the loan.
+            // Pay off the loan.
         } else if (loan.amount > newAmount) {
             // Get a reference to the amount being paid back.
             uint256 amountDiff = loan.amount - newAmount;
@@ -321,11 +337,21 @@ contract REVLoans is IREVLoans {
             totalBorrowedFrom[revnetId][loan.terminal][loan.token] -= amountDiff;
 
             // Accept the funds that'll be used to pay off loans.
-            uint256 amountPaidIn = _acceptFundsFor({projectId: loan.revnetId, token: loan.source.token, amount: amountDiff + feeAmount, allowance: allowance});
+            uint256 amountPaidIn = _acceptFundsFor({
+                projectId: loan.revnetId,
+                token: loan.source.token,
+                amount: amountDiff + feeAmount,
+                allowance: allowance
+            });
 
-            // If the loan is being overpaid, transfer any leftover amount back to the payer. 
+            // If the loan is being overpaid, transfer any leftover amount back to the payer.
             if (amountPaidIn > loan.amount + feeAmount) {
-                _transferFor({ from: address(this), to: msg.sender, token: loan.source.token, amount: amountPaidIn - loan.amount - feeAmount });
+                _transferFor({
+                    from: address(this),
+                    to: msg.sender,
+                    token: loan.source.token,
+                    amount: amountPaidIn - loan.amount - feeAmount
+                });
             }
 
             // The amount to pay as a fee.
@@ -365,8 +391,13 @@ contract REVLoans is IREVLoans {
             totalCollateralOf[revnetId] += collateralDiff;
 
             // Burn the tokens that are tracked as collateral.
-            controller.burnTokensOf({holder: msg.sender, projectId: revnetId, tokenCount: collateralDiff, memo: "Adding collateral to loan"});
-        // Remove collateral.
+            controller.burnTokensOf({
+                holder: msg.sender,
+                projectId: revnetId,
+                tokenCount: collateralDiff,
+                memo: "Adding collateral to loan"
+            });
+            // Remove collateral.
         } else if (loan.collateral > newCollateral) {
             // Keep a reference to the amount of collateral being returned.
             uint256 collateralDiff = loan.collateral - newCollateral;
@@ -387,13 +418,12 @@ contract REVLoans is IREVLoans {
         // Store the loans updated values.
         loan.amount = newAmount;
         loan.collateral = newCollateral;
-    }   
+    }
 
     /// @notice Cleans up any liquiditated loans.
     /// @dev Since loans are created in incremental order, earlier IDs will always be liquidated before later ones.
     /// @param count The amount of loans iterate over since the last liquidated loan.
     function liquidateExpiredLoans(uint256 count) external {
-
         // Keep a reference to the loan being iterated on.
         REVLoan memory loan;
 
@@ -425,7 +455,7 @@ contract REVLoans is IREVLoans {
             }
         }
     }
-    
+
     /// @notice The total borrowed amount from a revnet.
     /// @param revnetId The ID of the revnet to check for borrowed assets from.
     /// @param decimals The decimals the resulting fixed point value will include.

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {REVLoanSource} from "./REVLoanSource.sol"; 
+import {REVLoanSource} from "./REVLoanSource.sol";
 
 /// @custom:member revnetId The ID of the revnet that this loan is for.
 /// @custom:member borrowedAmount The amount that is being borrowed.
