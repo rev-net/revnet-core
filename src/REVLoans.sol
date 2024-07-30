@@ -1,53 +1,84 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+import {mulDiv} from "@prb/math/src/Common.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IAllowanceTransfer} from "@uniswap/permit2/src/interfaces/IAllowanceTransfer.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
+import {IJBPrices} from "@bananapus/core/src/interfaces/IJBPrices.sol";
+import {IJBTokens} from "@bananapus/core/src/interfaces/IJBTokens.sol";
+import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
+import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
 import {IJBTerminalStore} from "@bananapus/core/src/interfaces/IJBTerminalStore.sol";
+import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
 import {JBSurplus} from "@bananapus/core/src/libraries/JBSurplus.sol";
-import {IREVLoans} from "./interfaces/IREVLoans.sol";
+import {JBRulesetMetadataResolver} from "@bananapus/core/src/libraries/JBRulesetMetadataResolver.sol";
+import {IJBPayoutTerminal} from "@bananapus/core/src/interfaces/IJBPayoutTerminal.sol";
 import {JBRedemptions} from "@bananapus/core/src/libraries/JBRedemptions.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
+import {JBSingleAllowance} from "@bananapus/core/src/structs/JBSingleAllowance.sol";
+import {JBRuleset} from "@bananapus/core/src/structs/JBRuleset.sol";
+import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
 
+import {IREVBasic} from "./interfaces/IREVBasic.sol";
+import {IREVLoans} from "./interfaces/IREVLoans.sol";
 import {REVLoan} from "./structs/REVLoan.sol";
 import {REVLoanSource} from "./structs/REVLoanSource.sol";
 
 /// @notice A contract for borrowing from revnets.
-/// @dev Tokens used as collateral are burned, and reminted when the loan is paid off. This keeps the revnet's token structure orderly.
-/// @dev An upfront 10% fee is taken when a loan is created. 2.5% is charged by the underlying protocol, 2.5% is charged by the
-/// revnet issuing the loan, and 5% is charged by the revnet that receives the fees. The loan can be repaid anytime within 2 years without additional fees. 
-/// After 2 years, the loan will increasingly cost more to pay off. After 10 years, the loan collateral cannot be recouped.
-contract REVLoans is IREVLoans {
+/// @dev Tokens used as collateral are burned, and reminted when the loan is paid off. This keeps the revnet's token
+/// structure orderly.
+/// @dev An upfront 10% fee is taken when a loan is created. 2.5% is charged by the underlying protocol, 2.5% is charged
+/// by the
+/// revnet issuing the loan, and 5% is charged by the revnet that receives the fees. The loan can be repaid anytime
+/// within 2 years without additional fees.
+/// After 2 years, the loan will increasingly cost more to pay off. After 10 years, the loan collateral cannot be
+/// recouped.
+contract REVLoans is ERC721, IREVLoans {
+    // A library that parses the packed ruleset metadata into a friendlier format.
+    using JBRulesetMetadataResolver for JBRuleset;
+
+    // A library that adds default safety checks to ERC20 functionality.
+    using SafeERC20 for IERC20;
+
+    error UNAUTHORIZED();
     error MISSING_VALUES();
     error NOT_ENOUGH_COLLATERAL();
     error PERMIT_ALLOWANCE_NOT_ENOUGH();
     error NO_MSG_VALUE_ALLOWED();
+    error LOAN_EXPIRED();
 
     /// @dev A fee of 10% is charged at the time a loan is created. 2.5% is charged by the underlying protocol, 2.5% is
     /// charged by REV, 5% is charge by the revnet issuing the loan.
-    uint256 public constant override REV_PREPAID_FEE = 25; // 2.5%
+    uint256 public constant REV_PREPAID_FEE = 25; // 2.5%
 
     /// @dev The initial fee taken by the revnet issuing the loan.
-    uint256 public constant override SELF_PREPAID_FEE = 50; // 5%
+    uint256 public constant SELF_PREPAID_FEE = 50; // 5%
 
     /// @dev The initial fee covers the loan for 2 years. The loan can be repaid at anytime within this time frame for
     /// no additional charge.
-    uint256 public constant override LOAN_PREPAID_DURATION = 2 years;
+    uint256 public constant LOAN_PREPAID_DURATION = 730 days;
 
     /// @dev After 2 years, the loan will increasingly cost more to pay off. After 10 years, the loan collateral cannot
     /// be recouped.
-    uint256 public constant override LOAN_LIQUIDATION_DURATION = 10 years;
+    uint256 public constant LOAN_LIQUIDATION_DURATION = 3650 days;
 
     //*********************************************************************//
     // --------------- public immutable stored properties ---------------- //
     //*********************************************************************//
 
     /// @notice Mints ERC-721s that represent project ownership and transfers.
-    IJBProjects public immutable override PROJECTS;
+    IJBProjects public immutable PROJECTS;
 
     /// @notice The ID of the REV revnet that will receive the fees.
-    uint256 public immutable override FEE_REVNET_ID;
+    uint256 public immutable FEE_REVNET_ID;
+
+    /// @notice The permit2 utility.
+    IPermit2 public immutable PERMIT2;
 
     /// @notice The amount of loans that have been created.
     uint256 public numberOfLoans;
@@ -60,7 +91,8 @@ contract REVLoans is IREVLoans {
     /// @custom:member revnetId The ID of the revnet issuing the loan.
     /// @custom:member terminal The terminal that the loan is issued from.
     /// @custom:member token The token being loaned.
-    mapping(uint256 revnetId => mapping(IJBTerminal terminal => mapping(address token => bool))) public isLoanSourceOf;
+    mapping(uint256 revnetId => mapping(IJBPayoutTerminal terminal => mapping(address token => bool))) public
+        isLoanSourceOf;
 
     /// @notice The sources of each revnet's loan.
     /// @custom:member revnetId The ID of the revnet issuing the loan.
@@ -74,7 +106,8 @@ contract REVLoans is IREVLoans {
     /// @custom:member revnetId The ID of the revnet issuing the loan.
     /// @custom:member terminal The terminal that the loan is issued from.
     /// @custom:member token The token being loaned.
-    mapping(uint256 revnetId => mapping(IJBTerminal terminal => mapping(address token => uint256))) totalBorrowedFrom;
+    mapping(uint256 revnetId => mapping(IJBPayoutTerminal terminal => mapping(address token => uint256)))
+        totalBorrowedFrom;
 
     /// @notice The total amount of collateral supporting a revnet's loans.
     /// @custom:member revnetId The ID of the revnet issuing the loan.
@@ -90,9 +123,10 @@ contract REVLoans is IREVLoans {
 
     /// @param projects A contract which mints ERC-721s that represent project ownership and transfers.
     /// @param feeRevnetId The ID of the REV revnet that will receive the fees.
-    constructor(IJBProjects projects, uint256 feeRevnetId) {
+    constructor(IJBProjects projects, uint256 feeRevnetId, IPermit2 permit2) ERC721("REV Loans", "$REVLOAN") {
         PROJECTS = projects;
         FEE_REVNET_ID = feeRevnetId;
+        PERMIT2 = permit2;
     }
 
     /// @notice Open a loan by borrowing from a revnet.
@@ -100,20 +134,19 @@ contract REVLoans is IREVLoans {
     /// @param terminal The terminal where the funds will be borrowed from.
     /// @param token The token being borrowed.
     /// @param amount The amount being borrowed.
-    /// @param collateralTokenCount The amount of tokens to use as collateral for the loan.
+    /// @param collateral The amount of tokens to use as collateral for the loan.
     /// @param beneficiary The address that'll receive the borrowed funds and the tokens resulting from fee payments.
-    /// @return loanedAmount The amount being loaned out after all prepaid fees are taken.
+    /// @return loanId The ID of the loan created from borrowing.
     function borrowFrom(
         uint256 revnetId,
         IJBPayoutTerminal terminal,
         address token,
         uint256 amount,
         uint256 collateral,
-        address beneficiary
+        address payable beneficiary
     )
         external
-        view
-        returns (uint256 loanId, uint256 netNewBorrowedAmount)
+        returns (uint256 loanId)
     {
         // Make sure there is an amount being borrowed.
         if (amount == 0) revert MISSING_VALUES();
@@ -128,19 +161,19 @@ contract REVLoans is IREVLoans {
         REVLoan storage loan = loanOf[loanId];
 
         // Set the loan's values.
-        loan.revnetId = revnetId;
+        loan.revnetId = uint56(revnetId);
         loan.source = REVLoanSource({terminal: terminal, token: token});
-        loan.createdAt = block.timestamp;
-        loan.refinancedAt = block.timestamp;
+        loan.createdAt = uint40(block.timestamp);
+        loan.refinancedAt = uint40(block.timestamp);
 
         // Make an empty allowance to satisfy the function.
         JBSingleAllowance memory allowance;
 
         // Borrow the amount.
-        netNewBorrowedAmount = _refinance({
+        _refinance({
             loan: loan,
-            totalAmount: amount,
-            totalCollateral: collateral,
+            newAmount: amount,
+            newCollateral: collateral,
             beneficiary: beneficiary,
             allowance: allowance
         });
@@ -153,18 +186,17 @@ contract REVLoans is IREVLoans {
     /// @param newCollateral The new amount of collateral backing the loan.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     /// @param allowance An allowance to faciliate permit2 interactions.
-    /// @return loanId The ID of the new refinanced loan.
-    /// @return netNewBorrowedAmount Any new amount being borrowed as a resulf of the refinancing.
+    /// @return newLoanId The ID of the new refinanced loan.
     function refinance(
-        uint256 memory loanId,
+        uint256 loanId,
         uint256 newAmount,
         uint256 newCollateral,
-        address beneficiary,
+        address payable beneficiary,
         JBSingleAllowance memory allowance
     )
         external
         payable
-        returns (uint256 newLoanId, uint256 netNewBorrowedAmount)
+        returns (uint256 newLoanId)
     {
         // Make sure only the loan's owner can manage it.
         if (_ownerOf(loanId) != msg.sender) revert UNAUTHORIZED();
@@ -173,10 +205,10 @@ contract REVLoans is IREVLoans {
         REVLoan storage loan = loanOf[loanId];
 
         // Borrow in.
-        netNewBorrowedAmount = _refinance({
+        _refinance({
             loan: loan,
-            totalAmount: newAmount,
-            totalCollateral: newCollateral,
+            newAmount: newAmount,
+            newCollateral: newCollateral,
             beneficiary: beneficiary,
             allowance: allowance
         });
@@ -195,12 +227,12 @@ contract REVLoans is IREVLoans {
             // Set the new loan's values to match the old one.
             REVLoan storage newLoan = loanOf[newLoanId];
             newLoan.revnetId = loan.revnetId;
-            newLoan.amount = newAmount;
-            newLoan.collateral = newCollateral;
+            newLoan.amount = uint112(newAmount);
+            newLoan.collateral = uint112(newCollateral);
             newLoan.source = loan.source;
-            newLoan.basedOn = loanId;
-            newLoan.createdAt = loan.createdAt;
-            newLoan.refinancedAt = block.timestamp;
+            newLoan.basedOn = uint56(loanId);
+            newLoan.createdAt = uint40(loan.createdAt);
+            newLoan.refinancedAt = uint40(block.timestamp);
         }
     }
 
@@ -211,16 +243,14 @@ contract REVLoans is IREVLoans {
     /// @param newCollateral The new amount of collateral backing the loan.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     /// @param allowance An allowance to faciliate permit2 interactions.
-    /// @return netNewBorrowedAmount Any new amount being borrowed as a resulf of the refinancing.
     function _refinance(
         REVLoan storage loan,
         uint256 newAmount,
         uint256 newCollateral,
-        address beneficiary,
+        address payable beneficiary,
         JBSingleAllowance memory allowance
     )
         internal
-        returns (uint256 netNewBorrowedAmount)
     {
         // Keep a reference to the revnet's owner.
         IREVBasic revnetOwner = IREVBasic(PROJECTS.ownerOf(loan.revnetId));
@@ -229,252 +259,334 @@ contract REVLoans is IREVLoans {
         IJBController controller = revnetOwner.CONTROLLER();
 
         // Keep a reference to the revnet's directory.
-        IJBController directory = controller.DIRECTORY();
+        IJBDirectory directory = controller.DIRECTORY();
 
         // If the borrowed amount is increasing or the collateral is changing, check that the loan will still be
         // properly collateralized.
         if (newAmount > loan.amount || loan.collateral != newCollateral) {
-            // Get the surplus of all the revnet's terminals in terms of the native currency.
-            uint256 totalSurplus = JBSurplus.currentSurplusOf({
-                projectId: loan.revnetId,
+            _verifyCollateralizationOf({
+                loan: loan,
+                newAmount: newAmount,
+                newCollateral: newCollateral,
                 terminals: directory.terminalsOf(loan.revnetId),
-                decimals: 18,
-                currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
+                currentStage: controller.RULESETS().currentOf(loan.revnetId),
+                prices: controller.PRICES(),
+                tokens: controller.TOKENS()
             });
-
-            // Get the revnet's current stage.
-            JBRuleset memory currentStage = controller.RULESETS().currentOf(loan.revnetId);
-
-            // Get the total amount the revnet currently has loaned out, in terms of the native currency with 18
-            // decimals.
-            uint256 totalBorrowed = _totalBorrowedFrom({
-                revnetId: loan.revnetId,
-                decimals: 18,
-                currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
-            });
-
-            // Get the total amount of tokens in circulation.
-            uint256 totalSupply = controller.TOKENS().totalSupplyOf(loan.revnetId);
-
-            // Get a refeerence to the collateral being used to secure loans.
-            uint256 totalCollateral = totalCollateralOf[loan.revnetId];
-
-            // Get the amount that cashing out would return given a surplus that includes all loaned out tokens. This
-            // becomes the amount of the loan.
-            uint256 borrowableAmount = JBRedemptions.reclaimFrom({
-                surplus: totalSurplus + totalBorrowed,
-                tokensRedeemed: newCollateral,
-                totalSupply: totalSupply + totalCollateral,
-                redemptionRate: currentStage.redemptionRate()
-            });
-
-            // Make sure the amount being loaned is within the allowed amount.
-            if (newAmount > borrowableAmount) revert NOT_ENOUGH_COLLATERAL();
         }
 
-        // Add to the loan.
         if (newAmount > loan.amount) {
-            // Register the source if this is the first time its being used for this revnet.
-            if (!isLoanSourceOf[revnetId][terminal][token]) {
-                isLoanSourceOf[revnetId][terminal][token] = true;
-                loanSourcesOf[revnetId].push(REVLoanSource({token: token, terminal: terminal}));
-            }
-
-            // Keep a reference to the difference in amounts, which is the amount being borrowed.
-            uint256 amountDiff = newAmount - loan.amount;
-
-            // Increment the amount of the token borrowed from the revnet from the terminal.
-            totalBorrowedFrom[revnetId][terminal][token] += amountDiff;
-
-            // Get a reference to the accounting context for the source.
-            JBAccountingContext memory accountingContext =
-                source.terminal.accountingContextForTokenOf({projectId: revnetId, token: source.token});
-
-            // Pull the amount to be loaned out of the revnet. This will incure the protocol fee.
-            terminal.useAllowanceOf({
-                projectId: loan.revnetId,
-                token: loan.source.token,
-                amount: amountDiff,
-                currency: accountingContext.currency,
-                minTokensPaidOut: amountDiff,
-                beneficiary: address(this),
-                memo: "Lending out to a borrower"
+            newCollateral += _addTo({
+                loan: loan,
+                amount: newAmount - loan.amount,
+                feeTerminal: directory.primaryTerminalOf(FEE_REVNET_ID, loan.source.token),
+                beneficiary: beneficiary
             });
-
-            // Get the amount of additional fee to take for REV.
-            uint256 feeAmount = mulDiv(amountDiff, REV_PREPAID_FEE, JBConstants.MAX_FEE);
-
-            // Find the terminal that'll have the loaned amount added back to it.
-            IJBTerminal feeTerminal = directory.primaryTerminalOf(FEE_REVNET_ID, token);
-
-            // The amount to pay as a fee.
-            uint256 payValue = token == JBConstants.NATIVE_TOKEN ? feeAmount : 0;
-
-            // Pay the fee. Send the REV to the msg.sender.
-            try feeTerminal.pay{value: payValue}({
-                projectId: FEE_REVNET_ID,
-                token: token,
-                amount: feeAmount,
-                beneficiary: beneficiary,
-                minReturnedTokens: 0,
-                memo: "Fee from loan",
-                metadata: bytes(abi.encodePacked(revnetId))
-            }) {} catch (bytes memory) {}
-
-            // Get the amount of additional fee to take for the revnet issuing the loan.
-            feeAmount = mulDiv(amountDiff, SELF_PREPAID_FEE, JBConstants.MAX_FEE);
-
-            // The amount to pay as a fee.
-            payValue = token == JBConstants.NATIVE_TOKEN ? feeAmount : 0;
-
-            // Pay the fee. Add the tokens generated as collateral.
-            try terminal.pay{value: payValue}({
-                projectId: loan.revnetId,
-                token: token,
-                amount: feeAmount,
-                beneficiary: address(this),
-                minReturnedTokens: 0,
-                memo: "Fee from loan",
-                metadata: bytes(abi.encodePacked(FEE_REVNET_ID))
-            }) returns (uint256 beneficiaryTokenAmount) {
-                newCollateral += beneficiaryTokenAmount;
-            } catch (bytes memory) {}
-
-            // Transfer the remaining balance to the borrower.
-            _transferFor({from: address(this), to: beneficiary, token: token, amount: _balanceOf(token)});
-
-            // Pay off the loan.
         } else if (loan.amount > newAmount) {
-            // Get a reference to the amount being paid back.
-            uint256 amountDiff = loan.amount - newAmount;
-
-            // Keep a reference to the time since the loan was created.
-            uint256 timeSinceLoanCreated = block.timestamp - loan.loanedAt;
-
-            // Keep a reference to the fee that'll be taken.
-            uint256 feeAmount;
-
-            // If the loan period has passed the prepaid time frame, take a fee.
-            if (timeSinceLoanCreated > LOAN_PREPAID_DURATION) {
-                // If the loan period has passed the liqidation time frame, do not allow loan management.
-                if (timeSinceLoanCreate > LOAN_LIQUIDATION_TIMEFRAME) revert LOAN_EXPIRED();
-
-                // Calculate the fee as a linear proportion given the amount of time that has passed.
-                feeAmount = mulDiv(amountDiff, timeSinceLoanCreated, LOAN_LIQUIDATION_TIMEFRAME);
-            }
-
-            // Decrement the total amount of a token being loaned out by the revnet from its terminal.
-            totalBorrowedFrom[revnetId][loan.terminal][loan.token] -= amountDiff;
-
-            // Accept the funds that'll be used to pay off loans.
-            uint256 amountPaidIn = _acceptFundsFor({
-                projectId: loan.revnetId,
-                token: loan.source.token,
-                amount: amountDiff + feeAmount,
-                allowance: allowance
-            });
-
-            // If the loan is being overpaid, transfer any leftover amount back to the payer.
-            if (amountPaidIn > loan.amount + feeAmount) {
-                _transferFor({
-                    from: address(this),
-                    to: msg.sender,
-                    token: loan.source.token,
-                    amount: amountPaidIn - loan.amount - feeAmount
-                });
-            }
-
-            // The amount to pay as a fee.
-            uint256 payValue = token == JBConstants.NATIVE_TOKEN ? feeAmount : 0;
-
-            // Pay the fee.
-            try loan.source.terminal.pay{value: payValue}({
-                projectId: loan.revnetId,
-                token: loan.source.token,
-                amount: feeAmount,
-                beneficiary: beneficiary,
-                minReturnedTokens: 0,
-                memo: "Fee from loan",
-                metadata: bytes(abi.encodePacked(FEE_REVNET_ID))
-            }) {} catch (bytes memory) {}
-
-            // The borrowed amount to return to the revnet.
-            uint256 payValue = token == JBConstants.NATIVE_TOKEN ? amountDiff : 0;
-
-            // Add the loaned amount back to the revnet.
-            try loan.source.terminal.addToBalance{value: payValue}({
-                projectId: loan.revnetId,
-                token: token,
-                amount: amountDiff,
-                shouldReturnHeldFees: false,
-                memo: "Paying off loan",
-                metadata: bytes(abi.encodePacked(revnetId))
-            }) {} catch (bytes memory) {}
+            _payOff({loan: loan, amount: loan.amount - newAmount, beneficiary: beneficiary, allowance: allowance});
         }
 
-        // Add more collateral.
         if (newCollateral > loan.collateral) {
-            // Keep a reference to the new amount being used as collateral.
-            uint256 collateralDiff = newCollateral - loan.collateral;
-
-            // Increment the total amount of collateral tokens.
-            totalCollateralOf[revnetId] += collateralDiff;
-
-            // Burn the tokens that are tracked as collateral.
-            controller.burnTokensOf({
-                holder: msg.sender,
-                projectId: revnetId,
-                tokenCount: collateralDiff,
-                memo: "Adding collateral to loan"
-            });
-            // Remove collateral.
+            _addCollateralTo({loan: loan, amount: newCollateral - loan.collateral, controller: controller});
         } else if (loan.collateral > newCollateral) {
-            // Keep a reference to the amount of collateral being returned.
-            uint256 collateralDiff = loan.collateral - newCollateral;
-
-            // Decrement the total amount of collateral tokens.
-            totalCollateralOf[revnetId] -= collateralDiff;
-
-            // Mint the collateral tokens back to the loan payer.
-            deployer.CONTROLLER().mintTokensOf({
-                projectId: loan.revnetId,
-                tokenCount: collateralDiff,
+            _returnCollateralFrom({
+                loan: loan,
+                amount: loan.collateral - newCollateral,
                 beneficiary: beneficiary,
-                memo: "Removing collateral from loan",
-                useReservedPercent: false
+                controller: controller
             });
         }
 
         // Store the loans updated values.
-        loan.amount = newAmount;
-        loan.collateral = newCollateral;
+        loan.amount = uint112(newAmount);
+        loan.collateral = uint112(newCollateral);
+    }
+
+    /// @notice Returns collateral from a loan.
+    /// @param loan The loan having its collateral returned from.
+    /// @param amount The amount of collateral being returned from the loan.
+    /// @param beneficiary The address receiving the returned collateral.
+    /// @param controller The controller of the revnet.
+    function _returnCollateralFrom(
+        REVLoan memory loan,
+        uint256 amount,
+        address payable beneficiary,
+        IJBController controller
+    )
+        internal
+    {
+        // Decrement the total amount of collateral tokens.
+        totalCollateralOf[loan.revnetId] -= amount;
+
+        // Mint the collateral tokens back to the loan payer.
+        controller.mintTokensOf({
+            projectId: loan.revnetId,
+            tokenCount: amount,
+            beneficiary: beneficiary,
+            memo: "Removing collateral from loan",
+            useReservedPercent: false
+        });
+    }
+
+    /// @notice Adds collateral to a loan.
+    /// @param loan The loan being added to.
+    /// @param amount The new amount of collateral being added to the loan.
+    /// @param controller The controller of the revnet.
+    function _addCollateralTo(REVLoan memory loan, uint256 amount, IJBController controller) internal {
+        // Increment the total amount of collateral tokens.
+        totalCollateralOf[loan.revnetId] += amount;
+
+        // Burn the tokens that are tracked as collateral.
+        controller.burnTokensOf({
+            holder: msg.sender,
+            projectId: loan.revnetId,
+            tokenCount: amount,
+            memo: "Adding collateral to loan"
+        });
+    }
+
+    /// @notice Pays off a loan.
+    /// @param loan The loan being paid off.
+    /// @param amount The amount being paid off.
+    /// @param beneficiary The address receiving any tokens resulting from paying fees.
+    /// @param allowance An allowance to faciliate permit2 interactions.
+    function _payOff(
+        REVLoan memory loan,
+        uint256 amount,
+        address payable beneficiary,
+        JBSingleAllowance memory allowance
+    )
+        internal
+    {
+        // Keep a reference to the time since the loan was created.
+        uint256 timeSinceLoanCreated = block.timestamp - loan.createdAt;
+
+        // Keep a reference to the fee that'll be taken.
+        uint256 feeAmount;
+
+        // If the loan period has passed the prepaid time frame, take a fee.
+        if (timeSinceLoanCreated > LOAN_PREPAID_DURATION) {
+            // If the loan period has passed the liqidation time frame, do not allow loan management.
+            if (timeSinceLoanCreated > LOAN_LIQUIDATION_DURATION) revert LOAN_EXPIRED();
+
+            // Calculate the fee as a linear proportion given the amount of time that has passed.
+            feeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION);
+        }
+
+        // Decrement the total amount of a token being loaned out by the revnet from its terminal.
+        totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] -= amount;
+
+        // Accept the funds that'll be used to pay off loans.
+        uint256 amountPaidIn =
+            _acceptFundsFor({token: loan.source.token, amount: amount + feeAmount, allowance: allowance});
+
+        // If the loan is being overpaid, transfer any leftover amount back to the payer.
+        if (amountPaidIn > loan.amount + feeAmount) {
+            _transferFrom({
+                from: address(this),
+                to: payable(msg.sender),
+                token: loan.source.token,
+                amount: amountPaidIn - loan.amount - feeAmount
+            });
+        }
+
+        // The amount to pay as a fee.
+        uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? feeAmount : 0;
+
+        // Pay the fee.
+        try loan.source.terminal.pay{value: payValue}({
+            projectId: loan.revnetId,
+            token: loan.source.token,
+            amount: feeAmount,
+            beneficiary: beneficiary,
+            minReturnedTokens: 0,
+            memo: "Fee from loan",
+            metadata: bytes(abi.encodePacked(FEE_REVNET_ID))
+        }) {} catch (bytes memory) {}
+
+        // The borrowed amount to return to the revnet.
+        payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? amount : 0;
+
+        // Add the loaned amount back to the revnet.
+        try loan.source.terminal.addToBalanceOf{value: payValue}({
+            projectId: loan.revnetId,
+            token: loan.source.token,
+            amount: amount,
+            shouldReturnHeldFees: false,
+            memo: "Paying off loan",
+            metadata: bytes(abi.encodePacked(loan.revnetId))
+        }) {} catch (bytes memory) {}
+    }
+
+    /// @notice Add a new amount to the loan that is greater than the previous amount.
+    /// @param loan The loan being added to.
+    /// @param amount The amount being added to the loan.
+    /// @param feeTerminal The terminal that the fee will be paid to.
+    /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
+    function _addTo(
+        REVLoan memory loan,
+        uint256 amount,
+        IJBTerminal feeTerminal,
+        address payable beneficiary
+    )
+        internal
+        returns (uint256 generatedCollateral)
+    {
+        // Register the source if this is the first time its being used for this revnet.
+        if (!isLoanSourceOf[loan.revnetId][loan.source.terminal][loan.source.token]) {
+            isLoanSourceOf[loan.revnetId][loan.source.terminal][loan.source.token] = true;
+            loanSourcesOf[loan.revnetId].push(REVLoanSource({token: loan.source.token, terminal: loan.source.terminal}));
+        }
+
+        // Increment the amount of the token borrowed from the revnet from the terminal.
+        totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] += amount;
+
+        {
+            // Get a reference to the accounting context for the source.
+            JBAccountingContext memory accountingContext =
+                loan.source.terminal.accountingContextForTokenOf({projectId: loan.revnetId, token: loan.source.token});
+
+            // Pull the amount to be loaned out of the revnet. This will incure the protocol fee.
+            loan.source.terminal.useAllowanceOf({
+                projectId: loan.revnetId,
+                token: loan.source.token,
+                amount: amount,
+                currency: accountingContext.currency,
+                minTokensPaidOut: amount,
+                beneficiary: payable(address(this)),
+                feeBeneficiary: payable(msg.sender),
+                memo: "Lending out to a borrower"
+            });
+        }
+
+        // Get the amount of additional fee to take for REV.
+        uint256 feeAmount = mulDiv(amount, REV_PREPAID_FEE, JBConstants.MAX_FEE);
+
+        // The amount to pay as a fee.
+        uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? feeAmount : 0;
+
+        // Pay the fee. Send the REV to the msg.sender.
+        try feeTerminal.pay{value: payValue}({
+            projectId: FEE_REVNET_ID,
+            token: loan.source.token,
+            amount: feeAmount,
+            beneficiary: beneficiary,
+            minReturnedTokens: 0,
+            memo: "Fee from loan",
+            metadata: bytes(abi.encodePacked(loan.revnetId))
+        }) {} catch (bytes memory) {}
+
+        // Get the amount of additional fee to take for the revnet issuing the loan.
+        feeAmount = mulDiv(amount, SELF_PREPAID_FEE, JBConstants.MAX_FEE);
+
+        // The amount to pay as a fee.
+        payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? feeAmount : 0;
+
+        // Pay the fee. Add the tokens generated as collateral.
+        try loan.source.terminal.pay{value: payValue}({
+            projectId: loan.revnetId,
+            token: loan.source.token,
+            amount: feeAmount,
+            beneficiary: address(this),
+            minReturnedTokens: 0,
+            memo: "Fee from loan",
+            metadata: bytes(abi.encodePacked(FEE_REVNET_ID))
+        }) returns (uint256 beneficiaryTokenAmount) {
+            generatedCollateral = beneficiaryTokenAmount;
+        } catch (bytes memory) {}
+
+        // Transfer the remaining balance to the borrower.
+        _transferFrom({
+            from: address(this),
+            to: beneficiary,
+            token: loan.source.token,
+            amount: _balanceOf(loan.source.token)
+        });
+    }
+
+    /// @notice Makes sure the provided loan is sufficiently collateralized given the new amounts.
+    /// @param loan The loan to check for collateralization.
+    /// @param newAmount The new total amount being borrowed from the loan.
+    /// @param newCollateral The new amount of collateral that the loan will be collateralized with.
+    /// @param terminals The terminals that the funds are being borrowed from.
+    /// @param currentStage The current stage of the revnet.
+    /// @param prices A contract that stores prices for each project.
+    function _verifyCollateralizationOf(
+        REVLoan memory loan,
+        uint256 newAmount,
+        uint256 newCollateral,
+        IJBTerminal[] memory terminals,
+        JBRuleset memory currentStage,
+        IJBPrices prices,
+        IJBTokens tokens
+    )
+        internal
+        view
+    {
+        // Get the surplus of all the revnet's terminals in terms of the native currency.
+        uint256 totalSurplus = JBSurplus.currentSurplusOf({
+            projectId: loan.revnetId,
+            terminals: terminals,
+            decimals: 18,
+            currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
+        });
+
+        // Get the total amount the revnet currently has loaned out, in terms of the native currency with 18
+        // decimals.
+        uint256 totalBorrowed = _totalBorrowedFrom({
+            revnetId: loan.revnetId,
+            decimals: 18,
+            currency: uint32(uint160(JBConstants.NATIVE_TOKEN)),
+            prices: prices
+        });
+
+        // Get the total amount of tokens in circulation.
+        uint256 totalSupply = tokens.totalSupplyOf(loan.revnetId);
+
+        // Get a refeerence to the collateral being used to secure loans.
+        uint256 totalCollateral = totalCollateralOf[loan.revnetId];
+
+        // Get the amount that cashing out would return given a surplus that includes all loaned out tokens. This
+        // becomes the amount of the loan.
+        uint256 borrowableAmount = JBRedemptions.reclaimFrom({
+            surplus: totalSurplus + totalBorrowed,
+            tokensRedeemed: newCollateral,
+            totalSupply: totalSupply + totalCollateral,
+            redemptionRate: currentStage.redemptionRate()
+        });
+
+        // Make sure the amount being loaned is within the allowed amount.
+        if (newAmount > borrowableAmount) revert NOT_ENOUGH_COLLATERAL();
     }
 
     /// @notice Cleans up any liquiditated loans.
     /// @dev Since loans are created in incremental order, earlier IDs will always be liquidated before later ones.
     /// @param count The amount of loans iterate over since the last liquidated loan.
     function liquidateExpiredLoans(uint256 count) external {
-        // Keep a reference to the loan being iterated on.
-        REVLoan memory loan;
+        // Keep a reference to the loan ID being iterated on.
+        uint256 loanId;
 
         // Keep a reference to the number of loans liquiditated.
         uint256 numberOfLoansLiquidated;
 
         // Iterate over the desired number of loans to check for liquidation.
         for (uint256 i; i < count; i++) {
+            // Get a reference to the loan's ID being iterated on.
+            loanId = lastLoanIdLiquidated + i;
+
             // Get a reference to the loan being iterated on.
-            loan = loanOf[lastCleaned + i];
+            REVLoan memory loan = loanOf[loanId];
 
             // If the the loan has passed its liquidation timeframe, liquidate it.
-            if (block.timestamp - loan.loanedAt > LOAN_LIQUIDATION_TIMEFRAME) {
+            if (block.timestamp - loan.createdAt > LOAN_LIQUIDATION_DURATION) {
                 // Decrement the amount loaned.
-                totalBorrowedFrom[loan.revnetId][loan.terminal][loan.token] -= loan.borrowedAmount;
+                totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] -= loan.amount;
 
                 // Decrement the total amount of collateral tokens supporting loans from this revnet.
-                totalCollateralOf[loan.revnetId] -= loan.collateralTokenCount;
+                totalCollateralOf[loan.revnetId] -= loan.collateral;
 
                 // Burn the loan.
-                _burn(loan.loanId);
+                _burn(loanId);
 
                 // Increment the number of loans liquidated.
                 numberOfLoansLiquidated++;
@@ -490,24 +602,26 @@ contract REVLoans is IREVLoans {
     /// @param revnetId The ID of the revnet to check for borrowed assets from.
     /// @param decimals The decimals the resulting fixed point value will include.
     /// @param currency The currency the resulting value will be in terms of.
+    /// @param prices A contract that stores prices for each project.
     /// @return borrowedAmount The total amount borrowed.
     function _totalBorrowedFrom(
         uint256 revnetId,
         uint256 decimals,
-        uint256 currency
+        uint256 currency,
+        IJBPrices prices
     )
         internal
         view
         returns (uint256 borrowedAmount)
     {
         // Keep a reference to all sources being used to loaned out from this revnet.
-        REVLoanSources[] memory sources = loanSourcesOf[revnetId];
+        REVLoanSource[] memory sources = loanSourcesOf[revnetId];
 
         // Keep a reference to the number of sources being loaned out.
-        uint256 numberOfTokens = tokens.length;
+        uint256 numberOfSources = sources.length;
 
         // Keep a reference to the source being iterated on.
-        REVLoanSources memory source;
+        REVLoanSource memory source;
 
         // Iterate over all sources being used to loaned out.
         for (uint256 i = 0; i < numberOfSources; i++) {
@@ -521,7 +635,7 @@ contract REVLoans is IREVLoans {
             // Normalize the price to the provided currency and decimals.
             uint256 pricePerUnit = accountingContext.currency == currency
                 ? 10 ** decimals
-                : PRICES.pricePerUnitOf({
+                : prices.pricePerUnitOf({
                     projectId: revnetId,
                     pricingCurrency: accountingContext.currency,
                     unitCurrency: currency,
@@ -541,7 +655,7 @@ contract REVLoans is IREVLoans {
     /// @param token The address of the token being transfered.
     /// @param amount The amount of tokens to transfer, as a fixed point number with the same number of decimals as the
     /// token.
-    function _transferFor(address from, address payable to, address token, uint256 amount) internal virtual {
+    function _transferFrom(address from, address payable to, address token, uint256 amount) internal virtual {
         if (from == address(this)) {
             // If the token is native token, assume the `sendValue` standard.
             if (token == JBConstants.NATIVE_TOKEN) return Address.sendValue(to, amount);
@@ -560,13 +674,11 @@ contract REVLoans is IREVLoans {
     }
 
     /// @notice Accepts an incoming token.
-    /// @param projectId The ID of the project that the transfer is being accepted for.
     /// @param token The token being accepted.
     /// @param amount The number of tokens being accepted.
-    /// @param metadata The metadata in which permit2 context is provided.
+    /// @param allowance The permit2 context.
     /// @return amount The number of tokens which have been accepted.
     function _acceptFundsFor(
-        uint256 projectId,
         address token,
         uint256 amount,
         JBSingleAllowance memory allowance

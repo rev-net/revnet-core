@@ -471,7 +471,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     {
         // Normalize the configurations.
         (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration) =
-            _makeRulesetConfigurations(configuration, terminalConfigurations, address(dataHook), extraHookMetadata);
+            _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata);
 
         if (revnetId == 0) {
             // Deploy a juicebox for the revnet.
@@ -757,7 +757,6 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     /// @return encodedConfiguration The encoded configuration of the revnet.
     function _makeRulesetConfigurations(
         REVConfig memory configuration,
-        JBTerminalConfig[] memory terminalConfigurations,
         address dataHook,
         uint256 extraMetadata
     )
@@ -844,7 +843,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
 
                 // Set the fund access limits for the loans.
                 rulesetConfigurations[i].fundAccessLimitGroups[j] = JBFundAccessLimitGroup({
-                    terminal: loanSource.terminal,
+                    terminal: address(loanSource.terminal),
                     token: loanSource.token,
                     payoutLimits: new JBCurrencyAmount[](0),
                     surplusAllowances: loanAllowances
