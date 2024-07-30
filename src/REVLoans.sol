@@ -128,6 +128,7 @@ contract REVLoans is IREVLoans {
         loan.revnetId = revnetId;
         loan.source = REVLoanSource({terminal: terminal, token: token});
         loan.createdAt = block.timestamp;
+        loan.refinancedAt = block.timestamp;
 
         // Make an empty allowance to satisfy the function.
         JBSingleAllowance memory allowance;
@@ -149,6 +150,7 @@ contract REVLoans is IREVLoans {
     /// @param newCollateral The new amount of collateral backing the loan.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     /// @param allowance An allowance to faciliate permit2 interactions.
+    /// @return loanId The ID of the new refinanced loan.
     /// @return netNewBorrowedAmount Any new amount being borrowed as a resulf of the refinancing.
     function refinance(
         uint256 memory loanId,
@@ -159,7 +161,7 @@ contract REVLoans is IREVLoans {
     )
         external
         payable
-        returns (uint256 netNewBorrowedAmount)
+        returns (uint256 newLoanId, uint256 netNewBorrowedAmount)
     {
         // Make sure only the loan's owner can manage it.
         if (_ownerOf(loanId) != msg.sender) revert UNAUTHORIZED();
@@ -176,9 +178,26 @@ contract REVLoans is IREVLoans {
             allowance: allowance
         });
 
+        // Burn the old loan.
+        _burn(loanId);
+
         // If there's no amount or collateral left, burn the loan.
-        if (loan.amount == 0 && loan.collateral == 0) {
-            _burn(loanId);
+        if (loan.amount > 0 || loan.collateral > 0) {
+            // Get a reference to the loan ID.
+            newLoanId = ++numberOfLoans;
+
+            // Mint the loan.
+            _mint({to: msg.sender, tokenId: newLoanId});
+
+            // Set the new loan's values to match the old one.
+            REVLoan storage newLoan = loanOf[newLoanId];
+            newLoan.revnetId = loan.revnetId;
+            newLoan.amount = newAmount;
+            newLoan.collateral = newCollateral;
+            newLoan.source = loan.source;
+            newLoan.basedOn = loanId;
+            newLoan.createdAt = loan.createdAt;
+            newLoan.refinancedAt = block.timestamp;
         }
     }
 

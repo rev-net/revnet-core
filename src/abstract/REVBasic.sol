@@ -37,7 +37,7 @@ import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegi
 import {JBSuckerDeployerConfig} from "@bananapus/suckers/src/structs/JBSuckerDeployerConfig.sol";
 
 import {REVConfig} from "./../structs/REVConfig.sol";
-import {REVLoanAccessGroup} from "./../structs/REVLoanAccessGroup.sol";
+import {REVLoanSource} from "./../structs/REVLoanSource.sol";
 import {IREVBasic} from "./../interfaces/IREVBasic.sol";
 import {IREVLoans} from "../interfaces/IREVLoans.sol";
 import {REVMintConfig} from "./../structs/REVMintConfig.sol";
@@ -788,9 +788,9 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         loanAllowances[0] = JBCurrencyAmount({currency: configuration.baseCurrency, amount: type(uint224).max});
 
         // Keep a reference to the number of loan access groups there are.
-        uint256 numberOfloanAccessGroups = configuration.loanAccessGroups.length;
+        uint256 numberOfLoanSources = configuration.loanSources.length;
 
-        REVLoanAccessGroup memory loanAccessGroup;
+        REVLoanSource memory loanSource;
 
         // Loop through each stage to set up its ruleset configuration.
         for (uint256 i; i < numberOfStages; i++) {
@@ -835,17 +835,17 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
             );
 
             // Initialize the rulesets fund access limit.
-            rulesetConfigurations[i].fundAccessLimitGroups = new JBFundAccessLimitGroup[](numberOfloanAccessGroups);
+            rulesetConfigurations[i].fundAccessLimitGroups = new JBFundAccessLimitGroup[](numberOfLoanSources);
 
             // Set the fund access limits for the loans.
-            for (uint256 j; j < numberOfloanAccessGroups; j++) {
+            for (uint256 j; j < numberOfLoanSources; j++) {
                 // Set the loan access group being iterated on.
-                loanAccessGroup = configuration.loanAccessGroups[j];
+                loanSource = configuration.loanSources[j];
 
                 // Set the fund access limits for the loans.
                 rulesetConfigurations[i].fundAccessLimitGroups[j] = JBFundAccessLimitGroup({
-                    terminal: loanAccessGroup.terminal,
-                    token: loanAccessGroup.token,
+                    terminal: loanSource.terminal,
+                    token: loanSource.token,
                     payoutLimits: new JBCurrencyAmount[](0),
                     surplusAllowances: loanAllowances
                 });

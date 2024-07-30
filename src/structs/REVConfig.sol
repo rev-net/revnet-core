@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {REVDescription} from "./REVDescription.sol";
-import {REVLoanAccessGroup} from "./REVLoanAccessGroup.sol";
+import {REVLoanSource} from "./REVLoanSource.sol";
 import {REVStageConfig} from "./REVStageConfig.sol";
 
 /// @custom:member description The description of the revnet.
@@ -15,11 +15,11 @@ import {REVStageConfig} from "./REVStageConfig.sol";
 /// is
 /// allowed to change who the operator is. Only the operator can replace itself after deployment.
 /// @custom:member stageConfigurations The periods of changing constraints.
-/// @custom:member loanAccessGroups The access points for loans during this stage.
+/// @custom:member loanSources The sources for loans.
 struct REVConfig {
     REVDescription description;
     uint32 baseCurrency;
     address splitOperator;
     REVStageConfig[] stageConfigurations;
-    REVLoanAccessGroup[] loanAccessGroups;
+    REVLoanSource[] loanSources;
 }
