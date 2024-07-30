@@ -381,14 +381,13 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     /// @param stageId The ID of the stage to mint tokens from.
     /// @param beneficiary The address to mint tokens to.
     function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external override {
-        // Get a reference to the revnet's current stage.
-        JBRuleset memory stage = CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId);
-
         // Make sure the stage has started.
-        if (stage.start > block.timestamp) revert REVBasic_StageNotStarted();
+        if (CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId).start > block.timestamp) {
+            revert REVBasic_StageNotStarted();
+        }
 
         // Get a reference to the amount that should be minted.
-        uint256 count = allowedMintCountOf[revnetId][stage.id][beneficiary];
+        uint256 count = allowedMintCountOf[revnetId][stageId][beneficiary];
 
         // Premint tokens to the split operator if needed.
         if (count == 0) return;
@@ -399,7 +398,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         // Decrement the total pending mint amounts.
         totalPendingAutomintAmountOf[revnetId] -= count;
 
-        emit Mint(revnetId, stage.id, beneficiary, count, msg.sender);
+        emit Mint(revnetId, stageId, beneficiary, count, msg.sender);
 
         _mintTokensOf({revnetId: revnetId, tokenCount: count, beneficiary: beneficiary});
     }
@@ -753,18 +752,11 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         // Keep a reference to the stage configuration being iterated on.
         REVStageConfig memory stageConfiguration;
 
+        // Make the fund access limit groups for the loans.
+        JBFundAccessLimitGroup[] memory fundAccessLimitGroups = _makeLoanFundAccessLimits(configuration);
+
         // Keep a reference to the previous start time.
         uint256 previousStartTime;
-
-        // Keep a reference to the infinite surplus allowance currency amount.
-        JBCurrencyAmount[] memory loanAllowances = new JBCurrencyAmount[](1);
-        loanAllowances[0] = JBCurrencyAmount({currency: configuration.baseCurrency, amount: type(uint224).max});
-
-        // Keep a reference to the number of loan access groups there are.
-        uint256 numberOfLoanSources = configuration.loanSources.length;
-
-        // Keep a reference to the loan source that'll be iterated on.
-        REVLoanSource memory loanSource;
 
         // Loop through each stage to set up its ruleset configuration.
         for (uint256 i; i < numberOfStages; i++) {
@@ -805,7 +797,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
                     metadata: uint16(extraMetadata)
                 }),
                 splitGroups: new JBSplitGroup[](0),
-                fundAccessLimitGroups: new JBFundAccessLimitGroup[](numberOfLoanSources)
+                fundAccessLimitGroups: fundAccessLimitGroups
             });
 
             // Append the encoded stage properties.
@@ -813,22 +805,44 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
                 encodedConfiguration, _encodedStageConfig({stageConfiguration: stageConfiguration, stageNumber: i})
             );
 
-            // Set the fund access limits for the loans.
-            for (uint256 j; j < numberOfLoanSources; j++) {
-                // Set the loan access group being iterated on.
-                loanSource = configuration.loanSources[j];
-
-                // Set the fund access limits for the loans.
-                rulesetConfigurations[i].fundAccessLimitGroups[j] = JBFundAccessLimitGroup({
-                    terminal: address(loanSource.terminal),
-                    token: loanSource.token,
-                    payoutLimits: new JBCurrencyAmount[](0),
-                    surplusAllowances: loanAllowances
-                });
-            }
-
             // Set the previous start time.
             previousStartTime = stageConfiguration.startsAtOrAfter;
+        }
+    }
+
+    /// @notice Makes the fund access limit groups for the loans.
+    /// @param configuration The configuration of the revnet.
+    /// @return fundAccessLimitGroups The fund access limit groups for the loans.
+    function _makeLoanFundAccessLimits(REVConfig memory configuration)
+        internal
+        view
+        returns (JBFundAccessLimitGroup[] memory fundAccessLimitGroups)
+    {
+        // Keep a reference to the number of loan access groups there are.
+        uint256 numberOfLoanSources = configuration.loanSources.length;
+
+        // Keep a reference to the loan source that'll be iterated on.
+        REVLoanSource memory loanSource;
+
+        // Keep a reference to the infinite surplus allowance currency amount.
+        JBCurrencyAmount[] memory loanAllowances = new JBCurrencyAmount[](1);
+        loanAllowances[0] = JBCurrencyAmount({currency: configuration.baseCurrency, amount: type(uint224).max});
+
+        // Initialize the groups.
+        fundAccessLimitGroups = new JBFundAccessLimitGroup[](numberOfLoanSources);
+
+        // Set the fund access  limits for the loans.
+        for (uint256 i; i < numberOfLoanSources; i++) {
+            // Set the loan access group being iterated on.
+            loanSource = configuration.loanSources[i];
+
+            // Set the fund access limits for the loans.
+            fundAccessLimitGroups[i] = JBFundAccessLimitGroup({
+                terminal: address(loanSource.terminal),
+                token: loanSource.token,
+                payoutLimits: new JBCurrencyAmount[](0),
+                surplusAllowances: loanAllowances
+            });
         }
     }
 
@@ -840,15 +854,8 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         pure
         returns (JBSplitGroup[] memory splitGroups)
     {
-        // Package the reserved token splits.
-        splitGroups = new JBSplitGroup[](1);
-
-        // Make the splits.
-
-        // Make a new splits specifying where the reserved tokens will be sent.
-        JBSplit[] memory splits = new JBSplit[](1);
-
         // Send the operator all of the splits. They'll be able to change this later whenever they wish.
+        JBSplit[] memory splits = new JBSplit[](1);
         splits[0] = JBSplit({
             preferAddToBalance: false,
             percent: JBConstants.SPLITS_TOTAL_PERCENT,
@@ -858,7 +865,8 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
             hook: IJBSplitHook(address(0))
         });
 
-        // Set the item in the splits group.
+        // Package the reserved token splits.
+        splitGroups = new JBSplitGroup[](1);
         splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: splits});
     }
 
