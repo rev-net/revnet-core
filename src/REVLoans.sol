@@ -14,6 +14,7 @@ import {REVLoan} from "./structs/REVLoan.sol";
 import {REVLoanSource} from "./structs/REVLoanSource.sol";
 
 /// @notice A contract for borrowing from revnets.
+/// @dev Tokens used as collateral are burned, and reminted when the loan is paid off. This keeps the revnet's token structure orderly.
 contract REVLoans is IREVLoans {
     error MISSING_VALUES();
     error NOT_ENOUGH_COLLATERAL();
@@ -143,13 +144,12 @@ contract REVLoans is IREVLoans {
 
     /// @notice Allows the owner of a loan to pay it back, add more, or receive returned collateral no longer necessary
     /// to support the loan.
-    /// @param loanId The ID of the loan being managed.
-    /// @param amountToPayBack The amount being paid back.
-    /// @param amountOfCollateralToReturn The amount of collateral to returned.
-    /// @param beneficiary The address receiving the returned collateral.
+    /// @param loanId The ID of the loan being refinanced.
+    /// @param newAmount The new amount of the loan.
+    /// @param newCollateral The new amount of collateral backing the loan.
+    /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     /// @param allowance An allowance to faciliate permit2 interactions.
-    /// @return amountPaidBack The amount paid back to the loan's owner.
-    /// @return amountOfCollateralToReturn The amount of collateral returned to the loan's owner.
+    /// @return netNewBorrowedAmount Any new amount being borrowed as a resulf of the refinancing.
     function refinance(
         uint256 memory loanId,
         uint256 newAmount,
@@ -176,12 +176,20 @@ contract REVLoans is IREVLoans {
             allowance: allowance
         });
 
+        // If there's no amount or collateral left, burn the loan.
         if (loan.amount == 0 && loan.collateral == 0) {
-            // Burn the loan.
             _burn(loanId);
         }
     }
 
+    /// @notice Allows the owner of a loan to pay it back, add more, or receive returned collateral no longer necessary
+    /// to support the loan.
+    /// @param loan The loan being refinanced.
+    /// @param newAmount The new amount of the loan.
+    /// @param newCollateral The new amount of collateral backing the loan.
+    /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
+    /// @param allowance An allowance to faciliate permit2 interactions.
+    /// @return netNewBorrowedAmount Any new amount being borrowed as a resulf of the refinancing.
     function _refinance(
         REVLoan storage loan,
         uint256 newAmount,
