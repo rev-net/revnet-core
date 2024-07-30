@@ -15,6 +15,9 @@ import {REVLoanSource} from "./structs/REVLoanSource.sol";
 
 /// @notice A contract for borrowing from revnets.
 /// @dev Tokens used as collateral are burned, and reminted when the loan is paid off. This keeps the revnet's token structure orderly.
+/// @dev An upfront 10% fee is taken when a loan is created. 2.5% is charged by the underlying protocol, 2.5% is charged by the
+/// revnet issuing the loan, and 5% is charged by the revnet that receives the fees. The loan can be repaid anytime within 2 years without additional fees. 
+/// After 2 years, the loan will increasingly cost more to pay off. After 10 years, the loan collateral cannot be recouped.
 contract REVLoans is IREVLoans {
     error MISSING_VALUES();
     error NOT_ENOUGH_COLLATERAL();
