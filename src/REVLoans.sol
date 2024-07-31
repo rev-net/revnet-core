@@ -143,40 +143,22 @@ contract REVLoans is ERC721, IREVLoans {
     }
 
     /// @notice The amount that can be borrowed from a revnet.
-    /// @param loanId The ID of the loan.
+    /// @param revnetId The ID of the revnet to check for borrowable assets from.
     /// @param collateral The amount of collateral used to secure the loan.
     /// @return borrowableAmount The amount that can be borrowed from the revnet.
-    function borrowableAmountFrom(uint256 loanId, uint256 collateral) external view returns (uint256) {
-        // Get a reference to the loan.
-        REVLoan memory loan = _loanOf[loanId];
-
+    function borrowableAmountFrom(uint256 revnetId, uint256 collateral) external view returns (uint256) {
         // Keep a reference to the revnet's owner.
-        IREVBasic revnetOwner = IREVBasic(PROJECTS.ownerOf(loan.revnetId));
+        IREVBasic revnetOwner = IREVBasic(PROJECTS.ownerOf(revnetId));
 
         // Keep a reference to the revnet's controller.
         IJBController controller = revnetOwner.CONTROLLER();
 
-        // Keep a reference to the revnet's directory.
-        IJBDirectory directory = controller.DIRECTORY();
-
-        // Get a reference to the revnet's terminals.
-        IJBTerminal[] memory terminals = directory.terminalsOf(loan.revnetId);
-
-        // Get a reference to the revnet's current stage.
-        JBRuleset memory currentStage = controller.RULESETS().currentOf(loan.revnetId);
-
-        // Get a reference to the prices contract.
-        IJBPrices prices = controller.PRICES();
-
-        // Get a reference to the token's contract.
-        IJBTokens tokens = controller.TOKENS();
-
         return _borrowableAmountFrom({
-            loan: loan,
+            revnetId: revnetId,
             collateral: collateral,
-            pendingAutomintTokens: revnetOwner.totalPendingAutomintAmountOf(loan.revnetId),
-            terminals: directory.terminalsOf(loan.revnetId),
-            currentStage: controller.RULESETS().currentOf(loan.revnetId),
+            pendingAutomintTokens: revnetOwner.totalPendingAutomintAmountOf(revnetId),
+            terminals: controller.DIRECTORY().terminalsOf(revnetId),
+            currentStage: controller.RULESETS().currentOf(revnetId),
             prices: controller.PRICES(),
             tokens: controller.TOKENS()
         });
@@ -398,7 +380,7 @@ contract REVLoans is ERC721, IREVLoans {
         if (
             (newAmount > loan.amount || loan.collateral != newCollateral)
                 && _borrowableAmountFrom({
-                    loan: loan,
+                    revnetId: loan.revnetId,
                     collateral: newCollateral,
                     pendingAutomintTokens: revnetOwner.totalPendingAutomintAmountOf(loan.revnetId),
                     terminals: directory.terminalsOf(loan.revnetId),
@@ -649,7 +631,7 @@ contract REVLoans is ERC721, IREVLoans {
 
     /// @notice Makes sure the provided loan is sufficiently collateralized given the new amounts.
     /// @notice The amount that can be borrowed from a revnet given a certain amount of collateral.
-    /// @param loan The loan to check for collateralization.
+    /// @param revnetId The ID of the revnet to check for borrowable assets from.
     /// @param collateral The amount of collateral that the loan will be collateralized with.
     /// @param pendingAutomintTokens The amount of tokens pending automint from the revnet.
     /// @param terminals The terminals that the funds are being borrowed from.
@@ -657,7 +639,7 @@ contract REVLoans is ERC721, IREVLoans {
     /// @param prices A contract that stores prices for each project.
     /// @return borrowableAmount The amount that can be borrowed from the revnet.
     function _borrowableAmountFrom(
-        REVLoan memory loan,
+        uint256 revnetId,
         uint256 collateral,
         uint256 pendingAutomintTokens,
         IJBTerminal[] memory terminals,
@@ -671,7 +653,7 @@ contract REVLoans is ERC721, IREVLoans {
     {
         // Get the surplus of all the revnet's terminals in terms of the native currency.
         uint256 totalSurplus = JBSurplus.currentSurplusOf({
-            projectId: loan.revnetId,
+            projectId: revnetId,
             terminals: terminals,
             decimals: 18,
             currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
@@ -680,17 +662,17 @@ contract REVLoans is ERC721, IREVLoans {
         // Get the total amount the revnet currently has loaned out, in terms of the native currency with 18
         // decimals.
         uint256 totalBorrowed = _totalBorrowedFrom({
-            revnetId: loan.revnetId,
+            revnetId: revnetId,
             decimals: 18,
             currency: uint32(uint160(JBConstants.NATIVE_TOKEN)),
             prices: prices
         });
 
         // Get the total amount of tokens in circulation.
-        uint256 totalSupply = tokens.totalSupplyOf(loan.revnetId);
+        uint256 totalSupply = tokens.totalSupplyOf(revnetId);
 
         // Get a refeerence to the collateral being used to secure loans.
-        uint256 totalCollateral = totalCollateralOf[loan.revnetId];
+        uint256 totalCollateral = totalCollateralOf[revnetId];
 
         // Get the amount that cashing out would return given a surplus that includes all loaned out tokens. This
         // becomes the amount of the loan.
