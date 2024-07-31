@@ -392,7 +392,7 @@ contract REVLoans is ERC721, IREVLoans {
 
         // Add to the loan if needed...
         if (newAmount > loan.amount) {
-            newCollateral += _addTo({
+            _addTo({
                 loan: loan,
                 amount: newAmount - loan.amount,
                 feeTerminal: directory.primaryTerminalOf(FEE_REVNET_ID, loan.source.token),
@@ -551,7 +551,6 @@ contract REVLoans is ERC721, IREVLoans {
         address payable beneficiary
     )
         internal
-        returns (uint256 generatedCollateral)
     {
         // Register the source if this is the first time its being used for this revnet.
         if (!isLoanSourceOf[loan.revnetId][loan.source.terminal][loan.source.token]) {
@@ -612,13 +611,11 @@ contract REVLoans is ERC721, IREVLoans {
             projectId: loan.revnetId,
             token: loan.source.token,
             amount: feeAmount,
-            beneficiary: address(this),
+            beneficiary: beneficiary,
             minReturnedTokens: 0,
             memo: "Fee from loan",
             metadata: bytes(abi.encodePacked(FEE_REVNET_ID))
-        }) returns (uint256 beneficiaryTokenAmount) {
-            generatedCollateral = beneficiaryTokenAmount;
-        } catch (bytes memory) {}
+        })  {} catch (bytes memory) {}
 
         // Transfer the remaining balance to the borrower.
         _transferFrom({
