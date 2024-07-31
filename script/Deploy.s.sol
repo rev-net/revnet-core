@@ -179,7 +179,7 @@ contract DeployScript is Script, Sphinx {
             splitOperator: OPERATOR,
             stageConfigurations: stageConfigurations,
             loanSources: new REVLoanSource[](0),
-            loans: IREVLoans(address(0))
+            loans: address(0)
         });
 
         // The project's buyback hook configuration.

@@ -17,12 +17,12 @@ import {IREVLoans} from "../interfaces/IREVLoans.sol";
 /// allowed to change who the operator is. Only the operator can replace itself after deployment.
 /// @custom:member stageConfigurations The periods of changing constraints.
 /// @custom:member loanSources The sources for loans.
-/// @custom:member loans The loans contract for each revnet.
+/// @custom:member loans The loans contract, which can mint the revnet's tokens and use the revnet's balance.
 struct REVConfig {
     REVDescription description;
     uint32 baseCurrency;
     address splitOperator;
     REVStageConfig[] stageConfigurations;
     REVLoanSource[] loanSources;
-    IREVLoans loans;
+    address loans;
 }

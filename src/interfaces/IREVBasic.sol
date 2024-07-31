@@ -54,6 +54,7 @@ interface IREVBasic {
     function buybackHookOf(uint256 revnetId) external view returns (IJBRulesetDataHook);
     function cashOutDelayOf(uint256 revnetId) external view returns (uint256);
     function totalPendingAutomintAmountOf(uint256 revnetId) external view returns (uint256);
+    function loansOf(uint256 revnetId) external view returns (address);
     function payHookSpecificationsOf(uint256 revnetId) external view returns (JBPayHookSpecification[] memory);
     function isSplitOperatorOf(uint256 revnetId, address addr) external view returns (bool);
 

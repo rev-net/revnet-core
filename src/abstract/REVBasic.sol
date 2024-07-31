@@ -104,11 +104,11 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
 
     /// @notice The number of autominted tokens that each revnet has pending.
     /// @custom:param revnetId The ID of the revnet to which the mint applies.
-    mapping(uint256 revnetId => uint256) public totalPendingAutomintAmountOf;
+    mapping(uint256 revnetId => uint256) public override totalPendingAutomintAmountOf;
 
     /// @notice The loans contract for each revnet.
     /// @custom:param revnetId The ID of the revnet to which the loans contract applies.
-    mapping(uint256 revnetId => IREVLoans) public loansOf;
+    mapping(uint256 revnetId => address) public override loansOf;
 
     //*********************************************************************//
     // ------------------- internal stored properties -------------------- //
@@ -249,7 +249,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     /// @return flag The flag indicating if the address has permissions to mint on the revnet's behalf.
     function hasMintPermissionFor(uint256 revnetId, address addr) external view override returns (bool) {
         // The buyback hook is allowed to mint on the project's behalf.
-        return addr == address(buybackHookOf[revnetId]) || IREVLoans(addr) == loansOf[revnetId]
+        return addr == address(buybackHookOf[revnetId]) || addr == loansOf[revnetId]
             || _isSuckerOf({revnetId: revnetId, addr: addr});
     }
 
@@ -501,7 +501,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         }
 
         // Configure the loan broker if needed.
-        if (configuration.loans != IREVLoans(address(0))) {
+        if (configuration.loans != address(0)) {
             _setPermission({
                 operator: address(configuration.loans),
                 revnetId: revnetId,
