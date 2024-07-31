@@ -54,64 +54,77 @@ contract REVLoans is ERC721, IREVLoans {
 
     /// @dev A fee of 10% is charged at the time a loan is created. 2.5% is charged by the underlying protocol, 2.5% is
     /// charged by REV, 5% is charge by the revnet issuing the loan.
-    uint256 public constant REV_PREPAID_FEE = 25; // 2.5%
+    uint256 public constant override REV_PREPAID_FEE = 25; // 2.5%
 
     /// @dev The initial fee taken by the revnet issuing the loan.
-    uint256 public constant SELF_PREPAID_FEE = 50; // 5%
+    uint256 public constant override SELF_PREPAID_FEE = 50; // 5%
 
     /// @dev The initial fee covers the loan for 2 years. The loan can be repaid at anytime within this time frame for
     /// no additional charge.
-    uint256 public constant LOAN_PREPAID_DURATION = 730 days;
+    uint256 public constant override LOAN_PREPAID_DURATION = 730 days;
 
     /// @dev After 2 years, the loan will increasingly cost more to pay off. After 10 years, the loan collateral cannot
     /// be recouped.
-    uint256 public constant LOAN_LIQUIDATION_DURATION = 3650 days;
+    uint256 public constant override LOAN_LIQUIDATION_DURATION = 3650 days;
 
     //*********************************************************************//
     // --------------- public immutable stored properties ---------------- //
     //*********************************************************************//
 
     /// @notice Mints ERC-721s that represent project ownership and transfers.
-    IJBProjects public immutable PROJECTS;
+    IJBProjects public immutable override PROJECTS;
 
     /// @notice The ID of the REV revnet that will receive the fees.
-    uint256 public immutable FEE_REVNET_ID;
+    uint256 public immutable override FEE_REVNET_ID;
 
     /// @notice The permit2 utility.
-    IPermit2 public immutable PERMIT2;
+    IPermit2 public immutable override PERMIT2;
 
     /// @notice The amount of loans that have been created.
-    uint256 public numberOfLoans;
+    uint256 public override numberOfLoans;
 
     /// @notice The ID of the last revnet that has been successfully liquiditated after passing the duration.
-    uint256 public lastLoanIdLiquidated;
+    uint256 public override lastLoanIdLiquidated;
 
     /// @notice An indication if a revnet currently has outstanding loans from the specified terminal in the specified
     /// token.
     /// @custom:member revnetId The ID of the revnet issuing the loan.
     /// @custom:member terminal The terminal that the loan is issued from.
     /// @custom:member token The token being loaned.
-    mapping(uint256 revnetId => mapping(IJBPayoutTerminal terminal => mapping(address token => bool))) public
+    mapping(uint256 revnetId => mapping(IJBPayoutTerminal terminal => mapping(address token => bool))) public override
         isLoanSourceOf;
-
-    /// @notice The sources of each revnet's loan.
-    /// @custom:member revnetId The ID of the revnet issuing the loan.
-    mapping(uint256 revnetId => REVLoanSource[]) public loanSourcesOf;
-
-    /// @notice The loans.
-    /// @custom:member The ID of the loan.
-    mapping(uint256 loanId => REVLoan) loanOf;
 
     /// @notice The total amount loaned out by a revnet from a specified terminal in a specified token.
     /// @custom:member revnetId The ID of the revnet issuing the loan.
     /// @custom:member terminal The terminal that the loan is issued from.
     /// @custom:member token The token being loaned.
     mapping(uint256 revnetId => mapping(IJBPayoutTerminal terminal => mapping(address token => uint256)))
-        totalBorrowedFrom;
+        public
+        override totalBorrowedFrom;
 
     /// @notice The total amount of collateral supporting a revnet's loans.
     /// @custom:member revnetId The ID of the revnet issuing the loan.
-    mapping(uint256 revnetId => uint256) totalCollateralOf;
+    mapping(uint256 revnetId => uint256) public override totalCollateralOf;
+
+    /// @notice The sources of each revnet's loan.
+    /// @custom:member revnetId The ID of the revnet issuing the loan.
+    mapping(uint256 revnetId => REVLoanSource[]) public _loanSourcesOf;
+
+    /// @notice The loans.
+    /// @custom:member The ID of the loan.
+    mapping(uint256 loanId => REVLoan) public _loanOf;
+
+    /// @notice Get a loan.
+    /// @custom:member The ID of the loan.
+    function loanOf(uint256 loanId) external view override returns (REVLoan memory) {
+        return _loanOf[loanId];
+    }
+
+    /// @notice The sources of each revnet's loan.
+    /// @custom:member revnetId The ID of the revnet issuing the loan.
+    function loanSourcesOf(uint256 revnetId) external view override returns (REVLoanSource[] memory) {
+        return _loanSourcesOf[revnetId];
+    }
 
     /// @notice Checks this contract's balance of a specific token.
     /// @param token The address of the token to get this contract's balance of.
@@ -146,6 +159,7 @@ contract REVLoans is ERC721, IREVLoans {
         address payable beneficiary
     )
         external
+        override
         returns (uint256 loanId)
     {
         // Make sure there is an amount being borrowed.
@@ -158,7 +172,7 @@ contract REVLoans is ERC721, IREVLoans {
         _mint({to: msg.sender, tokenId: loanId});
 
         // Get a reference to the loan being created.
-        REVLoan storage loan = loanOf[loanId];
+        REVLoan storage loan = _loanOf[loanId];
 
         // Set the loan's values.
         loan.revnetId = uint56(revnetId);
@@ -177,6 +191,8 @@ contract REVLoans is ERC721, IREVLoans {
             beneficiary: beneficiary,
             allowance: allowance
         });
+
+        emit Borrow(loanId, revnetId, loan, terminal, token, amount, collateral, beneficiary);
     }
 
     /// @notice Allows the owner of a loan to pay it back, add more, or receive returned collateral no longer necessary
@@ -196,13 +212,14 @@ contract REVLoans is ERC721, IREVLoans {
     )
         external
         payable
+        override
         returns (uint256 newLoanId)
     {
         // Make sure only the loan's owner can manage it.
         if (_ownerOf(loanId) != msg.sender) revert UNAUTHORIZED();
 
         // Keep a reference to the fee being iterated on.
-        REVLoan storage loan = loanOf[loanId];
+        REVLoan storage loan = _loanOf[loanId];
 
         // Borrow in.
         _refinance({
@@ -225,7 +242,7 @@ contract REVLoans is ERC721, IREVLoans {
             _mint({to: msg.sender, tokenId: newLoanId});
 
             // Set the new loan's values to match the old one.
-            REVLoan storage newLoan = loanOf[newLoanId];
+            REVLoan storage newLoan = _loanOf[newLoanId];
             newLoan.revnetId = loan.revnetId;
             newLoan.amount = uint112(newAmount);
             newLoan.collateral = uint112(newCollateral);
@@ -233,6 +250,49 @@ contract REVLoans is ERC721, IREVLoans {
             newLoan.basedOn = uint56(loanId);
             newLoan.createdAt = uint40(loan.createdAt);
             newLoan.refinancedAt = uint40(block.timestamp);
+        }
+
+        emit Refinance(loanId, newLoanId, loan, terminal, token, amount, collateral, beneficiary, msg.sender);
+    }
+
+    /// @notice Cleans up any liquiditated loans.
+    /// @dev Since loans are created in incremental order, earlier IDs will always be liquidated before later ones.
+    /// @param count The amount of loans iterate over since the last liquidated loan.
+    function liquidateExpiredLoans(uint256 count) external override {
+        // Keep a reference to the loan ID being iterated on.
+        uint256 loanId;
+
+        // Keep a reference to the number of loans liquiditated.
+        uint256 numberOfLoansLiquidated;
+
+        // Iterate over the desired number of loans to check for liquidation.
+        for (uint256 i; i < count; i++) {
+            // Get a reference to the loan's ID being iterated on.
+            loanId = lastLoanIdLiquidated + i;
+
+            // Get a reference to the loan being iterated on.
+            REVLoan memory loan = _loanOf[loanId];
+
+            // If the the loan has passed its liquidation timeframe, liquidate it.
+            if (block.timestamp - loan.createdAt > LOAN_LIQUIDATION_DURATION) {
+                // Decrement the amount loaned.
+                totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] -= loan.amount;
+
+                // Decrement the total amount of collateral tokens supporting loans from this revnet.
+                totalCollateralOf[loan.revnetId] -= loan.collateral;
+
+                // Burn the loan.
+                _burn(loanId);
+
+                // Increment the number of loans liquidated.
+                numberOfLoansLiquidated++;
+
+                emit Liquidate(loanId, loan, msg.sender);
+            } else {
+                // Store the latest liquidated loan.
+                if (numberOfLoansLiquidated > 0) lastLoanIdLiquidated += numberOfLoansLiquidated;
+                return;
+            }
         }
     }
 
@@ -438,7 +498,9 @@ contract REVLoans is ERC721, IREVLoans {
         // Register the source if this is the first time its being used for this revnet.
         if (!isLoanSourceOf[loan.revnetId][loan.source.terminal][loan.source.token]) {
             isLoanSourceOf[loan.revnetId][loan.source.terminal][loan.source.token] = true;
-            loanSourcesOf[loan.revnetId].push(REVLoanSource({token: loan.source.token, terminal: loan.source.terminal}));
+            _loanSourcesOf[loan.revnetId].push(
+                REVLoanSource({token: loan.source.token, terminal: loan.source.terminal})
+            );
         }
 
         // Increment the amount of the token borrowed from the revnet from the terminal.
@@ -566,45 +628,6 @@ contract REVLoans is ERC721, IREVLoans {
         if (newAmount > borrowableAmount) revert NOT_ENOUGH_COLLATERAL();
     }
 
-    /// @notice Cleans up any liquiditated loans.
-    /// @dev Since loans are created in incremental order, earlier IDs will always be liquidated before later ones.
-    /// @param count The amount of loans iterate over since the last liquidated loan.
-    function liquidateExpiredLoans(uint256 count) external {
-        // Keep a reference to the loan ID being iterated on.
-        uint256 loanId;
-
-        // Keep a reference to the number of loans liquiditated.
-        uint256 numberOfLoansLiquidated;
-
-        // Iterate over the desired number of loans to check for liquidation.
-        for (uint256 i; i < count; i++) {
-            // Get a reference to the loan's ID being iterated on.
-            loanId = lastLoanIdLiquidated + i;
-
-            // Get a reference to the loan being iterated on.
-            REVLoan memory loan = loanOf[loanId];
-
-            // If the the loan has passed its liquidation timeframe, liquidate it.
-            if (block.timestamp - loan.createdAt > LOAN_LIQUIDATION_DURATION) {
-                // Decrement the amount loaned.
-                totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] -= loan.amount;
-
-                // Decrement the total amount of collateral tokens supporting loans from this revnet.
-                totalCollateralOf[loan.revnetId] -= loan.collateral;
-
-                // Burn the loan.
-                _burn(loanId);
-
-                // Increment the number of loans liquidated.
-                numberOfLoansLiquidated++;
-            } else {
-                // Store the latest liquidated loan.
-                if (numberOfLoansLiquidated > 0) lastLoanIdLiquidated += numberOfLoansLiquidated;
-                return;
-            }
-        }
-    }
-
     /// @notice The total borrowed amount from a revnet.
     /// @param revnetId The ID of the revnet to check for borrowed assets from.
     /// @param decimals The decimals the resulting fixed point value will include.
@@ -622,7 +645,7 @@ contract REVLoans is ERC721, IREVLoans {
         returns (uint256 borrowedAmount)
     {
         // Keep a reference to all sources being used to loaned out from this revnet.
-        REVLoanSource[] memory sources = loanSourcesOf[revnetId];
+        REVLoanSource[] memory sources = _loanSourcesOf[revnetId];
 
         // Keep a reference to the number of sources being loaned out.
         uint256 numberOfSources = sources.length;
