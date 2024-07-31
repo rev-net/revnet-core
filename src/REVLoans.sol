@@ -51,6 +51,7 @@ contract REVLoans is ERC721, IREVLoans {
 
     error UNAUTHORIZED();
     error MISSING_VALUES();
+    error INVALID_PREPAID_FEE_PERCENT();
     error NOT_ENOUGH_COLLATERAL();
     error PERMIT_ALLOWANCE_NOT_ENOUGH();
     error NO_MSG_VALUE_ALLOWED();
@@ -65,15 +66,15 @@ contract REVLoans is ERC721, IREVLoans {
     uint256 public constant override REV_PREPAID_FEE = 25; // 2.5%
 
     /// @dev The initial fee taken by the revnet issuing the loan.
-    uint256 public constant override SELF_PREPAID_FEE = 50; // 5%
+    uint256 public constant override SELF_PREPAID_FEE_PERCENT_RATIO = 50; // 5%
 
     /// @dev The initial fee covers the loan for 2 years. The loan can be repaid at anytime within this time frame for
     /// no additional charge.
-    uint256 public constant override LOAN_PREPAID_DURATION = 730 days;
+    uint256 public constant override LOAN_PREPAID_DURATION_RATIO = 730 days;
 
-    /// @dev After 2 years, the loan will increasingly cost more to pay off. After 10 years, the loan collateral cannot
+    /// @dev After the prepaid amount, the loan will increasingly cost more to pay off. After 8 years, the loan collateral cannot
     /// be recouped.
-    uint256 public constant override LOAN_LIQUIDATION_DURATION = 3650 days;
+    uint256 public constant override LOAN_LIQUIDATION_DURATION = 2920 days;
 
     //*********************************************************************//
     // --------------- public immutable stored properties ---------------- //
@@ -113,7 +114,7 @@ contract REVLoans is ERC721, IREVLoans {
     /// @notice The total amount of collateral supporting a revnet's loans.
     /// @custom:member revnetId The ID of the revnet issuing the loan.
     mapping(uint256 revnetId => uint256) public override totalCollateralOf;
-
+    
     //*********************************************************************//
     // --------------------- internal stored properties ------------------ //
     //*********************************************************************//
@@ -123,8 +124,12 @@ contract REVLoans is ERC721, IREVLoans {
     mapping(uint256 revnetId => REVLoanSource[]) public _loanSourcesOf;
 
     /// @notice The loans.
+    /// @custom:member The pointer to the loan.
+    mapping(uint256 loanPointer => REVLoan) public _loanOf;
+
+    /// @notice The loan ID pointers, issued when an existing loan is refinanced.
     /// @custom:member The ID of the loan.
-    mapping(uint256 loanId => REVLoan) public _loanOf;
+    mapping(uint256 loanId => uint256) public _loanIdPointerOf;
 
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
@@ -133,7 +138,9 @@ contract REVLoans is ERC721, IREVLoans {
     /// @notice Get a loan.
     /// @custom:member The ID of the loan.
     function loanOf(uint256 loanId) external view override returns (REVLoan memory) {
-        return _loanOf[loanId];
+        // Get a reference to the loan pointer.
+        uint256 loanIdPointer = _loanIdPointerOf[loanId];
+        return _loanOf[loanIdPointer == 0 ? loanId : loanIdPointer];
     }
 
     /// @notice The sources of each revnet's loan.
@@ -199,6 +206,7 @@ contract REVLoans is ERC721, IREVLoans {
     /// @param amount The amount being borrowed.
     /// @param collateral The amount of tokens to use as collateral for the loan.
     /// @param beneficiary The address that'll receive the borrowed funds and the tokens resulting from fee payments.
+    /// @param prepaidFeePercent The fee percent that will be charged upfront from the revnet being borrowed from. Prepaying a fee is cheaper than paying later.
     /// @return loanId The ID of the loan created from borrowing.
     function borrowFrom(
         uint256 revnetId,
@@ -206,7 +214,8 @@ contract REVLoans is ERC721, IREVLoans {
         address token,
         uint256 amount,
         uint256 collateral,
-        address payable beneficiary
+        address payable beneficiary,
+        uint256 prepaidFeePercent
     )
         external
         override
@@ -214,6 +223,9 @@ contract REVLoans is ERC721, IREVLoans {
     {
         // Make sure there is an amount being borrowed.
         if (amount == 0) revert MISSING_VALUES();
+
+        // Make sure the fee percent is acceptable.
+        if (prepaidFeePercent > JBConstants.MAX_FEE) revert INVALID_PREPAID_FEE_PERCENT();
 
         // Get a reference to the loan ID.
         loanId = ++numberOfLoans;
@@ -228,7 +240,8 @@ contract REVLoans is ERC721, IREVLoans {
         loan.revnetId = uint56(revnetId);
         loan.source = REVLoanSource({terminal: terminal, token: token});
         loan.createdAt = uint40(block.timestamp);
-        loan.refinancedAt = uint40(block.timestamp);
+        loan.prepaidFeePercent = uint16(prepaidFeePercent);
+        loan.prepaidDuration = uint32(mulDiv(prepaidFeePercent, LOAN_PREPAID_DURATION_RATIO, SELF_PREPAID_FEE_PERCENT_RATIO));
 
         // Make an empty allowance to satisfy the function.
         JBSingleAllowance memory allowance;
@@ -268,8 +281,11 @@ contract REVLoans is ERC721, IREVLoans {
         // Make sure only the loan's owner can manage it.
         if (_ownerOf(loanId) != msg.sender) revert UNAUTHORIZED();
 
+        // Get a reference to the loan pointer.
+        uint256 loanIdPointer = _loanIdPointerOf[loanId];
+
         // Keep a reference to the fee being iterated on.
-        REVLoan storage loan = _loanOf[loanId];
+        REVLoan storage loan = _loanOf[loanIdPointer == 0 ? loanId : loanIdPointer];
 
         // Borrow in.
         _refinance({
@@ -280,26 +296,19 @@ contract REVLoans is ERC721, IREVLoans {
             allowance: allowance
         });
 
-        // Burn the old loan.
+        // Burn tVhe old loan.
         _burn(loanId);
 
         // If there's no amount or collateral left, burn the loan.
         if (loan.amount > 0 || loan.collateral > 0) {
             // Get a reference to the loan ID.
             newLoanId = ++numberOfLoans;
+            
+            // Point the new loan to the original.
+            _loanIdPointerOf[newLoanId] = loanIdPointer == 0 ? loanId : loanIdPointer;
 
             // Mint the loan.
             _mint({to: msg.sender, tokenId: newLoanId});
-
-            // Set the new loan's values to match the old one.
-            REVLoan storage newLoan = _loanOf[newLoanId];
-            newLoan.revnetId = loan.revnetId;
-            newLoan.amount = uint112(newAmount);
-            newLoan.collateral = uint112(newCollateral);
-            newLoan.source = loan.source;
-            newLoan.basedOn = uint56(loanId);
-            newLoan.createdAt = uint40(loan.createdAt);
-            newLoan.refinancedAt = uint40(block.timestamp);
         }
 
         emit Refinance(loanId, newLoanId, loan, newAmount, newCollateral, beneficiary, msg.sender);
@@ -324,7 +333,8 @@ contract REVLoans is ERC721, IREVLoans {
             REVLoan memory loan = _loanOf[loanId];
 
             // If the the loan has passed its liquidation timeframe, liquidate it.
-            if (block.timestamp - loan.createdAt > LOAN_LIQUIDATION_DURATION) {
+            if (loan.revnetId == 0) continue;
+            else if (block.timestamp - loan.createdAt > LOAN_LIQUIDATION_DURATION) {
                 // Decrement the amount loaned.
                 totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] -= loan.amount;
 
@@ -485,7 +495,7 @@ contract REVLoans is ERC721, IREVLoans {
         uint256 feeAmount;
 
         // If the loan period has passed the prepaid time frame, take a fee.
-        if (timeSinceLoanCreated > LOAN_PREPAID_DURATION) {
+        if (timeSinceLoanCreated > loan.prepaidDuration) {
             // If the loan period has passed the liqidation time frame, do not allow loan management.
             if (timeSinceLoanCreated > LOAN_LIQUIDATION_DURATION) revert LOAN_EXPIRED();
 
@@ -601,7 +611,7 @@ contract REVLoans is ERC721, IREVLoans {
         }) {} catch (bytes memory) {}
 
         // Get the amount of additional fee to take for the revnet issuing the loan.
-        feeAmount = mulDiv(amount, SELF_PREPAID_FEE, JBConstants.MAX_FEE);
+        feeAmount = mulDiv(amount, loan.prepaidFeePercent, JBConstants.MAX_FEE);
 
         // The amount to pay as a fee.
         payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? feeAmount : 0;
