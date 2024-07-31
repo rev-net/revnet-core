@@ -141,7 +141,7 @@ contract REVLoans is ERC721, IREVLoans {
     function loanSourcesOf(uint256 revnetId) external view override returns (REVLoanSource[] memory) {
         return _loanSourcesOf[revnetId];
     }
-    
+
     /// @notice The amount that can be borrowed from a revnet.
     /// @param loanId The ID of the loan.
     /// @param collateral The amount of collateral used to secure the loan.
@@ -395,17 +395,20 @@ contract REVLoans is ERC721, IREVLoans {
 
         // If the borrowed amount is increasing or the collateral is changing, check that the loan will still be
         // properly collateralized.
-        if ((newAmount > loan.amount || loan.collateral != newCollateral) &&
-            _borrowableAmountFrom({
-                loan: loan,
-                collateral: newCollateral,
-                pendingAutomintTokens: revnetOwner.totalPendingAutomintAmountOf(loan.revnetId),
-                terminals: directory.terminalsOf(loan.revnetId),
-                currentStage: controller.RULESETS().currentOf(loan.revnetId),
-                prices: controller.PRICES(),
-                tokens: controller.TOKENS()
-            }) < newAmount) revert NOT_ENOUGH_COLLATERAL();
+        if (
+            (newAmount > loan.amount || loan.collateral != newCollateral)
+                && _borrowableAmountFrom({
+                    loan: loan,
+                    collateral: newCollateral,
+                    pendingAutomintTokens: revnetOwner.totalPendingAutomintAmountOf(loan.revnetId),
+                    terminals: directory.terminalsOf(loan.revnetId),
+                    currentStage: controller.RULESETS().currentOf(loan.revnetId),
+                    prices: controller.PRICES(),
+                    tokens: controller.TOKENS()
+                }) < newAmount
+        ) revert NOT_ENOUGH_COLLATERAL();
 
+        // Add to the loan if needed...
         if (newAmount > loan.amount) {
             newCollateral += _addTo({
                 loan: loan,
@@ -413,12 +416,15 @@ contract REVLoans is ERC721, IREVLoans {
                 feeTerminal: directory.primaryTerminalOf(FEE_REVNET_ID, loan.source.token),
                 beneficiary: beneficiary
             });
+            // ... or pay off the loan if needed.
         } else if (loan.amount > newAmount) {
             _payOff({loan: loan, amount: loan.amount - newAmount, beneficiary: beneficiary, allowance: allowance});
         }
 
+        // Add collateral if needed...
         if (newCollateral > loan.collateral) {
             _addCollateralTo({loan: loan, amount: newCollateral - loan.collateral, controller: controller});
+            // ... or return collateral if needed.
         } else if (loan.collateral > newCollateral) {
             _returnCollateralFrom({
                 loan: loan,
@@ -639,7 +645,7 @@ contract REVLoans is ERC721, IREVLoans {
             token: loan.source.token,
             amount: _balanceOf(loan.source.token)
         });
-    } 
+    }
 
     /// @notice Makes sure the provided loan is sufficiently collateralized given the new amounts.
     /// @notice The amount that can be borrowed from a revnet given a certain amount of collateral.
