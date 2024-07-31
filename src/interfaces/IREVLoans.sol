@@ -29,10 +29,8 @@ interface IREVLoans {
         uint256 indexed loanId,
         uint256 indexed newLoanId,
         REVLoan loan,
-        IJBPayoutTerminal terminal,
-        address token,
-        uint256 amount,
-        uint256 collateral,
+        uint256 newAmount,
+        uint256 newCollateral,
         address payable beneficiary,
         address caller
     );
@@ -51,6 +49,7 @@ interface IREVLoans {
     function isLoanSourceOf(uint256 revnetId, IJBPayoutTerminal terminal, address token) external view returns (bool);
     function loanSourcesOf(uint256 revnetId) external view returns (REVLoanSource[] memory);
     function loanOf(uint256 loanId) external view returns (REVLoan memory);
+    function borrowableAmountFrom(uint256 loanId, uint256 collateral) external view returns (uint256);
     function totalBorrowedFrom(
         uint256 revnetId,
         IJBPayoutTerminal terminal,

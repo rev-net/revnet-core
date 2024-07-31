@@ -45,12 +45,20 @@ contract REVLoans is ERC721, IREVLoans {
     // A library that adds default safety checks to ERC20 functionality.
     using SafeERC20 for IERC20;
 
+    //*********************************************************************//
+    // --------------------------- custom errors ------------------------- //
+    //*********************************************************************//
+
     error UNAUTHORIZED();
     error MISSING_VALUES();
     error NOT_ENOUGH_COLLATERAL();
     error PERMIT_ALLOWANCE_NOT_ENOUGH();
     error NO_MSG_VALUE_ALLOWED();
     error LOAN_EXPIRED();
+
+    //*********************************************************************//
+    // ------------------------- public constants ------------------------ //
+    //*********************************************************************//
 
     /// @dev A fee of 10% is charged at the time a loan is created. 2.5% is charged by the underlying protocol, 2.5% is
     /// charged by REV, 5% is charge by the revnet issuing the loan.
@@ -106,6 +114,10 @@ contract REVLoans is ERC721, IREVLoans {
     /// @custom:member revnetId The ID of the revnet issuing the loan.
     mapping(uint256 revnetId => uint256) public override totalCollateralOf;
 
+    //*********************************************************************//
+    // --------------------- internal stored properties ------------------ //
+    //*********************************************************************//
+
     /// @notice The sources of each revnet's loan.
     /// @custom:member revnetId The ID of the revnet issuing the loan.
     mapping(uint256 revnetId => REVLoanSource[]) public _loanSourcesOf;
@@ -113,6 +125,10 @@ contract REVLoans is ERC721, IREVLoans {
     /// @notice The loans.
     /// @custom:member The ID of the loan.
     mapping(uint256 loanId => REVLoan) public _loanOf;
+
+    //*********************************************************************//
+    // ------------------------- external views -------------------------- //
+    //*********************************************************************//
 
     /// @notice Get a loan.
     /// @custom:member The ID of the loan.
@@ -125,6 +141,50 @@ contract REVLoans is ERC721, IREVLoans {
     function loanSourcesOf(uint256 revnetId) external view override returns (REVLoanSource[] memory) {
         return _loanSourcesOf[revnetId];
     }
+    
+    /// @notice The amount that can be borrowed from a revnet.
+    /// @param loanId The ID of the loan.
+    /// @param collateral The amount of collateral used to secure the loan.
+    /// @return borrowableAmount The amount that can be borrowed from the revnet.
+    function borrowableAmountFrom(uint256 loanId, uint256 collateral) external view returns (uint256) {
+        // Get a reference to the loan.
+        REVLoan memory loan = _loanOf[loanId];
+
+        // Keep a reference to the revnet's owner.
+        IREVBasic revnetOwner = IREVBasic(PROJECTS.ownerOf(loan.revnetId));
+
+        // Keep a reference to the revnet's controller.
+        IJBController controller = revnetOwner.CONTROLLER();
+
+        // Keep a reference to the revnet's directory.
+        IJBDirectory directory = controller.DIRECTORY();
+
+        // Get a reference to the revnet's terminals.
+        IJBTerminal[] memory terminals = directory.terminalsOf(loan.revnetId);
+
+        // Get a reference to the revnet's current stage.
+        JBRuleset memory currentStage = controller.RULESETS().currentOf(loan.revnetId);
+
+        // Get a reference to the prices contract.
+        IJBPrices prices = controller.PRICES();
+
+        // Get a reference to the token's contract.
+        IJBTokens tokens = controller.TOKENS();
+
+        return _borrowableAmountFrom({
+            loan: loan,
+            collateral: collateral,
+            pendingAutomintTokens: revnetOwner.totalPendingAutomintAmountOf(loan.revnetId),
+            terminals: directory.terminalsOf(loan.revnetId),
+            currentStage: controller.RULESETS().currentOf(loan.revnetId),
+            prices: controller.PRICES(),
+            tokens: controller.TOKENS()
+        });
+    }
+
+    //*********************************************************************//
+    // -------------------------- internal views ------------------------- //
+    //*********************************************************************//
 
     /// @notice Checks this contract's balance of a specific token.
     /// @param token The address of the token to get this contract's balance of.
@@ -134,6 +194,10 @@ contract REVLoans is ERC721, IREVLoans {
         return token == JBConstants.NATIVE_TOKEN ? address(this).balance : IERC20(token).balanceOf(address(this));
     }
 
+    //*********************************************************************//
+    // -------------------------- constructor ---------------------------- //
+    //*********************************************************************//
+
     /// @param projects A contract which mints ERC-721s that represent project ownership and transfers.
     /// @param feeRevnetId The ID of the REV revnet that will receive the fees.
     constructor(IJBProjects projects, uint256 feeRevnetId, IPermit2 permit2) ERC721("REV Loans", "$REVLOAN") {
@@ -141,6 +205,10 @@ contract REVLoans is ERC721, IREVLoans {
         FEE_REVNET_ID = feeRevnetId;
         PERMIT2 = permit2;
     }
+
+    //*********************************************************************//
+    // ---------------------- external transactions ---------------------- //
+    //*********************************************************************//
 
     /// @notice Open a loan by borrowing from a revnet.
     /// @param revnetId The ID of the revnet being borrowed from.
@@ -192,7 +260,7 @@ contract REVLoans is ERC721, IREVLoans {
             allowance: allowance
         });
 
-        emit Borrow(loanId, revnetId, loan, terminal, token, amount, collateral, beneficiary);
+        emit Borrow(loanId, revnetId, loan, terminal, token, amount, collateral, beneficiary, msg.sender);
     }
 
     /// @notice Allows the owner of a loan to pay it back, add more, or receive returned collateral no longer necessary
@@ -252,7 +320,7 @@ contract REVLoans is ERC721, IREVLoans {
             newLoan.refinancedAt = uint40(block.timestamp);
         }
 
-        emit Refinance(loanId, newLoanId, loan, terminal, token, amount, collateral, beneficiary, msg.sender);
+        emit Refinance(loanId, newLoanId, loan, newAmount, newCollateral, beneficiary, msg.sender);
     }
 
     /// @notice Cleans up any liquiditated loans.
@@ -296,6 +364,10 @@ contract REVLoans is ERC721, IREVLoans {
         }
     }
 
+    //*********************************************************************//
+    // ---------------------- internal transactions ---------------------- //
+    //*********************************************************************//
+
     /// @notice Allows the owner of a loan to pay it back, add more, or receive returned collateral no longer necessary
     /// to support the loan.
     /// @param loan The loan being refinanced.
@@ -323,18 +395,16 @@ contract REVLoans is ERC721, IREVLoans {
 
         // If the borrowed amount is increasing or the collateral is changing, check that the loan will still be
         // properly collateralized.
-        if (newAmount > loan.amount || loan.collateral != newCollateral) {
-            _verifyCollateralizationOf({
+        if ((newAmount > loan.amount || loan.collateral != newCollateral) &&
+            _borrowableAmountFrom({
                 loan: loan,
-                newAmount: newAmount,
-                newCollateral: newCollateral,
+                collateral: newCollateral,
                 pendingAutomintTokens: revnetOwner.totalPendingAutomintAmountOf(loan.revnetId),
                 terminals: directory.terminalsOf(loan.revnetId),
                 currentStage: controller.RULESETS().currentOf(loan.revnetId),
                 prices: controller.PRICES(),
                 tokens: controller.TOKENS()
-            });
-        }
+            }) < newAmount) revert NOT_ENOUGH_COLLATERAL();
 
         if (newAmount > loan.amount) {
             newCollateral += _addTo({
@@ -569,20 +639,20 @@ contract REVLoans is ERC721, IREVLoans {
             token: loan.source.token,
             amount: _balanceOf(loan.source.token)
         });
-    }
+    } 
 
     /// @notice Makes sure the provided loan is sufficiently collateralized given the new amounts.
+    /// @notice The amount that can be borrowed from a revnet given a certain amount of collateral.
     /// @param loan The loan to check for collateralization.
-    /// @param newAmount The new total amount being borrowed from the loan.
-    /// @param newCollateral The new amount of collateral that the loan will be collateralized with.
+    /// @param collateral The amount of collateral that the loan will be collateralized with.
     /// @param pendingAutomintTokens The amount of tokens pending automint from the revnet.
     /// @param terminals The terminals that the funds are being borrowed from.
     /// @param currentStage The current stage of the revnet.
     /// @param prices A contract that stores prices for each project.
-    function _verifyCollateralizationOf(
+    /// @return borrowableAmount The amount that can be borrowed from the revnet.
+    function _borrowableAmountFrom(
         REVLoan memory loan,
-        uint256 newAmount,
-        uint256 newCollateral,
+        uint256 collateral,
         uint256 pendingAutomintTokens,
         IJBTerminal[] memory terminals,
         JBRuleset memory currentStage,
@@ -591,6 +661,7 @@ contract REVLoans is ERC721, IREVLoans {
     )
         internal
         view
+        returns (uint256)
     {
         // Get the surplus of all the revnet's terminals in terms of the native currency.
         uint256 totalSurplus = JBSurplus.currentSurplusOf({
@@ -617,15 +688,12 @@ contract REVLoans is ERC721, IREVLoans {
 
         // Get the amount that cashing out would return given a surplus that includes all loaned out tokens. This
         // becomes the amount of the loan.
-        uint256 borrowableAmount = JBRedemptions.reclaimFrom({
+        return JBRedemptions.reclaimFrom({
             surplus: totalSurplus + totalBorrowed,
-            tokensRedeemed: newCollateral,
+            tokensRedeemed: collateral,
             totalSupply: totalSupply + totalCollateral + pendingAutomintTokens,
             redemptionRate: currentStage.redemptionRate()
         });
-
-        // Make sure the amount being loaned is within the allowed amount.
-        if (newAmount > borrowableAmount) revert NOT_ENOUGH_COLLATERAL();
     }
 
     /// @notice The total borrowed amount from a revnet.
