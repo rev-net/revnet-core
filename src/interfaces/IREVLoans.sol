@@ -25,9 +25,8 @@ interface IREVLoans {
         address payable beneficiary,
         address caller
     );
-    event Refinance(
+    event PayOff(
         uint256 indexed loanId,
-        uint256 indexed newLoanId,
         REVLoan loan,
         uint256 newAmount,
         uint256 newCollateral,
@@ -39,6 +38,7 @@ interface IREVLoans {
     function REV_PREPAID_FEE() external view returns (uint256);
     function SELF_PREPAID_FEE_PERCENT_RATIO() external view returns (uint256);
     function LOAN_PREPAID_DURATION_RATIO() external view returns (uint256);
+    function MAX_PREPAID_PERCENT() external view returns (uint256);
     function LOAN_LIQUIDATION_DURATION() external view returns (uint256);
     function PROJECTS() external view returns (IJBProjects);
     function FEE_REVNET_ID() external view returns (uint256);
@@ -72,7 +72,7 @@ interface IREVLoans {
         external
         returns (uint256 loanId);
 
-    function refinance(
+    function payOff(
         uint256 loanId,
         uint256 newAmount,
         uint256 newCollateral,
@@ -80,8 +80,7 @@ interface IREVLoans {
         JBSingleAllowance memory allowance
     )
         external
-        payable
-        returns (uint256 newLoanId);
+        payable;
 
     function liquidateExpiredLoans(uint256 count) external;
 }

@@ -56,6 +56,8 @@ contract REVLoans is ERC721, IREVLoans {
     error PERMIT_ALLOWANCE_NOT_ENOUGH();
     error NO_MSG_VALUE_ALLOWED();
     error LOAN_EXPIRED();
+    error CANT_BORROW_MORE_FROM_EXISTING_LOAN();
+    error CANT_ADD_MORE_COLLATERAL_TO_EXISTING_LOAN();
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -66,11 +68,14 @@ contract REVLoans is ERC721, IREVLoans {
     uint256 public constant override REV_PREPAID_FEE = 25; // 2.5%
 
     /// @dev The initial fee taken by the revnet issuing the loan.
-    uint256 public constant override SELF_PREPAID_FEE_PERCENT_RATIO = 50; // 5%
+    uint256 public constant override SELF_PREPAID_FEE_PERCENT_RATIO = 100; // 10%
 
     /// @dev The initial fee covers the loan for 2 years. The loan can be repaid at anytime within this time frame for
     /// no additional charge.
     uint256 public constant override LOAN_PREPAID_DURATION_RATIO = 730 days;
+    
+    /// @dev The maximum amount of a loan that can be prepaid, in terms of JBConstants.MAX_FEE.
+    uint256 public constant override MAX_PREPAID_PERCENT = 400;
 
     /// @dev After the prepaid amount, the loan will increasingly cost more to pay off. After 8 years, the loan collateral cannot
     /// be recouped.
@@ -124,12 +129,8 @@ contract REVLoans is ERC721, IREVLoans {
     mapping(uint256 revnetId => REVLoanSource[]) public _loanSourcesOf;
 
     /// @notice The loans.
-    /// @custom:member The pointer to the loan.
-    mapping(uint256 loanPointer => REVLoan) public _loanOf;
-
-    /// @notice The loan ID pointers, issued when an existing loan is refinanced.
     /// @custom:member The ID of the loan.
-    mapping(uint256 loanId => uint256) public _loanIdPointerOf;
+    mapping(uint256 loanId => REVLoan) public _loanOf;
 
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
@@ -138,9 +139,7 @@ contract REVLoans is ERC721, IREVLoans {
     /// @notice Get a loan.
     /// @custom:member The ID of the loan.
     function loanOf(uint256 loanId) external view override returns (REVLoan memory) {
-        // Get a reference to the loan pointer.
-        uint256 loanIdPointer = _loanIdPointerOf[loanId];
-        return _loanOf[loanIdPointer == 0 ? loanId : loanIdPointer];
+        return _loanOf[loanId];
     }
 
     /// @notice The sources of each revnet's loan.
@@ -189,6 +188,7 @@ contract REVLoans is ERC721, IREVLoans {
 
     /// @param projects A contract which mints ERC-721s that represent project ownership and transfers.
     /// @param feeRevnetId The ID of the REV revnet that will receive the fees.
+    /// @param permit2 A permit2 utility.
     constructor(IJBProjects projects, uint256 feeRevnetId, IPermit2 permit2) ERC721("REV Loans", "$REVLOAN") {
         PROJECTS = projects;
         FEE_REVNET_ID = feeRevnetId;
@@ -224,8 +224,8 @@ contract REVLoans is ERC721, IREVLoans {
         // Make sure there is an amount being borrowed.
         if (amount == 0) revert MISSING_VALUES();
 
-        // Make sure the fee percent is acceptable.
-        if (prepaidFeePercent > JBConstants.MAX_FEE) revert INVALID_PREPAID_FEE_PERCENT();
+        // Make sure the prepaid fee percent is between 0 and 20%. Meaning an 16 year loan can be paid upfront with a payment of 40% of the borrowed assets, the cheapest possible rate.
+        if (prepaidFeePercent > MAX_PREPAID_PERCENT) revert INVALID_PREPAID_FEE_PERCENT();
 
         // Get a reference to the loan ID.
         loanId = ++numberOfLoans;
@@ -247,7 +247,7 @@ contract REVLoans is ERC721, IREVLoans {
         JBSingleAllowance memory allowance;
 
         // Borrow the amount.
-        _refinance({
+        _adjust({
             loan: loan,
             newAmount: amount,
             newCollateral: collateral,
@@ -258,15 +258,13 @@ contract REVLoans is ERC721, IREVLoans {
         emit Borrow(loanId, revnetId, loan, terminal, token, amount, collateral, beneficiary, msg.sender);
     }
 
-    /// @notice Allows the owner of a loan to pay it back, add more, or receive returned collateral no longer necessary
-    /// to support the loan.
-    /// @param loanId The ID of the loan being refinanced.
+    /// @notice Allows the owner of a loan to pay it back or receive returned collateral no longer necessary to support the loan.
+    /// @param loanId The ID of the loan being adjusted.
     /// @param newAmount The new amount of the loan.
     /// @param newCollateral The new amount of collateral backing the loan.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     /// @param allowance An allowance to faciliate permit2 interactions.
-    /// @return newLoanId The ID of the new refinanced loan.
-    function refinance(
+    function payOff(
         uint256 loanId,
         uint256 newAmount,
         uint256 newCollateral,
@@ -276,19 +274,21 @@ contract REVLoans is ERC721, IREVLoans {
         external
         payable
         override
-        returns (uint256 newLoanId)
     {
         // Make sure only the loan's owner can manage it.
         if (_ownerOf(loanId) != msg.sender) revert UNAUTHORIZED();
 
-        // Get a reference to the loan pointer.
-        uint256 loanIdPointer = _loanIdPointerOf[loanId];
-
         // Keep a reference to the fee being iterated on.
-        REVLoan storage loan = _loanOf[loanIdPointer == 0 ? loanId : loanIdPointer];
+        REVLoan storage loan = _loanOf[loanId];
 
-        // Borrow in.
-        _refinance({
+        // Make sure the amount being paid off is less than the loan's amount.
+        if (newAmount > loan.amount) revert CANT_BORROW_MORE_FROM_EXISTING_LOAN();
+
+        // Make sure the amount of collateral being added is less than the loan's collateral.
+        if (newCollateral > loan.collateral) revert CANT_ADD_MORE_COLLATERAL_TO_EXISTING_LOAN();
+
+            // Borrow in.
+        _adjust({
             loan: loan,
             newAmount: newAmount,
             newCollateral: newCollateral,
@@ -296,22 +296,12 @@ contract REVLoans is ERC721, IREVLoans {
             allowance: allowance
         });
 
-        // Burn tVhe old loan.
-        _burn(loanId);
-
         // If there's no amount or collateral left, burn the loan.
-        if (loan.amount > 0 || loan.collateral > 0) {
-            // Get a reference to the loan ID.
-            newLoanId = ++numberOfLoans;
-            
-            // Point the new loan to the original.
-            _loanIdPointerOf[newLoanId] = loanIdPointer == 0 ? loanId : loanIdPointer;
-
-            // Mint the loan.
-            _mint({to: msg.sender, tokenId: newLoanId});
+        if (loan.amount == 0 && loan.collateral == 0) {
+            _burn(loanId);
         }
 
-        emit Refinance(loanId, newLoanId, loan, newAmount, newCollateral, beneficiary, msg.sender);
+        emit PayOff(loanId, loan, newAmount, newCollateral, beneficiary, msg.sender);
     }
 
     /// @notice Cleans up any liquiditated loans.
@@ -362,12 +352,12 @@ contract REVLoans is ERC721, IREVLoans {
 
     /// @notice Allows the owner of a loan to pay it back, add more, or receive returned collateral no longer necessary
     /// to support the loan.
-    /// @param loan The loan being refinanced.
+    /// @param loan The loan being adjusted.
     /// @param newAmount The new amount of the loan.
     /// @param newCollateral The new amount of collateral backing the loan.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     /// @param allowance An allowance to faciliate permit2 interactions.
-    function _refinance(
+    function _adjust(
         REVLoan storage loan,
         uint256 newAmount,
         uint256 newCollateral,
