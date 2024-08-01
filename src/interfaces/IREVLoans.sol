@@ -36,8 +36,6 @@ interface IREVLoans {
     event Liquidate(uint256 indexed loanId, REVLoan loan, address caller);
 
     function REV_PREPAID_FEE() external view returns (uint256);
-    function SELF_PREPAID_FEE_PERCENT_RATIO() external view returns (uint256);
-    function LOAN_PREPAID_DURATION_RATIO() external view returns (uint256);
     function MAX_PREPAID_PERCENT() external view returns (uint256);
     function LOAN_LIQUIDATION_DURATION() external view returns (uint256);
     function PROJECTS() external view returns (IJBProjects);
