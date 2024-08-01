@@ -269,7 +269,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     }
 
     /// @dev Make sure this contract can only receive project NFTs from `JBProjects`.
-    function onERC721Received(address, address, uint256 tokenId, bytes calldata) external view returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external view returns (bytes4) {
         // Make sure the 721 received is from the `JBProjects` contract.
         if (msg.sender != address(_projects())) revert();
 
@@ -280,10 +280,10 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     // -------------------------- public views --------------------------- //
     //*********************************************************************//
 
-    /// @notice A flag indicating if a given address is the revnets split operator.
-    /// @param revnetId The ID of the revnet to check the split operator for.
-    /// @param addr The address to check if is the split operator.
-    /// @return flag The flag indicating if the address is the split operator.
+    /// @notice A flag indicating whether an address is a revnet's split operator.
+    /// @param revnetId The ID of the revnet.
+    /// @param addr The address to check.
+    /// @return flag A flag indicating whether the address is the revnet's split operator.
     function isSplitOperatorOf(uint256 revnetId, address addr) public view override returns (bool) {
         return _permissions().hasPermissions({
             operator: addr,
@@ -296,7 +296,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     }
 
     /// @notice Indicates if this contract adheres to the specified interface.
-    /// @dev See {IERC165-supportsInterface}.
+    /// @dev See `IERC165.supportsInterface`.
     /// @return A flag indicating if the provided interface ID is supported.
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
         return interfaceId == type(IREVBasic).interfaceId || interfaceId == type(IJBRulesetDataHook).interfaceId
@@ -307,9 +307,9 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     // -------------------------- constructor ---------------------------- //
     //*********************************************************************//
 
-    /// @param controller The controller that revnets are made from.
-    /// @param suckerRegistry The registry that deploys and tracks each project's suckers.
-    /// @param feeRevnetId The ID of the revnet that will receive fees.
+    /// @param controller The controller used to launch Juicebox projects which will be revnets.
+    /// @param suckerRegistry The registry that deploys and tracks each revnet's suckers.
+    /// @param feeRevnetId The Juicebox project ID of the revnet that will receive fees.
     constructor(IJBController controller, IJBSuckerRegistry suckerRegistry, uint256 feeRevnetId) {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
@@ -323,21 +323,22 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     // --------------------- external transactions ----------------------- //
     //*********************************************************************//
 
-    /// @notice Processes the fee for the redemption.
-    /// @param context The redemption context passed in by the terminal.
+    /// @notice Processes the cashout fee from a redemption.
+    /// @param context Redemption context passed in by the terminal.
     function afterRedeemRecordedWith(JBAfterRedeemRecordedContext calldata context) external payable {
-        // Make sure only the project's payment terminals can access this function.
+        // Only the revnet's payment terminals can access this function.
         if (!_directory().isTerminalOf(context.projectId, IJBTerminal(msg.sender))) {
             revert REVBasic_Unauthorized();
         }
 
         // Parse the metadata forwarded from the data hook to get the fee terminal.
+        // See `beforeRedeemRecordedWith(…)`.
         (IJBTerminal feeTerminal) = abi.decode(context.hookMetadata, (IJBTerminal));
 
-        // Keep a reference to the amount that'll be paid in the native currency.
+        // Determine how much to pay in `msg.value` (in the native currency).
         uint256 payValue = context.forwardedAmount.token == JBConstants.NATIVE_TOKEN ? context.forwardedAmount.value : 0;
 
-        // Send the fee.
+        // Pay the fee.
         // slither-disable-next-line arbitrary-send-eth,unused-return
         try feeTerminal.pay{value: payValue}({
             projectId: FEE_REVNET_ID,
@@ -348,7 +349,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
             memo: "",
             metadata: bytes(abi.encodePacked(context.projectId))
         }) {} catch (bytes memory) {
-            // Return funds to the project if the fee couldn't be processed.
+            // If the fee can't be processed, return the funds to the project.
             // slither-disable-next-line arbitrary-send-eth
             IJBTerminal(msg.sender).addToBalanceOf{value: payValue}({
                 projectId: context.projectId,
