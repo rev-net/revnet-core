@@ -13,7 +13,6 @@ import {IJBPrices} from "@bananapus/core/src/interfaces/IJBPrices.sol";
 import {IJBTokens} from "@bananapus/core/src/interfaces/IJBTokens.sol";
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
-import {IJBTerminalStore} from "@bananapus/core/src/interfaces/IJBTerminalStore.sol";
 import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
 import {JBSurplus} from "@bananapus/core/src/libraries/JBSurplus.sol";
 import {JBRulesetMetadataResolver} from "@bananapus/core/src/libraries/JBRulesetMetadataResolver.sol";
@@ -33,11 +32,11 @@ import {REVLoanSource} from "./structs/REVLoanSource.sol";
 /// structure orderly.
 /// @dev The borrowable amount is a linear proportionality between tokens and available funds. This works itself out to
 /// maximize the potential of issued loans while still favoring the next cash out rate from the revnet.
-/// @dev An upfront 10% fee is taken when a loan is created. 2.5% is charged by the underlying protocol, 2.5% is charged
+/// @dev An upfront fee is taken when a loan is created. 2.5% is charged by the underlying protocol, 2.5% is charged
 /// by the
-/// revnet issuing the loan, and 5% is charged by the revnet that receives the fees. The loan can be repaid anytime
-/// within 2 years without additional fees.
-/// After 2 years, the loan will increasingly cost more to pay off. After 10 years, the loan collateral cannot be
+/// revnet issuing the loan, and a variable amount charged by the revnet that receives the fees. This variable amount is chosen by the borrower, the more paid upfront, the longer the prepaid duration. The loan can be repaid anytime
+/// within the prepaid duration without additional fees.
+/// After the prepaid duration, the loan will increasingly cost more to pay off. After 10 years, the loan collateral cannot be
 /// recouped.
 contract REVLoans is ERC721, IREVLoans {
     // A library that parses the packed ruleset metadata into a friendlier format.
@@ -68,19 +67,11 @@ contract REVLoans is ERC721, IREVLoans {
     /// charged by REV, 5% is charge by the revnet issuing the loan.
     uint256 public constant override REV_PREPAID_FEE = 25; // 2.5%
 
-    /// @dev The initial fee taken by the revnet issuing the loan.
-    uint256 public constant override SELF_PREPAID_FEE_PERCENT_RATIO = 100; // 10%
-
-    /// @dev The initial fee covers the loan for 2 years. The loan can be repaid at anytime within this time frame for
-    /// no additional charge.
-    uint256 public constant override LOAN_PREPAID_DURATION_RATIO = 730 days;
-
     /// @dev The maximum amount of a loan that can be prepaid, in terms of JBConstants.MAX_FEE.
     uint256 public constant override MAX_PREPAID_PERCENT = 400;
 
-    /// @dev After the prepaid amount, the loan will increasingly cost more to pay off. After 8 years, the loan
-    /// collateral cannot
-    /// be recouped.
+    /// @dev After the prepaid duration, the loan will increasingly cost more to pay off. After 8 years, the loan
+    /// collateral cannot be recouped.
     uint256 public constant override LOAN_LIQUIDATION_DURATION = 2920 days;
 
     //*********************************************************************//
@@ -166,7 +157,6 @@ contract REVLoans is ERC721, IREVLoans {
             collateral: collateral,
             pendingAutomintTokens: revnetOwner.totalPendingAutomintAmountOf(revnetId),
             terminals: controller.DIRECTORY().terminalsOf(revnetId),
-            currentStage: controller.RULESETS().currentOf(revnetId),
             prices: controller.PRICES(),
             tokens: controller.TOKENS()
         });
@@ -245,8 +235,7 @@ contract REVLoans is ERC721, IREVLoans {
         loan.source = REVLoanSource({terminal: terminal, token: token});
         loan.createdAt = uint40(block.timestamp);
         loan.prepaidFeePercent = uint16(prepaidFeePercent);
-        loan.prepaidDuration =
-            uint32(mulDiv(prepaidFeePercent, LOAN_PREPAID_DURATION_RATIO, SELF_PREPAID_FEE_PERCENT_RATIO));
+        loan.prepaidDuration = uint32(mulDiv(prepaidFeePercent, LOAN_LIQUIDATION_DURATION, MAX_PREPAID_PERCENT));
 
         // Make an empty allowance to satisfy the function.
         JBSingleAllowance memory allowance;
@@ -389,7 +378,6 @@ contract REVLoans is ERC721, IREVLoans {
                     collateral: newCollateral,
                     pendingAutomintTokens: revnetOwner.totalPendingAutomintAmountOf(loan.revnetId),
                     terminals: directory.terminalsOf(loan.revnetId),
-                    currentStage: controller.RULESETS().currentOf(loan.revnetId),
                     prices: controller.PRICES(),
                     tokens: controller.TOKENS()
                 }) < newAmount
@@ -638,7 +626,6 @@ contract REVLoans is ERC721, IREVLoans {
     /// @param collateral The amount of collateral that the loan will be collateralized with.
     /// @param pendingAutomintTokens The amount of tokens pending automint from the revnet.
     /// @param terminals The terminals that the funds are being borrowed from.
-    /// @param currentStage The current stage of the revnet.
     /// @param prices A contract that stores prices for each project.
     /// @return borrowableAmount The amount that can be borrowed from the revnet.
     function _borrowableAmountFrom(
@@ -646,7 +633,6 @@ contract REVLoans is ERC721, IREVLoans {
         uint256 collateral,
         uint256 pendingAutomintTokens,
         IJBTerminal[] memory terminals,
-        JBRuleset memory currentStage,
         IJBPrices prices,
         IJBTokens tokens
     )
