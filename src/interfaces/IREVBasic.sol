@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
@@ -60,7 +61,7 @@ interface IREVBasic {
 
     function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external;
     function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
-    function allowedMintCountOf(
+    function amountToAutoMint(
         uint256 revnetId,
         uint256 stageId,
         address beneficiary

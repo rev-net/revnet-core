@@ -46,14 +46,20 @@ import {REVBuybackHookConfig} from "./../structs/REVBuybackHookConfig.sol";
 import {REVBuybackPoolConfig} from "./../structs/REVBuybackPoolConfig.sol";
 import {REVSuckerDeploymentConfig} from "./../structs/REVSuckerDeploymentConfig.sol";
 
-/// @notice A contract that facilitates deploying a basic Revnet.
+/// @notice `REVBasic` contains core logic for deploying, managing, and operating Revnets.
+/// @dev Key features:
+/// - `_launchRevnetFor(…)` deploys a new revnet, or converts an existing Juicebox project into one.
+/// - `beforePayRecordedWith(…)` triggers a revnet's buyback hook when it is paid.
+/// - `beforeRedeemRecordedWith(…)` calculates the fee to be charged on redemptions, and
+///   `afterRedeemRecordedWith(…)` processes that fee.
+/// - `deploySuckersFor(…)` allows a revnet's split operator to deploy new suckers for an existing revnet.
 abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC721Receiver {
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
-    error REVBasic_BadStageTimes();
-    error REVBasic_CashOutDelayInEffect();
+    error REVBasic_StageTimesMustIncrease();
+    error REVBasic_CashOutDelayNotFinished();
     error REVBasic_StagesRequired();
     error REVBasic_StageNotStarted();
     error REVBasic_Unauthorized();
@@ -62,45 +68,52 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     // ------------------------- public constants ------------------------ //
     //*********************************************************************//
 
-    /// @notice The amount of time from a sucker being deployed to when it can facilitate cashing out.
-    /// @dev 30 days.
+    /// @notice The number of seconds until a revnet's participants can cash out, starting from the time when that revnet is deployed to a new network.
+    /// - Only applies to existing revnets which are deploying onto a new network.
+    /// - Intended to prevent liquidity/arbitrage issues which might arise when an existing revnet has a brand new treasury.
+    /// @dev 30 days, in seconds.
     uint256 public constant override CASH_OUT_DELAY = 2_592_000;
 
-    /// @notice Revnets' fee (as a fraction out of `JBConstants.MAX_FEE`).
-    /// @dev Fees are charged on redemptions while the redemption rate is less than 100%.
+    /// @notice The cashout fee (as a fraction out of `JBConstants.MAX_FEE`).
+    /// Cashout fees are paid to the revnet with `FEE_REVNET_ID`.
+    /// @dev Fees are charged on cashouts if the cashout tax rate is greater than 0%.
+    /// @dev Suckers are exempt from cashout fees.
     uint256 public constant override FEE = 25; // 2.5%
 
     //*********************************************************************//
     // --------------- public immutable stored properties ---------------- //
     //*********************************************************************//
 
-    /// @notice The ID of the revnet that will receive fees.
+    /// @notice The Juicebox project ID of the revnet that receives cashout fees.
     uint256 public immutable override FEE_REVNET_ID;
 
-    /// @notice The controller that networks are made from.
+    /// @notice The controller used to create and manage Juicebox projects for revnets.
     IJBController public immutable override CONTROLLER;
 
-    /// @notice The registry that deploys and tracks each project's suckers.
+    /// @notice The sucker registry that deploys and tracks suckers for revnets.
     IJBSuckerRegistry public immutable override SUCKER_REGISTRY;
 
     //*********************************************************************//
     // --------------------- public stored properties -------------------- //
     //*********************************************************************//
 
-    /// @notice The data hook that returns the correct values for the buyback hook of each network.
-    /// @custom:param revnetId The ID of the revnet to which the buyback contract applies.
+    /// @notice Each revnet's data hook, which returns buyback hook data.
+    /// @dev Buyback hooks are a combined data hook/pay hook.
+    /// @custom:param revnetId The ID of the revnet to get the buyback hook for.
     mapping(uint256 revnetId => IJBRulesetDataHook buybackHook) public override buybackHookOf;
 
-    /// @notice The time at which cashing out from a revnet become allowed.
-    /// @custom:param revnetId The ID of the revnet to which the delay applies.
+    /// @notice The timestamp of when cashouts become available to a specific revnet's participants.
+    /// @custom:param revnetId The ID of the revnet to get the cashout delay for.
     mapping(uint256 revnetId => uint256 cashOutDelay) public override cashOutDelayOf;
 
-    /// @notice The specification of how many tokens are still allowed to be minted at each stage of a revnet.
-    /// @custom:param revnetId The ID of the revnet to which the mint applies.
-    /// @custom:param stageId The ID of the ruleset to which the mint applies.
-    /// @custom:param beneficiary The address that will benefit from the mint.
+    /// @notice The number of revnet tokens which can be "auto-minted" (minted without payments) for a specific beneficiary during a stage.
+    /// Think of this as a per-stage premint.
+    /// @dev These tokens can be minted by calling `mintFor(…)`.
+    /// @custom:param revnetId The ID of the revnet to get the auto-mint amount for.
+    /// @custom:param stageId The ID of the stage to get the auto-mint amount for.
+    /// @custom:param beneficiary The beneficiary of the auto-mint.
     mapping(uint256 revnetId => mapping(uint256 stageId => mapping(address beneficiary => uint256))) public override
-        allowedMintCountOf;
+        amountToAutoMint;
 
     /// @notice The number of autominted tokens that each revnet has pending.
     /// @custom:param revnetId The ID of the revnet to which the mint applies.
@@ -114,11 +127,11 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     // ------------------- internal stored properties -------------------- //
     //*********************************************************************//
 
-    /// @notice The permissions that the provided operator should be granted if the revnet was deployed with that
-    /// intent. This is set once for each revnet when deployed.
-    /// @dev This should only be set in the deployment process for each revnet.
+    /// @notice A list of `JBPermissonIds` indices to grant to the split operator of a specific revnet.
+    /// @dev These should be set in the revnet's deployment process.
     // slither-disable-next-line uninitialized-state
-    mapping(uint256 => uint256[]) internal _customSplitOperatorPermissionsIndexes;
+    /// @custom:param revnetId The ID of the revnet to get the extra operator permissions for.
+    mapping(uint256 revnetId => uint256[]) internal _extraOperatorPermissions;
 
     /// @notice The pay hooks to include during payments to networks.
     /// @custom:param revnetId The ID of the revnet to which the extensions apply.
@@ -212,7 +225,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
 
         // If there's a cash out delay, do not allow cashing out until the delay has passed.
         if (cashOutDelayOf[context.projectId] > block.timestamp) {
-            revert REVBasic_CashOutDelayInEffect();
+            revert REVBasic_CashOutDelayNotFinished();
         }
 
         // Get the terminal that'll receive the fee if one wasn't provided.
@@ -387,13 +400,13 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         }
 
         // Get a reference to the amount that should be minted.
-        uint256 count = allowedMintCountOf[revnetId][stageId][beneficiary];
+        uint256 count = amountToAutoMint[revnetId][stageId][beneficiary];
 
         // Premint tokens to the split operator if needed.
         if (count == 0) return;
 
         // Reset the mint amount.
-        allowedMintCountOf[revnetId][stageId][beneficiary] = 0;
+        amountToAutoMint[revnetId][stageId][beneficiary] = 0;
 
         // Decrement the total pending mint amounts.
         totalPendingAutomintAmountOf[revnetId] -= count;
@@ -651,7 +664,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
 
                     // Stage IDs are indexed incrementally from the timestamp of this transaction.
                     // slither-disable-next-line reentrancy-events
-                    allowedMintCountOf[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.count;
+                    amountToAutoMint[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.count;
 
                     // Increment the total.
                     totalPendingAutomintAmount += mintConfig.count;
@@ -704,7 +717,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         returns (uint256[] memory allOperatorPermissions)
     {
         // Keep a reference to the custom split operator permissions.
-        uint256[] memory customSplitOperatorPermissionIndexes = _customSplitOperatorPermissionsIndexes[revnetId];
+        uint256[] memory customSplitOperatorPermissionIndexes = _extraOperatorPermissions[revnetId];
 
         // Keep a reference to the number of custom permissions.
         uint256 numberOfCustomPermissionIndexes = customSplitOperatorPermissionIndexes.length;
@@ -765,7 +778,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
 
             // Make sure the start time of this stage is after the previous stage.
             if (stageConfiguration.startsAtOrAfter <= previousStartTime) {
-                revert REVBasic_BadStageTimes();
+                revert REVBasic_StageTimesMustIncrease();
             }
 
             // Specify the ruleset.
