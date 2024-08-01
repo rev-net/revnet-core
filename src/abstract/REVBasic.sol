@@ -75,9 +75,9 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     uint256 public constant override CASH_OUT_DELAY = 2_592_000;
 
     /// @notice The cashout fee (as a fraction out of `JBConstants.MAX_FEE`).
-    /// Cashout fees are paid to the revnet with `FEE_REVNET_ID`.
+    /// Cashout fees are paid to the revnet with the `FEE_REVNET_ID`.
     /// @dev Fees are charged on cashouts if the cashout tax rate is greater than 0%.
-    /// @dev Suckers are exempt from cashout fees.
+    /// @dev When suckers withdraw funds, they do not pay cashout fees.
     uint256 public constant override FEE = 25; // 2.5%
 
     //*********************************************************************//
@@ -97,30 +97,34 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     // --------------------- public stored properties -------------------- //
     //*********************************************************************//
 
-    /// @notice Each revnet's data hook, which returns buyback hook data.
+    /// @notice Each revnet's data hook. These data hooks return buyback hook data.
     /// @dev Buyback hooks are a combined data hook/pay hook.
     /// @custom:param revnetId The ID of the revnet to get the buyback hook for.
     mapping(uint256 revnetId => IJBRulesetDataHook buybackHook) public override buybackHookOf;
 
-    /// @notice The timestamp of when cashouts become available to a specific revnet's participants.
+    /// @notice The timestamp of when cashouts will become available to a specific revnet's participants.
+    /// @dev Only applies to existing revnets which are deploying onto a new network.
     /// @custom:param revnetId The ID of the revnet to get the cashout delay for.
     mapping(uint256 revnetId => uint256 cashOutDelay) public override cashOutDelayOf;
 
-    /// @notice The number of revnet tokens which can be "auto-minted" (minted without payments) for a specific beneficiary during a stage.
-    /// Think of this as a per-stage premint.
-    /// @dev These tokens can be minted by calling `mintFor(…)`.
+    /// @notice The number of revnet tokens which can be "auto-minted" (minted without payments)
+    /// for a specific beneficiary during a stage. Think of this as a per-stage premint.
+    /// @dev These tokens can be minted with `mintFor(…)`.
     /// @custom:param revnetId The ID of the revnet to get the auto-mint amount for.
     /// @custom:param stageId The ID of the stage to get the auto-mint amount for.
     /// @custom:param beneficiary The beneficiary of the auto-mint.
     mapping(uint256 revnetId => mapping(uint256 stageId => mapping(address beneficiary => uint256))) public override
         amountToAutoMint;
 
-    /// @notice The number of autominted tokens that each revnet has pending.
-    /// @custom:param revnetId The ID of the revnet to which the mint applies.
+    /// @notice The total number of tokens which are available for auto-minting.
+    /// @dev These tokens can be claimed with `mintFor(…)`.
+    /// @custom:param revnetId The ID of the revnet to get the pending auto-mint amount for.
     mapping(uint256 revnetId => uint256) public override totalPendingAutomintAmountOf;
 
-    /// @notice The loans contract for each revnet.
-    /// @custom:param revnetId The ID of the revnet to which the loans contract applies.
+    /// @notice The loan contract for each revnet.
+    /// @dev Revnets can offer loans to their participants, collateralized by their tokens.
+    /// Participants can borrow up to the current cashout value of their tokens.
+    /// @custom:param revnetId The ID of the revnet to get the loan contract of.
     mapping(uint256 revnetId => address) public override loansOf;
 
     //*********************************************************************//
@@ -129,12 +133,12 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
 
     /// @notice A list of `JBPermissonIds` indices to grant to the split operator of a specific revnet.
     /// @dev These should be set in the revnet's deployment process.
-    // slither-disable-next-line uninitialized-state
     /// @custom:param revnetId The ID of the revnet to get the extra operator permissions for.
+    // slither-disable-next-line uninitialized-state
     mapping(uint256 revnetId => uint256[]) internal _extraOperatorPermissions;
 
-    /// @notice The pay hooks to include during payments to networks.
-    /// @custom:param revnetId The ID of the revnet to which the extensions apply.
+    /// @notice The pay hook specifications to use when a specific revnet is paid.
+    /// @custom:param revnetId The ID of the revnet to get the pay hook specifications for.
     // slither-disable-next-line uninitialized-state
     mapping(uint256 revnetId => JBPayHookSpecification[] payHooks) internal _payHookSpecificationsOf;
 
@@ -142,9 +146,9 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
 
-    /// @notice The pay hooks to include during payments to networks.
-    /// @param revnetId The ID of the revnet to which the extensions apply.
-    /// @return payHookSpecifications The pay hooks.
+    /// @notice The pay hook specifications to use when a specific revnet is paid.
+    /// @custom:param revnetId The ID of the revnet to get the pay hook specifications for.
+    /// @return payHookSpecifications The pay hook specifications.
     function payHookSpecificationsOf(uint256 revnetId)
         external
         view
@@ -154,92 +158,89 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         return _payHookSpecificationsOf[revnetId];
     }
 
-    /// @notice This function gets called when the revnet receives a payment.
-    /// @dev Part of IJBFundingCycleDataSource.
-    /// @dev This implementation just sets this contract up to receive a `didPay` call.
-    /// @param context The Juicebox standard network payment context. See
-    /// @return weight The weight that network tokens should get minted relative to. This is useful for optionally
-    /// customizing how many tokens are issued per payment.
-    /// @return hookSpecifications Amount to be sent to pay hooks instead of adding to local balance. Useful for
-    /// auto-routing funds from a treasury as payment come in.
+    /// @notice Before a revnet processes an incoming payment, determine the weight and pay hooks to use.
+    /// @dev This function is part of `IJBRulesetDataHook`, and gets called before the revnet processes a payment.
+    /// @param context Standard Juicebox payment context. See `JBBeforePayRecordedContext`.
+    /// @return weight The weight which revnet tokens are minted relative to. This can be used to customize how many tokens get minted by a payment.
+    /// @return hookSpecifications Amounts (out of what's being paid in) to be sent to pay hooks instead of being paid into the revnet. Useful for automatically routing funds from a treasury as payments come in.
     function beforePayRecordedWith(JBBeforePayRecordedContext calldata context)
         external
         view
         override
         returns (uint256 weight, JBPayHookSpecification[] memory hookSpecifications)
     {
-        // Keep a reference to the hooks that the buyback hook data hook provides.
+        // Keep a reference to the specifications provided by the buyback data hook.
         JBPayHookSpecification[] memory buybackHookSpecifications;
 
         // Keep a reference to the buyback hook.
         IJBRulesetDataHook buybackHook = buybackHookOf[context.projectId];
 
-        // Set the values to be those returned by the buyback hook's data source.
+        // Read the weight and specifications from the buyback data hook.
+        // If there's no buyback data hook, use the default weight.
         if (buybackHook != IJBRulesetDataHook(address(0))) {
             (weight, buybackHookSpecifications) = buybackHook.beforePayRecordedWith(context);
         } else {
             weight = context.weight;
         }
 
-        // Check if a buyback hook is used.
+        // Is there a buyback hook specification?
         bool usesBuybackHook = buybackHookSpecifications.length != 0;
 
         // Cache any other pay hooks to use.
         JBPayHookSpecification[] memory storedPayHookSpecifications = _payHookSpecificationsOf[context.projectId];
 
-        // Keep a reference to the number of pay hooks.
+        // Keep a reference to the number of stored pay hook specifications.
         uint256 numberOfStoredPayHookSpecifications = storedPayHookSpecifications.length;
 
-        // Each hook specification must run, plus the buyback hook if provided.
+        // Initialize the returned specification array with enough room to include all of the specifications.
         hookSpecifications =
             new JBPayHookSpecification[](numberOfStoredPayHookSpecifications + (usesBuybackHook ? 1 : 0));
 
-        // Add the other expected pay hooks.
+        // Add the stored pay hook specifications.
         for (uint256 i; i < numberOfStoredPayHookSpecifications; i++) {
             hookSpecifications[i] = storedPayHookSpecifications[i];
         }
 
-        // Add the buyback hook as the last element.
+        // And if we have a buyback hook specification, add it to the end of the array.
         if (usesBuybackHook) hookSpecifications[numberOfStoredPayHookSpecifications] = buybackHookSpecifications[0];
     }
 
-    /// @notice Determines how much to redeem.
-    /// @dev If a sucker is redeeming, there should be no tax imposed.
-    /// @dev Charge a fee on redemptions if there is a cash out tax.
-    /// @param context The redemption context passed to this contract by the `redeemTokensOf(...)` function.
-    /// @return redemptionRate The redemption rate influencing the reclaim amount.
-    /// @return redeemCount The amount of tokens that should be considered redeemed.
-    /// @return totalSupply The total amount of tokens that are considered to be existing.
-    /// @return hookSpecifications The amount and data to send to redeem hooks (this contract) instead of returning to
-    /// the beneficiary.
+    /// @notice Determine how a redemption from a revnet should be processed.
+    /// @dev This function is part of `IJBRulesetDataHook`, and gets called before the revnet processes a redemption.
+    /// @dev If a sucker is redeeming, no taxes or fees are imposed.
+    /// @param context Standard Juicebox redemption context. See `JBBeforeRedeemRecordedContext`.
+    /// @return redemptionRate The redemption rate, which influences the amount of terminal tokens which get reclaimed.
+    /// @return redeemCount The number of revnet tokens that are redeemed.
+    /// @return totalSupply The total revnet token supply.
+    /// @return hookSpecifications The amount of funds and the data to send to redeem hooks (this contract).
     function beforeRedeemRecordedWith(JBBeforeRedeemRecordedContext calldata context)
         external
         view
         override
-        returns (uint256, uint256, uint256, JBRedeemHookSpecification[] memory hookSpecifications)
+        returns (uint256 redemptionRate, uint256 redeemCount, uint256 totalSupply, JBRedeemHookSpecification[] memory hookSpecifications)
     {
-        // If the holder is a sucker, do not impose a tax.
+        // If the redeemer is a sucker, return the full redemption amount without taxes or fees.
         if (_isSuckerOf({revnetId: context.projectId, addr: context.holder})) {
             return (JBConstants.MAX_REDEMPTION_RATE, context.redeemCount, context.totalSupply, hookSpecifications);
         }
 
-        // If there's a cash out delay, do not allow cashing out until the delay has passed.
+        // Enforce the cashout delay.
         if (cashOutDelayOf[context.projectId] > block.timestamp) {
             revert REVBasic_CashOutDelayNotFinished();
         }
 
-        // Get the terminal that'll receive the fee if one wasn't provided.
+        // Get the terminal that will receive the cashout fee.
         IJBTerminal feeTerminal = _directory().primaryTerminalOf(FEE_REVNET_ID, context.surplus.token);
 
-        // Do not charge a fee if the redemption rate is 100% or if there isn't a fee terminal.
+        // If there's no cashout tax (100% redemption rate), or if there's no fee terminal, do not charge a fee.
         if (context.redemptionRate == JBConstants.MAX_REDEMPTION_RATE || address(feeTerminal) == address(0)) {
             return (context.redemptionRate, context.redeemCount, context.totalSupply, hookSpecifications);
         }
 
-        // Get a reference to the amount of tokens that are used to cover the fee.
+        // Get a reference to the number of tokens being used to pay the fee (out of the total being redeemed).
         uint256 feeRedeemCount = mulDiv(context.redeemCount, FEE, JBConstants.MAX_FEE);
 
-        // Keep a reference to the hook specifications that invokes this hook to process the fee.
+        // Assemble a redeem hook specification to invoke `afterRedeemRecordedWith(…)` and process the fee.
         hookSpecifications = new JBRedeemHookSpecification[](1);
         hookSpecifications[0] = JBRedeemHookSpecification({
             hook: IJBRedeemHook(address(this)),
@@ -252,23 +253,24 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
             metadata: abi.encode(feeTerminal)
         });
 
-        // Return the reclaimed amount with the fee charged.
+        // Return the amount of tokens to be reclaimed, minus the fee.
         return (context.redemptionRate, context.redeemCount - feeRedeemCount, context.totalSupply, hookSpecifications);
     }
 
-    /// @notice Required by the IJBRulesetDataHook interfaces.
+    /// @notice A flag indicating whether an address has permission to mint a revnet's tokens on-demand.
+    /// @dev Required by the `IJBRulesetDataHook` interface.
     /// @param revnetId The ID of the revnet to check permissions for.
-    /// @param addr The address to check if has permissions.
-    /// @return flag The flag indicating if the address has permissions to mint on the revnet's behalf.
+    /// @param addr The address to check the mint permission of.
+    /// @return flag A flag indicating whether the address has permission to mint the revnet's tokens on-demand.
     function hasMintPermissionFor(uint256 revnetId, address addr) external view override returns (bool) {
         // The buyback hook is allowed to mint on the project's behalf.
         return addr == address(buybackHookOf[revnetId]) || addr == loansOf[revnetId]
             || _isSuckerOf({revnetId: revnetId, addr: addr});
     }
 
-    /// @dev Make sure only mints can be received.
+    /// @dev Make sure this contract can only receive project NFTs from `JBProjects`.
     function onERC721Received(address, address, uint256 tokenId, bytes calldata) external view returns (bytes4) {
-        // Make sure the 721 received is the JBProjects contract.
+        // Make sure the 721 received is from the `JBProjects` contract.
         if (msg.sender != address(_projects())) revert();
 
         return IERC721Receiver.onERC721Received.selector;
@@ -804,7 +806,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
                     ownerMustSendPayouts: false,
                     holdFees: false,
                     useTotalSurplusForRedemptions: false,
-                    useDataHookForPay: true, // Use the buyback hook data source.
+                    useDataHookForPay: true, // Use the buyback data hook.
                     useDataHookForRedeem: false,
                     dataHook: dataHook,
                     metadata: uint16(extraMetadata)
