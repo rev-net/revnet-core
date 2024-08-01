@@ -67,11 +67,12 @@ contract REVLoans is ERC721, IREVLoans {
     /// charged by REV, 5% is charge by the revnet issuing the loan.
     uint256 public constant override REV_PREPAID_FEE = 25; // 2.5%
 
-    /// @dev The maximum amount of a loan that can be prepaid, in terms of JBConstants.MAX_FEE.
-    uint256 public constant override MAX_PREPAID_PERCENT = 400;
+    /// @dev The maximum amount of a loan that can be prepaid at the time of borrowing, in terms of JBConstants.MAX_FEE.
+    uint256 public constant override MAX_PREPAID_PERCENT = 500;
 
-    /// @dev After the prepaid duration, the loan will increasingly cost more to pay off. After 10 years, the loan
-    /// collateral cannot be recouped. This means paying 40% of the loan amount upfront will pay for having access to the remaining 60% for 10 years.
+    /// @dev After the prepaid duration, the loan will cost more to pay off. After 10 years, the loan
+    /// collateral cannot be recouped. This means paying 50% of the loan amount upfront will pay for having access to the remaining 50% for 10 years,
+    /// whereas paying 0% of the loan upfront will cost 100% of the loan amount to be paid off after 10 years. After 10 years with repayment, both loans cost 100% and are liquidated.
     uint256 public constant override LOAN_LIQUIDATION_DURATION = 3650 days;
 
     //*********************************************************************//
@@ -218,7 +219,7 @@ contract REVLoans is ERC721, IREVLoans {
         if (amount == 0) revert MISSING_VALUES();
 
         // Make sure the prepaid fee percent is between 0 and 20%. Meaning an 16 year loan can be paid upfront with a
-        // payment of 40% of the borrowed assets, the cheapest possible rate.
+        // payment of 50% of the borrowed assets, the cheapest possible rate.
         if (prepaidFeePercent > MAX_PREPAID_PERCENT) revert INVALID_PREPAID_FEE_PERCENT();
 
         // Get a reference to the loan ID.
