@@ -156,7 +156,7 @@ contract REVLoans is ERC721, IREVLoans {
         return _borrowableAmountFrom({
             revnetId: revnetId,
             collateral: collateral,
-            pendingAutomintTokens: revnetOwner.totalPendingAutomintAmountOf(revnetId),
+            pendingAutomintTokens: revnetOwner.totalPendingAutoMintAmountOf(revnetId),
             terminals: controller.DIRECTORY().terminalsOf(revnetId),
             prices: controller.PRICES(),
             tokens: controller.TOKENS()
@@ -377,7 +377,7 @@ contract REVLoans is ERC721, IREVLoans {
                 && _borrowableAmountFrom({
                     revnetId: loan.revnetId,
                     collateral: newCollateral,
-                    pendingAutomintTokens: revnetOwner.totalPendingAutomintAmountOf(loan.revnetId),
+                    pendingAutomintTokens: revnetOwner.totalPendingAutoMintAmountOf(loan.revnetId),
                     terminals: directory.terminalsOf(loan.revnetId),
                     prices: controller.PRICES(),
                     tokens: controller.TOKENS()

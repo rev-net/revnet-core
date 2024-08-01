@@ -109,7 +109,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
 
     /// @notice The number of revnet tokens which can be "auto-minted" (minted without payments)
     /// for a specific beneficiary during a stage. Think of this as a per-stage premint.
-    /// @dev These tokens can be minted with `mintFor(…)`.
+    /// @dev These tokens can be minted with `autoMintFor(…)`.
     /// @custom:param revnetId The ID of the revnet to get the auto-mint amount for.
     /// @custom:param stageId The ID of the stage to get the auto-mint amount for.
     /// @custom:param beneficiary The beneficiary of the auto-mint.
@@ -117,9 +117,9 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         amountToAutoMint;
 
     /// @notice The total number of tokens which are available for auto-minting.
-    /// @dev These tokens can be claimed with `mintFor(…)`.
+    /// @dev These tokens can be claimed with `autoMintFor(…)`.
     /// @custom:param revnetId The ID of the revnet to get the pending auto-mint amount for.
-    mapping(uint256 revnetId => uint256) public override totalPendingAutomintAmountOf;
+    mapping(uint256 revnetId => uint256) public override totalPendingAutoMintAmountOf;
 
     /// @notice The loan contract for each revnet.
     /// @dev Revnets can offer loans to their participants, collateralized by their tokens.
@@ -392,44 +392,45 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     //     });
     // }
 
-    /// @notice Mint tokens from a revnet to a specified beneficiary according to the rules set for the revnet.
-    /// @param revnetId The ID of the revnet to mint tokens from.
-    /// @param stageId The ID of the stage to mint tokens from.
-    /// @param beneficiary The address to mint tokens to.
-    function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external override {
+    /// @notice Auto-mint a revnet's tokens from a stage for a beneficiary.
+    /// @param revnetId The ID of the revnet to auto-mint tokens from.
+    /// @param stageId The ID of the stage auto-mint tokens are available from.
+    /// @param beneficiary The address to auto-mint tokens to.
+    function autoMintFor(uint256 revnetId, uint256 stageId, address beneficiary) external override {
         // Make sure the stage has started.
         if (CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId).start > block.timestamp) {
             revert REVBasic_StageNotStarted();
         }
 
-        // Get a reference to the amount that should be minted.
+        // Get a reference to the amount that should be auto-minted.
         uint256 count = amountToAutoMint[revnetId][stageId][beneficiary];
 
-        // Premint tokens to the split operator if needed.
+        // If there's nothing to auto-mint, return.
         if (count == 0) return;
 
-        // Reset the mint amount.
+        // Reset the auto-mint amount.
         amountToAutoMint[revnetId][stageId][beneficiary] = 0;
 
-        // Decrement the total pending mint amounts.
-        totalPendingAutomintAmountOf[revnetId] -= count;
+        // Decrement the total pending auto-mint amounts.
+        totalPendingAutoMintAmountOf[revnetId] -= count;
 
         emit Mint(revnetId, stageId, beneficiary, count, msg.sender);
 
+        // Mint the tokens.
         _mintTokensOf({revnetId: revnetId, tokenCount: count, beneficiary: beneficiary});
     }
 
-    /// @notice A revnet's operator can replace itself.
-    /// @dev Only the revnet's split operator can replace itself.
-    /// @param revnetId The ID of the revnet having its operator replaced.
-    /// @param newSplitOperator The address of the new split operator.
-    function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external override {
+    /// @notice Change a revnet's split operator.
+    /// @dev Only a revnet's current split operator can set a new split operator.
+    /// @param revnetId The ID of the revnet to set the split operator of.
+    /// @param newSplitOperator The new split operator's address.
+    function setSplitOperatorOf(uint256 revnetId, address newSplitOperator) external override {
         // Enforce permissions.
         if (!isSplitOperatorOf(revnetId, msg.sender)) revert REVBasic_Unauthorized();
 
         emit ReplaceSplitOperator(revnetId, newSplitOperator, msg.sender);
 
-        // Remove operator permission from the old split operator.
+        // Remove operator permissions from the old split operator.
         _setPermissionsFor({
             account: address(this),
             operator: msg.sender,
@@ -445,16 +446,17 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     // --------------------- itnernal transactions ----------------------- //
     //*********************************************************************//
 
-    /// @notice Deploys a revnet with the specified hook information.
+    /// @notice Deploy a revnet, or convert an existing Juicebox project into a revnet.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
-    /// @param configuration The data needed to deploy a basic revnet.
-    /// @param terminalConfigurations The terminals that the network uses to accept payments through.
-    /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
-    /// for new participants.
-    /// @param dataHook The address of the data hook.
-    /// @param extraHookMetadata Extra info to send to the hook.
-    /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
+    /// @param configuration The revnet's rules and setup. See `REVConfig`.
+    /// @param terminalConfigurations The terminals to set up for the revnet.
+    /// @param buybackHookConfiguration The buyback hook and the pools to use for buybacks.
+    /// @param dataHook The address of the buyback data hook.
+    /// @param extraHookMetadata Customizeable per-project configuration for hooks to read.
+    /// @param suckerDeploymentConfiguration The sucker deployer and mappings to set up for the revnet.
     /// @return revnetId The ID of the newly created revnet.
+    /// @dev Note that `extraHookMetadata` defines project-specific hook configuration, defined by the hook in question.
+    /// `extraHookMetadata` is cast down to a `uint16` and is set as the `JBRulesetMetadata.metadata`.
     function _launchRevnetFor(
         uint256 revnetId,
         REVConfig memory configuration,
@@ -472,7 +474,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
             _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata);
 
         if (revnetId == 0) {
-            // Deploy a juicebox for the revnet.
+            // If we're deploying a new revnet, launch a Juicebox project for it.
             // slither-disable-next-line reentrancy-benign,reentrancy-events
             revnetId = CONTROLLER.launchProjectFor({
                 owner: address(this),
@@ -482,12 +484,13 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
                 memo: ""
             });
         } else {
-            // Transfer the revnet to be owned by this deployer.
+            // If we're converting an existing Juicebox project into a revnet,
+            // transfer the `JBProjects` NFT to this deployer.
             IERC721(CONTROLLER.PROJECTS()).safeTransferFrom(
                 CONTROLLER.PROJECTS().ownerOf(revnetId), address(this), revnetId
             );
 
-            // Launch rulesets for a pre-existing juicebox.
+            // Launch the revnet rulesets for the pre-existing project.
             // slither-disable-next-line unused-return
             CONTROLLER.launchRulesetsFor({
                 projectId: revnetId,
@@ -497,12 +500,12 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
             });
         }
 
-        // Store the cash out delay of the revnet if it is in progess. This prevents cashing out from the revnet until
-        // the delay
-        // is up.
+        // Store the cash out delay of the revnet if its stages are already in progress.
+        // This prevents cashout liquidity/arbitrage issues for existing revnets which
+        // are deploying to a new chain.
         _setCashOutDelayIfNeeded(revnetId, configuration.stageConfigurations[0]);
 
-        // Issue the network's ERC-20 token.
+        // Deploy the revnet's ERC-20 token.
         // slither-disable-next-line unused-return
         CONTROLLER.deployERC20For({
             projectId: revnetId,
@@ -511,12 +514,12 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
             salt: configuration.description.salt
         });
 
-        // Setup the buyback hook if needed.
+        // Set up the buyback hook (if applicable).
         if (buybackHookConfiguration.hook != IJBBuybackHook(address(0))) {
             _setupBuybackHookOf(revnetId, buybackHookConfiguration);
         }
 
-        // Configure the loan broker if needed.
+        // Set up the loan broker (if applicable).
         if (configuration.loans != address(0)) {
             _setPermission({
                 operator: address(configuration.loans),
@@ -526,25 +529,27 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
             loansOf[revnetId] = configuration.loans;
         }
 
-        // Set the operator splits at the default ruleset of 0.
+        // Set up the reserved token split group under the default ruleset (0).
+        // This split group sends the revnet's reserved tokens to the split operator,
+        // who can allocate splits to other recipients later on.
         CONTROLLER.setSplitGroupsOf({
             projectId: revnetId,
             rulesetId: 0,
             splitGroups: _makeOperatorSplitGroupWith(configuration.splitOperator)
         });
 
-        // Store the mint amounts.
+        // Store the auto-mint amounts.
         _storeAutomintAmounts(revnetId, configuration);
 
-        // Give the operator its permissions.
+        // Give the split operator their permissions.
         _setSplitOperatorOf({revnetId: revnetId, operator: configuration.splitOperator});
 
-        // Compose the salt.
+        // Compose the salt to use for deploying suckers.
         bytes32 suckerSalt = suckerDeploymentConfiguration.salt == bytes32(0)
             ? bytes32(0)
             : keccak256(abi.encode(configuration.splitOperator, encodedConfiguration, suckerDeploymentConfiguration.salt));
 
-        // Deploy the suckers if needed.
+        // Deploy the suckers (if applicable).
         if (suckerSalt != bytes32(0)) {
             // slither-disable-next-line unused-return
             SUCKER_REGISTRY.deploySuckersFor({
@@ -569,32 +574,34 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         return revnetId;
     }
 
-    /// @notice Sets the cash out delay if the revnet is in progress.
+    /// @notice Sets the cash out delay if the revnet's stages are already in progress.
+    /// @dev This prevents cashout liquidity/arbitrage issues for existing revnets which
+    /// are deploying to a new chain.
     /// @param revnetId The ID of the revnet to set the cash out delay for.
-    /// @param firstStageConfig The configuration of the first stage of the revnet.
+    /// @param firstStageConfig The revnet's first stage.
     function _setCashOutDelayIfNeeded(uint256 revnetId, REVStageConfig memory firstStageConfig) internal {
-        // If the first stage has a start time in the past, mark the revnet as being in progress.
+        // If this is the first revnet being deployed (with a `startsAtOrAfter` of 0),
+        // or if the first stage hasn't started yet, we don't need to set a cashout delay.
         if (firstStageConfig.startsAtOrAfter == 0 || firstStageConfig.startsAtOrAfter >= block.timestamp) return;
 
-        // Calculate the delay.
+        // Calculate the timestamp at which the cashout delay ends.
         uint256 cashOutDelay = block.timestamp + CASH_OUT_DELAY;
 
-        // Store the delay.
+        // Store the cashout delay.
         cashOutDelayOf[revnetId] = cashOutDelay;
 
         emit SetCashOutDelay(revnetId, cashOutDelay, msg.sender);
     }
 
-    /// @notice Sets a permission for an operator.
-    /// @param operator The operator to give a permission.
+    /// @notice Grants a permission to an address (called the operator).
+    /// @param operator The address to give the permission to.
     /// @param revnetId The ID of the revnet to set the permission for.
-    /// @param permissionId The ID of the permission to set.
+    /// @param permissionId The ID of the permission to set. See `JBPermissionIds`.
     function _setPermission(address operator, uint256 revnetId, uint8 permissionId) internal {
-        // Give the address the permission.
         uint8[] memory permissionsIds = new uint8[](1);
         permissionsIds[0] = permissionId;
 
-        // Give the operator permission to change the recipients of the operator's split.
+        // Give the operator the permission.
         _setPermissionsFor({
             account: address(this),
             operator: operator,
@@ -603,11 +610,11 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         });
     }
 
-    /// @notice A revnet's operator can replace itself.
-    /// @param revnetId The ID of the revnet having its operator replaced.
-    /// @param operator The address of the new split operator.
+    /// @notice Give a new split operator their permissions.
+    /// @dev Only a revnet's current split operator can set a new split operator.
+    /// @param revnetId The ID of the revnet to set the split operator of.
+    /// @param operator The new split operator's address.
     function _setSplitOperatorOf(uint256 revnetId, address operator) internal {
-        // Give the new split operator its permissions.
         _setPermissionsFor({
             account: address(this),
             operator: operator,
@@ -676,7 +683,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         }
 
         // Store the total pending mint amounts.
-        totalPendingAutomintAmountOf[revnetId] = totalPendingAutomintAmount;
+        totalPendingAutoMintAmountOf[revnetId] = totalPendingAutomintAmount;
     }
 
     /// @notice Sets up a buyback hook.

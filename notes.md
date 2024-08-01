@@ -1,1 +1,0 @@
-- Why is there a separate `_payHookSpecificationsOf` mapping along with the `buybackHookOf` (data hook) mapping? Is this for revnets which use another hook in addition to the buyback hook?
