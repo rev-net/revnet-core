@@ -70,9 +70,9 @@ contract REVLoans is ERC721, IREVLoans {
     /// @dev The maximum amount of a loan that can be prepaid, in terms of JBConstants.MAX_FEE.
     uint256 public constant override MAX_PREPAID_PERCENT = 400;
 
-    /// @dev After the prepaid duration, the loan will increasingly cost more to pay off. After 8 years, the loan
-    /// collateral cannot be recouped.
-    uint256 public constant override LOAN_LIQUIDATION_DURATION = 2920 days;
+    /// @dev After the prepaid duration, the loan will increasingly cost more to pay off. After 10 years, the loan
+    /// collateral cannot be recouped. This means paying 40% of the loan amount upfront will pay for having access to the remaining 60% for 10 years.
+    uint256 public constant override LOAN_LIQUIDATION_DURATION = 3650 days;
 
     //*********************************************************************//
     // --------------- public immutable stored properties ---------------- //
@@ -482,8 +482,11 @@ contract REVLoans is ERC721, IREVLoans {
             // If the loan period has passed the liqidation time frame, do not allow loan management.
             if (timeSinceLoanCreated > LOAN_LIQUIDATION_DURATION) revert LOAN_EXPIRED();
 
+            // Calculate the prepaid fee for the amount being paid back.
+            uint256 prepaidAmount = mulDiv(amount, loan.prepaidFeePercent, JBConstants.MAX_FEE);
+
             // Calculate the fee as a linear proportion given the amount of time that has passed.
-            feeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION);
+            feeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION) - prepaidAmount;
         }
 
         // Decrement the total amount of a token being loaned out by the revnet from its terminal.
