@@ -362,35 +362,35 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         }
     }
 
-    // /// @notice Allow the split operat
-    // /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
-    // /// @dev Only the revnet's split operator can deploy new suckers.
-    // /// @param revnetId The ID of the revnet having new suckers deployed.
-    // /// @param encodedConfiguration A bytes representation of the revnet's configuration.
-    // /// @param suckerDeploymentConfiguration The specifics about the suckers being deployed.
-    // function deploySuckersFor(
-    //     uint256 revnetId,
-    //     bytes calldata encodedConfiguration,
-    //     REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
-    // )
-    //     external
-    //     override
-    // {
-    //     // Enforce permissions.
-    //     _checkIfSplitOperatorOf({revnetId: revnetId, operator: msg.sender});
+    /// @notice Allow the split operat
+    /// @notice Allows a revnet's split operator to deploy new suckers to the revnet after it's deployed.
+    /// @dev Only the revnet's split operator can deploy new suckers.
+    /// @param revnetId The ID of the revnet having new suckers deployed.
+    /// @param encodedConfiguration A bytes representation of the revnet's configuration.
+    /// @param suckerDeploymentConfiguration The specifics about the suckers being deployed.
+    function deploySuckersFor(
+        uint256 revnetId,
+        bytes calldata encodedConfiguration,
+        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
+    )
+        external
+        override
+    {
+        // Enforce permissions.
+        _checkIfSplitOperatorOf({revnetId: revnetId, operator: msg.sender});
 
-    //     // Compose the salt.
-    //     bytes32 salt = keccak256(abi.encode(msg.sender, encodedConfiguration, suckerDeploymentConfiguration.salt));
+        // Compose the salt.
+        bytes32 salt = keccak256(abi.encode(msg.sender, encodedConfiguration, suckerDeploymentConfiguration.salt));
 
-    //     emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, msg.sender);
+        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, msg.sender);
 
-    //     // Deploy the suckers.
-    //     _deploySuckersFor({
-    //         revnetId: revnetId,
-    //         salt: salt,
-    //         configurations: suckerDeploymentConfiguration.deployerConfigurations
-    //     });
-    // }
+        // Deploy the suckers.
+        _deploySuckersFor({
+            revnetId: revnetId,
+            salt: salt,
+            configurations: suckerDeploymentConfiguration.deployerConfigurations
+        });
+    }
 
     /// @notice Auto-mint a revnet's tokens from a stage for a beneficiary.
     /// @param revnetId The ID of the revnet to auto-mint tokens from.
@@ -426,7 +426,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     /// @param newSplitOperator The new split operator's address.
     function setSplitOperatorOf(uint256 revnetId, address newSplitOperator) external override {
         // Enforce permissions.
-        if (!isSplitOperatorOf(revnetId, msg.sender)) revert REVBasic_Unauthorized();
+        _checkIfSplitOperatorOf({revnetId: revnetId, operator: msg.sender});
 
         emit ReplaceSplitOperator(revnetId, newSplitOperator, msg.sender);
 
@@ -551,9 +551,8 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
 
         // Deploy the suckers (if applicable).
         if (suckerSalt != bytes32(0)) {
-            // slither-disable-next-line unused-return
-            SUCKER_REGISTRY.deploySuckersFor({
-                projectId: revnetId,
+            _deploySuckersFor({
+                revnetId: revnetId,
                 salt: suckerSalt,
                 configurations: suckerDeploymentConfiguration.deployerConfigurations
             });
@@ -731,15 +730,14 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         uint256 numberOfCustomPermissionIndexes = customSplitOperatorPermissionIndexes.length;
 
         // Make the array that merges the default and custom operator permissions.
-        allOperatorPermissions = new uint256[](4 + numberOfCustomPermissionIndexes);
+        allOperatorPermissions = new uint256[](3 + numberOfCustomPermissionIndexes);
         allOperatorPermissions[0] = JBPermissionIds.SET_SPLIT_GROUPS;
         allOperatorPermissions[1] = JBPermissionIds.SET_BUYBACK_POOL;
         allOperatorPermissions[2] = JBPermissionIds.SET_PROJECT_URI;
-        allOperatorPermissions[3] = JBPermissionIds.DEPLOY_SUCKERS;
 
         // Copy the custom permissions into the array.
         for (uint256 i; i < numberOfCustomPermissionIndexes; i++) {
-            allOperatorPermissions[4 + i] = customSplitOperatorPermissionIndexes[i];
+            allOperatorPermissions[3 + i] = customSplitOperatorPermissionIndexes[i];
         }
     }
 
@@ -992,6 +990,28 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
             memo: "",
             useReservedPercent: false
         });
+    }
+
+    /// @notice Deploy suckers for a revnet.
+    /// @param revnetId The ID of the revnet to deploy suckers for.
+    /// @param salt The salt to use for the deployment.
+    /// @param configurations The configurations that specify the deployment.
+    function _deploySuckersFor(
+        uint256 revnetId,
+        bytes32 salt,
+        JBSuckerDeployerConfig[] memory configurations
+    )
+        internal
+    {
+        // slither-disable-next-line unused-return
+        SUCKER_REGISTRY.deploySuckersFor({projectId: revnetId, salt: salt, configurations: configurations});
+    }
+
+    /// @notice Enforces that the message sender is the current split operator.
+    /// @param revnetId The ID of the revnet to check operator permissions for.
+    /// @param operator The address of the operator to check permissions for.
+    function _checkIfSplitOperatorOf(uint256 revnetId, address operator) internal view {
+        if (!isSplitOperatorOf(revnetId, operator)) revert REVBasic_Unauthorized();
     }
 
     /// @notice A reference to the controller's directory contract.
