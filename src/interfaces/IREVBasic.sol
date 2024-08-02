@@ -60,6 +60,7 @@ interface IREVBasic {
 
     function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external;
     function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
+    function deploySuckersFor(uint256 revnetId, bytes calldata encodedConfiguration, REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration) external;
     function allowedMintCountOf(
         uint256 revnetId,
         uint256 stageId,
