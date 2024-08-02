@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
@@ -39,7 +40,7 @@ interface IREVBasic {
         uint256 indexed revnetId, uint256 indexed stageId, address indexed beneficiary, uint256 count, address caller
     );
 
-    event StoreMintPotential(
+    event StoreAutoMintAmount(
         uint256 indexed revnetId, uint256 indexed stageId, address indexed beneficiary, uint256 count, address caller
     );
 
@@ -53,15 +54,15 @@ interface IREVBasic {
 
     function buybackHookOf(uint256 revnetId) external view returns (IJBRulesetDataHook);
     function cashOutDelayOf(uint256 revnetId) external view returns (uint256);
-    function totalPendingAutomintAmountOf(uint256 revnetId) external view returns (uint256);
+    function totalPendingAutoMintAmountOf(uint256 revnetId) external view returns (uint256);
     function loansOf(uint256 revnetId) external view returns (address);
     function payHookSpecificationsOf(uint256 revnetId) external view returns (JBPayHookSpecification[] memory);
     function isSplitOperatorOf(uint256 revnetId, address addr) external view returns (bool);
 
-    function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external;
-    function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
+    function setSplitOperatorOf(uint256 revnetId, address newSplitOperator) external;
+    function autoMintFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
     function deploySuckersFor(uint256 revnetId, bytes calldata encodedConfiguration, REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration) external;
-    function allowedMintCountOf(
+    function amountToAutoMint(
         uint256 revnetId,
         uint256 stageId,
         address beneficiary
