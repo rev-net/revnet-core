@@ -623,20 +623,20 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         });
     }
 
-    /// @notice Stores the amount of tokens that can be minted during each stage from this chain.
-    /// @param revnetId The ID of the revnet to which the mints should apply.
-    /// @param configuration The data that defines the revnet's characteristics.
+    /// @notice Stores the auto-mint amounts for each of a revnet's stages.
+    /// @param revnetId The ID of the revnet to store the auto-mint amounts for.
+    /// @param configuration The revnet's configuration. See `REVConfig`.
     function _storeAutomintAmounts(uint256 revnetId, REVConfig memory configuration) internal {
-        // Keep a reference to the number of stages to schedule.
+        // Keep a reference to the number of stages the revnet has.
         uint256 numberOfStages = configuration.stageConfigurations.length;
 
         // Keep a reference to the stage configuration being iterated on.
         REVStageConfig memory stageConfiguration;
 
-        // Keep a reference to the total amount can still be autominted.
+        // Keep a reference to the total amount of tokens which can be auto-minted.
         uint256 totalPendingAutomintAmount;
 
-        // Loop through each stage to set up its ruleset configuration.
+        // Loop through each stage to store its auto-mint amounts.
         for (uint256 i; i < numberOfStages; i++) {
             // Set the stage configuration being iterated on.
             stageConfiguration = configuration.stageConfigurations[i];
@@ -652,10 +652,11 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
                 // Set the mint config being iterated on.
                 mintConfig = stageConfiguration.mintConfigs[j];
 
-                // Only deal with mint specification for this chain.
+                // If the mint config is for another chain, skip it.
                 if (mintConfig.chainId != block.chainid) continue;
 
-                // Mint right away if its the first stage or its any stage that has started.
+                // If the auto-mint is for the first stage, or a stage which has already started,
+                // mint the tokens right away.
                 if (i == 0 || stageConfiguration.startsAtOrAfter <= block.timestamp) {
                     emit Mint(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender);
 
@@ -666,39 +667,36 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
                         beneficiary: mintConfig.beneficiary
                     });
                 }
-                // Store the amount of tokens that can be minted during this stage from this chain.
+                // Store the amount of tokens that can be auto-minted on this chain during this stage.
                 else {
-                    emit StoreMintPotential(
-                        revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender
-                    );
+                    emit StoreAutoMintAmount(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender);
 
-                    // Stage IDs are indexed incrementally from the timestamp of this transaction.
+                    // The first stage ID is stored at this block's timestamp,
+                    // and further stage IDs have incrementally increasing IDs
                     // slither-disable-next-line reentrancy-events
                     amountToAutoMint[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.count;
 
-                    // Increment the total.
+                    // Increase the total pending auto-mint amount.
                     totalPendingAutomintAmount += mintConfig.count;
                 }
             }
         }
 
-        // Store the total pending mint amounts.
+        // Store the total pending auto-mint amount.
         totalPendingAutoMintAmountOf[revnetId] = totalPendingAutomintAmount;
     }
 
-    /// @notice Sets up a buyback hook.
-    /// @param revnetId The ID of the revnet to which the buybacks should apply.
-    /// @param buybackHookConfiguration Data used to setup pools that'll be used to buyback tokens from if an optimal
-    /// price
-    /// is presented.
+    /// @notice Sets up a buyback hook and pools for a revnet.
+    /// @param revnetId The ID of the revnet to set up the buyback hook for.
+    /// @param buybackHookConfiguration The address of the hook and a list of pools to use for buybacks.
     function _setupBuybackHookOf(uint256 revnetId, REVBuybackHookConfig memory buybackHookConfiguration) internal {
-        // Get a reference to the number of pools that need setting up.
+        // Get a reference to the number of pools being set up.
         uint256 numberOfPoolsToSetup = buybackHookConfiguration.poolConfigurations.length;
 
         // Keep a reference to the pool being iterated on.
         REVBuybackPoolConfig memory poolConfig;
 
-        // Store the hook.
+        // Store the buyback hook.
         buybackHookOf[revnetId] = buybackHookConfiguration.hook;
 
         for (uint256 i; i < numberOfPoolsToSetup; i++) {
@@ -717,10 +715,10 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         }
     }
 
-    /// @notice The permissions that the split operator should be granted for a revnet.
-    /// @param revnetId The ID of the revnet to check operator permissions for.
+    /// @notice Returns the permissions that the split operator should be granted for a revnet.
+    /// @param revnetId The ID of the revnet to get split operator permissions for.
     /// @return allOperatorPermissions The permissions that the split operator should be granted for the revnet,
-    /// including default and custom permissions.
+    /// including both default and custom permissions.
     function _splitOperatorPermissionIndexesOf(uint256 revnetId)
         internal
         view
@@ -732,14 +730,14 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         // Keep a reference to the number of custom permissions.
         uint256 numberOfCustomPermissionIndexes = customSplitOperatorPermissionIndexes.length;
 
-        // Make the array that merges the default operator permissions and the custom ones.
+        // Make the array that merges the default and custom operator permissions.
         allOperatorPermissions = new uint256[](4 + numberOfCustomPermissionIndexes);
         allOperatorPermissions[0] = JBPermissionIds.SET_SPLIT_GROUPS;
         allOperatorPermissions[1] = JBPermissionIds.SET_BUYBACK_POOL;
         allOperatorPermissions[2] = JBPermissionIds.SET_PROJECT_URI;
         allOperatorPermissions[3] = JBPermissionIds.DEPLOY_SUCKERS;
 
-        // Copy elements from the custom permissions.
+        // Copy the custom permissions into the array.
         for (uint256 i; i < numberOfCustomPermissionIndexes; i++) {
             allOperatorPermissions[4 + i] = customSplitOperatorPermissionIndexes[i];
         }

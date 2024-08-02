@@ -40,7 +40,7 @@ interface IREVBasic {
         uint256 indexed revnetId, uint256 indexed stageId, address indexed beneficiary, uint256 count, address caller
     );
 
-    event StoreMintPotential(
+    event StoreAutoMintAmount(
         uint256 indexed revnetId, uint256 indexed stageId, address indexed beneficiary, uint256 count, address caller
     );
 
