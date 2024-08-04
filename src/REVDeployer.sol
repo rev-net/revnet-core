@@ -6,6 +6,7 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {mulDiv} from "@prb/math/src/Common.sol";
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
+import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
 import {IJBRulesetApprovalHook} from "@bananapus/core/src/interfaces/IJBRulesetApprovalHook.sol";
 import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
 import {IJBSplitHook} from "@bananapus/core/src/interfaces/IJBSplitHook.sol";
@@ -96,6 +97,15 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @notice The controller used to create and manage Juicebox projects for revnets.
     IJBController public immutable override CONTROLLER;
 
+    /// @notice The directory of terminals and controllers for PROJECTS.
+    IJBDirectory public immutable override DIRECTORY;
+
+    /// @notice Mints ERC-721s that represent project ownership and transfers.
+    IJBProjects public immutable override PROJECTS;
+
+    /// @notice A contract storing permissions.
+    IJBPermissions public immutable override PERMISSIONS;
+
     /// @notice The sucker registry that deploys and tracks suckers for revnets.
     IJBSuckerRegistry public immutable override SUCKER_REGISTRY;
 
@@ -113,6 +123,11 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @dev Buyback hooks are a combined data hook/pay hook.
     /// @custom:param revnetId The ID of the revnet to get the buyback hook for.
     mapping(uint256 revnetId => IJBRulesetDataHook buybackHook) public override buybackHookOf;
+
+    /// @notice Each revnet's 721 hook.
+    /// @custom:param revnetId The ID of the revnet to get the 721 hook for.
+    // slither-disable-next-line uninitialized-state
+    mapping(uint256 revnetId => IJB721TiersHook tiered721Hook) public override tiered721HookOf;
 
     /// @notice The timestamp of when cashouts will become available to a specific revnet's participants.
     /// @dev Only applies to existing revnets which are deploying onto a new network.
@@ -149,26 +164,9 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     // slither-disable-next-line uninitialized-state
     mapping(uint256 revnetId => uint256[]) internal _extraOperatorPermissions;
 
-    /// @notice The pay hook specifications to use when a specific revnet is paid.
-    /// @custom:param revnetId The ID of the revnet to get the pay hook specifications for.
-    // slither-disable-next-line uninitialized-state
-    mapping(uint256 revnetId => JBPayHookSpecification[] payHooks) internal _payHookSpecificationsOf;
-
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
-
-    /// @notice The pay hook specifications to use when a specific revnet is paid.
-    /// @custom:param revnetId The ID of the revnet to get the pay hook specifications for.
-    /// @return payHookSpecifications The pay hook specifications.
-    function payHookSpecificationsOf(uint256 revnetId)
-        external
-        view
-        override
-        returns (JBPayHookSpecification[] memory)
-    {
-        return _payHookSpecificationsOf[revnetId];
-    }
 
     /// @notice Before a revnet processes an incoming payment, determine the weight and pay hooks to use.
     /// @dev This function is part of `IJBRulesetDataHook`, and gets called before the revnet processes a payment.
@@ -201,22 +199,22 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         bool usesBuybackHook = buybackHookSpecifications.length != 0;
 
         // Cache any other pay hooks to use.
-        JBPayHookSpecification[] memory storedPayHookSpecifications = _payHookSpecificationsOf[context.projectId];
+        IJB721TiersHook tiered721Hook = tiered721HookOf[context.projectId];
 
-        // Keep a reference to the number of stored pay hook specifications.
-        uint256 numberOfStoredPayHookSpecifications = storedPayHookSpecifications.length;
+        // Is there a tiered 721 hook?
+        bool usesTiered721Hook = address(tiered721Hook) != address(0);
 
         // Initialize the returned specification array with enough room to include all of the specifications.
-        hookSpecifications =
-            new JBPayHookSpecification[](numberOfStoredPayHookSpecifications + (usesBuybackHook ? 1 : 0));
+        hookSpecifications = new JBPayHookSpecification[]((usesTiered721Hook ? 1 : 0) + (usesBuybackHook ? 1 : 0));
 
-        // Add the stored pay hook specifications.
-        for (uint256 i; i < numberOfStoredPayHookSpecifications; i++) {
-            hookSpecifications[i] = storedPayHookSpecifications[i];
+        // Add the tiered 721 hook to the array.
+        if (usesTiered721Hook) {
+            hookSpecifications[0] =
+                JBPayHookSpecification({hook: IJBPayHook(address(tiered721Hook)), amount: 0, metadata: bytes("")});
         }
 
         // And if we have a buyback hook specification, add it to the end of the array.
-        if (usesBuybackHook) hookSpecifications[numberOfStoredPayHookSpecifications] = buybackHookSpecifications[0];
+        if (usesBuybackHook) hookSpecifications[1] = buybackHookSpecifications[0];
     }
 
     /// @notice Determine how a redemption from a revnet should be processed.
@@ -249,7 +247,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         }
 
         // Get the terminal that will receive the cashout fee.
-        IJBTerminal feeTerminal = _directory().primaryTerminalOf(FEE_REVNET_ID, context.surplus.token);
+        IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf(FEE_REVNET_ID, context.surplus.token);
 
         // If there's no cashout tax (100% redemption rate), or if there's no fee terminal, do not charge a fee.
         if (context.redemptionRate == JBConstants.MAX_REDEMPTION_RATE || address(feeTerminal) == address(0)) {
@@ -290,7 +288,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @dev Make sure this contract can only receive project NFTs from `JBProjects`.
     function onERC721Received(address, address, uint256, bytes calldata) external view returns (bytes4) {
         // Make sure the 721 received is from the `JBProjects` contract.
-        if (msg.sender != address(_projects())) revert();
+        if (msg.sender != address(PROJECTS)) revert();
 
         return IERC721Receiver.onERC721Received.selector;
     }
@@ -304,7 +302,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @param addr The address to check.
     /// @return flag A flag indicating whether the address is the revnet's split operator.
     function isSplitOperatorOf(uint256 revnetId, address addr) public view override returns (bool) {
-        return _permissions().hasPermissions({
+        return PERMISSIONS.hasPermissions({
             operator: addr,
             account: address(this),
             projectId: revnetId,
@@ -339,6 +337,9 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         CTPublisher publisher
     ) {
         CONTROLLER = controller;
+        DIRECTORY = controller.DIRECTORY();
+        PROJECTS = controller.PROJECTS();
+        PERMISSIONS = IJBPermissioned(address(CONTROLLER)).PERMISSIONS();
         SUCKER_REGISTRY = suckerRegistry;
         FEE_REVNET_ID = feeRevnetId;
         HOOK_DEPLOYER = hookDeployer;
@@ -352,7 +353,36 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     // --------------------- external transactions ----------------------- //
     //*********************************************************************//
 
-    /// @notice Launch a revnet, optionally supporting 721 sales.
+    /// @notice Launch a revnet.
+    /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
+    /// @param configuration The data needed to deploy a basic revnet.
+    /// @param terminalConfigurations The terminals that the network uses to accept payments through.
+    /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
+    /// for new participants.
+    /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
+    /// @return revnetId The ID of the newly created revnet.
+    function deployFor(
+        uint256 revnetId,
+        REVConfig memory configuration,
+        JBTerminalConfig[] memory terminalConfigurations,
+        REVBuybackHookConfig memory buybackHookConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+    )
+        external
+        override
+        returns (uint256)
+    {
+        // Deploy the revnet.
+        return _launchRevnetFor({
+            revnetId: revnetId,
+            configuration: configuration,
+            terminalConfigurations: terminalConfigurations,
+            buybackHookConfiguration: buybackHookConfiguration,
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration
+        });
+    }
+
+    /// @notice Launch a revnet supporting 721 sales.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
@@ -360,18 +390,16 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// for new participants.
     /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
     /// @param hookConfiguration Data used for setting up the 721 tiers.
-    /// @param otherPayHooksSpecifications Any hooks that should run when the revnet is paid alongside the 721 hook.
     /// @param allowedPosts The type of posts that the revent should allow.
     /// @return revnetId The ID of the newly created revnet.
     /// @return hook The address of the 721 hook that was deployed on the revnet.
-    function deployFor(
+    function deployWith721sFor(
         uint256 revnetId,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
         REVSuckerDeploymentConfig memory suckerDeploymentConfiguration,
         REVDeploy721TiersHookConfig memory hookConfiguration,
-        JBPayHookSpecification[] memory otherPayHooksSpecifications,
         REVCroptopAllowedPost[] memory allowedPosts
     )
         external
@@ -379,14 +407,13 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         returns (uint256, IJB721TiersHook hook)
     {
         // Deploy the revnet with tiered 721 hooks.
-        (revnetId, hook) = _launchCroptopRevnetFor({
+        (revnetId, hook) = _launch721RevnetFor({
             revnetId: revnetId,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration,
             hookConfiguration: hookConfiguration,
-            otherPayHooksSpecifications: otherPayHooksSpecifications,
             allowedPosts: allowedPosts
         });
 
@@ -397,7 +424,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @param context Redemption context passed in by the terminal.
     function afterRedeemRecordedWith(JBAfterRedeemRecordedContext memory context) external payable {
         // Only the revnet's payment terminals can access this function.
-        if (!_directory().isTerminalOf(context.projectId, IJBTerminal(msg.sender))) {
+        if (!DIRECTORY.isTerminalOf(context.projectId, IJBTerminal(msg.sender))) {
             revert REVBasic_Unauthorized();
         }
 
@@ -449,16 +476,12 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Enforce permissions.
         _checkIfSplitOperatorOf({revnetId: revnetId, operator: msg.sender});
 
-        // Compose the salt.
-        bytes32 salt = keccak256(abi.encode(msg.sender, encodedConfiguration, suckerDeploymentConfiguration.salt));
-
-        emit DeploySuckers(revnetId, salt, encodedConfiguration, suckerDeploymentConfiguration, msg.sender);
-
         // Deploy the suckers.
         _deploySuckersFor({
             revnetId: revnetId,
-            salt: salt,
-            configurations: suckerDeploymentConfiguration.deployerConfigurations
+            operator: msg.sender,
+            encodedConfiguration: encodedConfiguration,
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
     }
 
@@ -524,18 +547,16 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// for new participants.
     /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
     /// @param hookConfiguration Data used for setting up the 721 tiers.
-    /// @param otherPayHooksSpecifications Any hooks that should run when the revnet is paid alongside the 721 hook.
     /// @param allowedPosts The type of posts that the revent should allow.
     /// @return revnetId The ID of the newly created revnet.
     /// @return hook The address of the 721 hook that was deployed on the revnet.
-    function _launchCroptopRevnetFor(
+    function _launch721RevnetFor(
         uint256 revnetId,
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
         REVSuckerDeploymentConfig memory suckerDeploymentConfiguration,
         REVDeploy721TiersHookConfig memory hookConfiguration,
-        JBPayHookSpecification[] memory otherPayHooksSpecifications,
         REVCroptopAllowedPost[] memory allowedPosts
     )
         internal
@@ -545,24 +566,14 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         uint256 originalRevnetId = revnetId;
 
         // Get the revnet ID, optimistically knowing it will be one greater than the current count.
-        if (originalRevnetId == 0) revnetId = _projects().count() + 1;
-
-        // Keep a reference to the number of pay hooks passed in.
-        uint256 numberOfOtherPayHooks = otherPayHooksSpecifications.length;
-
-        // Repopulate the updated list with the params passed in.
-        for (uint256 i; i < numberOfOtherPayHooks; i++) {
-            _payHookSpecificationsOf[revnetId].push(otherPayHooksSpecifications[i]);
-        }
+        if (originalRevnetId == 0) revnetId = PROJECTS.count() + 1;
 
         // Deploy the tiered 721 hook contract.
         // slither-disable-next-line reentrancy-benign
         hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration.baseline721HookConfiguration);
 
-        // Add the tiered 721 hook at the end.
-        _payHookSpecificationsOf[revnetId].push(
-            JBPayHookSpecification({hook: IJBPayHook(address(hook)), amount: 0, metadata: bytes("")})
-        );
+        // Set the tiered 721 hook.
+        tiered721HookOf[revnetId] = hook;
 
         // If needed, give the operator permission to add and remove tiers.
         if (hookConfiguration.splitOperatorCanAdjustTiers) {
@@ -579,14 +590,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             _extraOperatorPermissions[revnetId].push(JBPermissionIds.MINT_721);
         }
 
-        _launchRevnetFor({
-            revnetId: originalRevnetId,
-            configuration: configuration,
-            terminalConfigurations: terminalConfigurations,
-            buybackHookConfiguration: buybackHookConfiguration,
-            suckerDeploymentConfiguration: suckerDeploymentConfiguration
-        });
-
         // Format the posts.
         if (_configurePostingCriteriaFor({hook: address(hook), allowedPosts: allowedPosts})) {
             // Give the croptop publisher permission to post on this contract's behalf.
@@ -596,6 +599,14 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                 permissionId: JBPermissionIds.ADJUST_721_TIERS
             });
         }
+
+        _launchRevnetFor({
+            revnetId: originalRevnetId,
+            configuration: configuration,
+            terminalConfigurations: terminalConfigurations,
+            buybackHookConfiguration: buybackHookConfiguration,
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration
+        });
 
         return (revnetId, hook);
     }
@@ -636,9 +647,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         } else {
             // If we're converting an existing Juicebox project into a revnet,
             // transfer the `JBProjects` NFT to this deployer.
-            IERC721(CONTROLLER.PROJECTS()).safeTransferFrom(
-                CONTROLLER.PROJECTS().ownerOf(revnetId), address(this), revnetId
-            );
+            IERC721(PROJECTS).safeTransferFrom(PROJECTS.ownerOf(revnetId), address(this), revnetId);
 
             // Launch the revnet rulesets for the pre-existing project.
             // slither-disable-next-line unused-return
@@ -694,23 +703,18 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Give the split operator their permissions.
         _setSplitOperatorOf({revnetId: revnetId, operator: configuration.splitOperator});
 
-        // Compose the salt to use for deploying suckers.
-        bytes32 suckerSalt = suckerDeploymentConfiguration.salt == bytes32(0)
-            ? bytes32(0)
-            : keccak256(abi.encode(configuration.splitOperator, encodedConfiguration, suckerDeploymentConfiguration.salt));
-
         // Deploy the suckers (if applicable).
-        if (suckerSalt != bytes32(0)) {
+        if (suckerDeploymentConfiguration.salt != bytes32(0)) {
             _deploySuckersFor({
                 revnetId: revnetId,
-                salt: suckerSalt,
-                configurations: suckerDeploymentConfiguration.deployerConfigurations
+                operator: configuration.splitOperator,
+                encodedConfiguration: encodedConfiguration,
+                suckerDeploymentConfiguration: suckerDeploymentConfiguration
             });
         }
 
         emit DeployRevnet(
             revnetId,
-            suckerSalt,
             configuration,
             terminalConfigurations,
             buybackHookConfiguration,
@@ -1134,7 +1138,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             JBPermissionsData({operator: operator, projectId: uint56(revnetId), permissionIds: permissionIds});
 
         // Set the permissions.
-        _permissions().setPermissionsFor({account: account, permissionsData: permissionData});
+        PERMISSIONS.setPermissionsFor({account: account, permissionsData: permissionData});
     }
 
     /// @notice A flag indicating if an address is a sucker for a revnet.
@@ -1162,17 +1166,28 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
     /// @notice Deploy suckers for a revnet.
     /// @param revnetId The ID of the revnet to deploy suckers for.
-    /// @param salt The salt to use for the deployment.
-    /// @param configurations The configurations that specify the deployment.
+    /// @param operator The address of the operator that can later add new suckers.
+    /// @param encodedConfiguration The encoded configuration of the revnet.
+    /// @param suckerDeploymentConfiguration The configuration that specifies the deployment.
     function _deploySuckersFor(
         uint256 revnetId,
-        bytes32 salt,
-        JBSuckerDeployerConfig[] memory configurations
+        address operator,
+        bytes memory encodedConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
     )
         internal
     {
+        // Compose the salt.
+        bytes32 salt = keccak256(abi.encode(operator, encodedConfiguration, suckerDeploymentConfiguration.salt));
+
+        emit DeploySuckers(revnetId, operator, salt, encodedConfiguration, suckerDeploymentConfiguration, msg.sender);
+
         // slither-disable-next-line unused-return
-        SUCKER_REGISTRY.deploySuckersFor({projectId: revnetId, salt: salt, configurations: configurations});
+        SUCKER_REGISTRY.deploySuckersFor({
+            projectId: revnetId,
+            salt: salt,
+            configurations: suckerDeploymentConfiguration.deployerConfigurations
+        });
     }
 
     /// @notice Enforces that the message sender is the current split operator.
@@ -1180,24 +1195,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @param operator The address of the operator to check permissions for.
     function _checkIfSplitOperatorOf(uint256 revnetId, address operator) internal view {
         if (!isSplitOperatorOf(revnetId, operator)) revert REVBasic_Unauthorized();
-    }
-
-    /// @notice A reference to the controller's directory contract.
-    /// @return directory The directory contract.
-    function _directory() internal view returns (IJBDirectory) {
-        return CONTROLLER.DIRECTORY();
-    }
-
-    /// @notice A reference to the controller's projects contract.
-    /// @return projects The projects contract.
-    function _projects() internal view returns (IJBProjects) {
-        return CONTROLLER.PROJECTS();
-    }
-
-    /// @notice A reference to the controller's permissions contract.
-    /// @return permissions The permissions contract.
-    function _permissions() internal view returns (IJBPermissions) {
-        return IJBPermissioned(address(CONTROLLER)).PERMISSIONS();
     }
 
     /// @notice Converts a uint256 array to a uint8 array.

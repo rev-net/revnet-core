@@ -235,10 +235,7 @@ contract DeployScript is Script, Sphinx {
                 configuration: feeProjectConfig.configuration,
                 terminalConfigurations: feeProjectConfig.terminalConfigurations,
                 buybackHookConfiguration: feeProjectConfig.buybackHookConfiguration,
-                suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration,
-                hookConfiguration: hookConfiguration,
-                otherPayHooksSpecifications: new JBPayHookSpecification[](0),
-                allowedPosts: new REVCroptopAllowedPost[](0)
+                suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration
             });
         }
 
