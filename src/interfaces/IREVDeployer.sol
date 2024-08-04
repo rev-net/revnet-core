@@ -7,12 +7,17 @@ import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpeci
 import {JBRulesetConfig} from "@bananapus/core/src/structs/JBRulesetConfig.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
+import {CTPublisher} from "@croptop/core/src/CTPublisher.sol";
+import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
+import {REVDeploy721TiersHookConfig} from "../structs/REVDeploy721TiersHookConfig.sol";
+import {REVCroptopAllowedPost} from "../structs/REVCroptopAllowedPost.sol";
+import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
 
 import {REVBuybackHookConfig} from "../structs/REVBuybackHookConfig.sol";
 import {REVConfig} from "../structs/REVConfig.sol";
 import {REVSuckerDeploymentConfig} from "../structs/REVSuckerDeploymentConfig.sol";
 
-interface IREVBasic {
+interface IREVDeployer {
     event ReplaceSplitOperator(uint256 indexed revnetId, address indexed newSplitOperator, address caller);
     event DeploySuckers(
         uint256 indexed revnetId,
@@ -34,6 +39,12 @@ interface IREVBasic {
         address caller
     );
 
+    event StoredPayHookSpecifications(
+        uint256 revnetId,
+        JBPayHookSpecification[] specifications,
+        address caller
+    );
+
     event SetCashOutDelay(uint256 indexed revnetId, uint256 cashOutDelay, address caller);
 
     event Mint(
@@ -51,6 +62,8 @@ interface IREVBasic {
     function FEE() external view returns (uint256);
     function SUCKER_REGISTRY() external view returns (IJBSuckerRegistry);
     function FEE_REVNET_ID() external view returns (uint256);
+    function PUBLISHER() external view returns (CTPublisher);
+    function HOOK_DEPLOYER() external view returns (IJB721TiersHookDeployer);
 
     function buybackHookOf(uint256 revnetId) external view returns (IJBRulesetDataHook);
     function cashOutDelayOf(uint256 revnetId) external view returns (uint256);
@@ -58,6 +71,29 @@ interface IREVBasic {
     function loansOf(uint256 revnetId) external view returns (address);
     function payHookSpecificationsOf(uint256 revnetId) external view returns (JBPayHookSpecification[] memory);
     function isSplitOperatorOf(uint256 revnetId, address addr) external view returns (bool);
+
+//  function deployFor(
+//         uint256 revnetId,
+//         REVConfig memory configuration,
+//         JBTerminalConfig[] memory terminalConfigurations,
+//         REVBuybackHookConfig memory buybackHookConfiguration,
+//         REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+//     )
+//         external
+//         returns (uint256);
+
+    function deployFor(
+        uint256 revnetId,
+        REVConfig calldata configuration,
+        JBTerminalConfig[] memory terminalConfigurations,
+        REVBuybackHookConfig memory buybackHookConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration,
+        REVDeploy721TiersHookConfig memory hookConfiguration,
+        JBPayHookSpecification[] memory otherPayHooksSpecifications,
+        REVCroptopAllowedPost[] memory allowedPosts
+    )
+        external
+        returns (uint256, IJB721TiersHook hook);
 
     function setSplitOperatorOf(uint256 revnetId, address newSplitOperator) external;
     function autoMintFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
@@ -70,11 +106,4 @@ interface IREVBasic {
         external
         view
         returns (uint256);
-
-    // function deploySuckersFor(
-    //     uint256 projectId,
-    //     bytes memory encodedConfiguration,
-    //     REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
-    // )
-    //     external;
 }

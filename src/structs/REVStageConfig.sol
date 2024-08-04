@@ -17,6 +17,7 @@ import {REVMintConfig} from "./REVMintConfig.sol";
 /// of 1_000_000_000 (JBConstants.MAX_DECAY_PERCENT). 0% corresponds to no issuance increase.
 /// @custom:member cashOutTaxRate The factor determining how much each token can cash out from the revnet once
 /// redeemed. This rate is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no tax when cashing out.
+/// @custom:member extraMetadata Extra info to attach set into this stage that may affect hooks.
 struct REVStageConfig {
     uint40 startsAtOrAfter;
     REVMintConfig[] mintConfigs;
@@ -25,4 +26,5 @@ struct REVStageConfig {
     uint32 issuanceDecayFrequency;
     uint32 issuanceDecayPercent;
     uint16 cashOutTaxRate;
+    uint16 extraMetadata;
 }

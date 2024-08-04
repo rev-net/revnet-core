@@ -11,7 +11,7 @@ import "@bananapus/buyback-hook/script/helpers/BuybackDeploymentLib.sol";
 import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
 import {Script} from "forge-std/Script.sol";
 
-import "./../src/REVBasicDeployer.sol";
+import "./../src/REVDeployer.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
 import {REVStageConfig, REVMintConfig} from "../src/structs/REVStageConfig.sol";
@@ -19,9 +19,8 @@ import {REVLoanSource} from "../src/structs/REVLoanSource.sol";
 import {REVDescription} from "../src/structs/REVDescription.sol";
 import {REVBuybackPoolConfig} from "../src/structs/REVBuybackPoolConfig.sol";
 import {IREVLoans} from "./../src/interfaces/IREVLoans.sol";
-import {REVTiered721HookDeployer} from "./../src/REVTiered721HookDeployer.sol";
 import {JBSuckerDeployerConfig} from "@bananapus/suckers/src/structs/JBSuckerDeployerConfig.sol";
-import {REVCroptopDeployer} from "./../src/REVCroptopDeployer.sol";
+import {REVDeployer} from "./../src/REVDeployer.sol";
 
 struct FeeProjectConfig {
     REVConfig configuration;
@@ -45,9 +44,7 @@ contract DeployScript is Script, Sphinx {
     SwapTerminalDeployment swapTerminal;
 
     /// @notice the salts that are used to deploy the contracts.
-    bytes32 BASIC_DEPLOYER = "REVBasicDeployer";
-    bytes32 NFT_HOOK_DEPLOYER = "REVTiered721HookDeployer";
-    bytes32 CROPTOP_DEPLOYER = "REVCroptopDeployer";
+    bytes32 BASIC_DEPLOYER = "REVDeployer";
 
     address OPERATOR = address(this);
     bytes32 ERC20_SALT = "REV_TOKEN";
@@ -148,7 +145,8 @@ contract DeployScript is Script, Sphinx {
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceDecayFrequency: 90 days,
                 issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
-                cashOutTaxRate: 6000 // 0.6
+                cashOutTaxRate: 6000, // 0.6
+                extraMetadata: 0
             });
         }
 
@@ -159,7 +157,8 @@ contract DeployScript is Script, Sphinx {
             initialIssuance: 0, // inherit from previous cycle.
             issuanceDecayFrequency: 180 days,
             issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
-            cashOutTaxRate: 6000 // 0.6
+            cashOutTaxRate: 6000, // 0.6
+            extraMetadata: 0
         });
 
         stageConfigurations[2] = REVStageConfig({
@@ -169,7 +168,8 @@ contract DeployScript is Script, Sphinx {
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
             issuanceDecayFrequency: 0,
             issuanceDecayPercent: 0,
-            cashOutTaxRate: 6000 // 0.6
+            cashOutTaxRate: 6000, // 0.6
+            extraMetadata: 0
         });
 
         // The project's revnet configuration
@@ -212,12 +212,12 @@ contract DeployScript is Script, Sphinx {
         if (
             !_isDeployed(
                 BASIC_DEPLOYER,
-                type(REVBasicDeployer).creationCode,
-                abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID)
+                type(REVDeployer).creationCode,
+                abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher)
             )
         ) {
-            REVBasicDeployer _basicDeployer =
-                new REVBasicDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, FEE_PROJECT_ID);
+            REVDeployer _basicDeployer =
+                new REVDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher);
 
             // Approve the basic deployer to configure the project.
             core.projects.approve(address(_basicDeployer), FEE_PROJECT_ID);
@@ -225,38 +225,20 @@ contract DeployScript is Script, Sphinx {
             // Build the config.
             FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
+            // Empty hook config.
+            REVDeploy721TiersHookConfig memory hookConfiguration;
+
             // Configure the project.
             _basicDeployer.deployFor({
                 revnetId: FEE_PROJECT_ID,
                 configuration: feeProjectConfig.configuration,
                 terminalConfigurations: feeProjectConfig.terminalConfigurations,
                 buybackHookConfiguration: feeProjectConfig.buybackHookConfiguration,
-                suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration
+                suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration,
+                hookConfiguration: hookConfiguration,
+                otherPayHooksSpecifications: new JBPayHookSpecification[](0),
+                allowedPosts: new REVCroptopAllowedPost[](0)
             });
-        }
-
-        if (
-            !_isDeployed(
-                NFT_HOOK_DEPLOYER,
-                type(REVTiered721HookDeployer).creationCode,
-                abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer)
-            )
-        ) {
-            new REVTiered721HookDeployer{salt: NFT_HOOK_DEPLOYER}(
-                core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer
-            );
-        }
-
-        if (
-            !_isDeployed(
-                CROPTOP_DEPLOYER,
-                type(REVCroptopDeployer).creationCode,
-                abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher)
-            )
-        ) {
-            new REVCroptopDeployer{salt: CROPTOP_DEPLOYER}(
-                core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher
-            );
         }
 
         // TODO get a reference to the $REV revnet specifications that will be set.

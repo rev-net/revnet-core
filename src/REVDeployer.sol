@@ -35,16 +35,23 @@ import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol
 import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackHook.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
 import {JBSuckerDeployerConfig} from "@bananapus/suckers/src/structs/JBSuckerDeployerConfig.sol";
+import {CTPublisher} from "@croptop/core/src/CTPublisher.sol";
+import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
+import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
+import {IJBPayHook} from "@bananapus/core/src/interfaces/IJBPayHook.sol";
+import {CTAllowedPost} from "@croptop/core/src/structs/CTAllowedPost.sol";
 
-import {REVConfig} from "./../structs/REVConfig.sol";
-import {REVLoanSource} from "./../structs/REVLoanSource.sol";
-import {IREVBasic} from "./../interfaces/IREVBasic.sol";
-import {IREVLoans} from "../interfaces/IREVLoans.sol";
-import {REVMintConfig} from "./../structs/REVMintConfig.sol";
-import {REVStageConfig} from "./../structs/REVStageConfig.sol";
-import {REVBuybackHookConfig} from "./../structs/REVBuybackHookConfig.sol";
-import {REVBuybackPoolConfig} from "./../structs/REVBuybackPoolConfig.sol";
-import {REVSuckerDeploymentConfig} from "./../structs/REVSuckerDeploymentConfig.sol";
+import {REVConfig} from "./structs/REVConfig.sol";
+import {REVLoanSource} from "./structs/REVLoanSource.sol";
+import {IREVDeployer} from "./interfaces/IREVDeployer.sol";
+import {IREVLoans} from "./interfaces/IREVLoans.sol";
+import {REVMintConfig} from "./structs/REVMintConfig.sol";
+import {REVStageConfig} from "./structs/REVStageConfig.sol";
+import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
+import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
+import {REVDeploy721TiersHookConfig} from "./structs/REVDeploy721TiersHookConfig.sol";
+import {REVCroptopAllowedPost} from "./structs/REVCroptopAllowedPost.sol";
+import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol";
 
 /// @notice `REVBasic` contains core logic for deploying, managing, and operating Revnets.
 /// @dev Key features:
@@ -53,7 +60,7 @@ import {REVSuckerDeploymentConfig} from "./../structs/REVSuckerDeploymentConfig.
 /// - `beforeRedeemRecordedWith(…)` calculates the fee to be charged on redemptions, and
 ///   `afterRedeemRecordedWith(…)` processes that fee.
 /// - `deploySuckersFor(…)` allows a revnet's split operator to deploy new suckers for an existing revnet.
-abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC721Receiver {
+contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721Receiver {
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
@@ -92,6 +99,12 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
 
     /// @notice The sucker registry that deploys and tracks suckers for revnets.
     IJBSuckerRegistry public immutable override SUCKER_REGISTRY;
+
+    /// @notice The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
+    CTPublisher public immutable override PUBLISHER;
+
+    /// @notice The contract responsible for deploying the tiered 721 hook.
+    IJB721TiersHookDeployer public immutable override HOOK_DEPLOYER;
 
     //*********************************************************************//
     // --------------------- public stored properties -------------------- //
@@ -299,7 +312,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     /// @dev See `IERC165.supportsInterface`.
     /// @return A flag indicating if the provided interface ID is supported.
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return interfaceId == type(IREVBasic).interfaceId || interfaceId == type(IJBRulesetDataHook).interfaceId
+        return interfaceId == type(IREVDeployer).interfaceId || interfaceId == type(IJBRulesetDataHook).interfaceId
             || interfaceId == type(IJBRedeemHook).interfaceId || interfaceId == type(IERC721Receiver).interfaceId;
     }
 
@@ -310,10 +323,17 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     /// @param controller The controller used to launch Juicebox projects which will be revnets.
     /// @param suckerRegistry The registry that deploys and tracks each revnet's suckers.
     /// @param feeRevnetId The Juicebox project ID of the revnet that will receive fees.
-    constructor(IJBController controller, IJBSuckerRegistry suckerRegistry, uint256 feeRevnetId) {
+    /// @param hookDeployer The 721 tiers hook deployer.
+    /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
+    constructor(IJBController controller, IJBSuckerRegistry suckerRegistry, uint256 feeRevnetId, 
+        IJB721TiersHookDeployer hookDeployer,
+        CTPublisher publisher
+    ) {
         CONTROLLER = controller;
         SUCKER_REGISTRY = suckerRegistry;
         FEE_REVNET_ID = feeRevnetId;
+        HOOK_DEPLOYER = hookDeployer;
+        PUBLISHER = publisher;
 
         // Give the sucker registry permission to map tokens.
         _setPermission({operator: address(SUCKER_REGISTRY), revnetId: 0, permissionId: JBPermissionIds.MAP_SUCKER_TOKEN});
@@ -322,6 +342,77 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     //*********************************************************************//
     // --------------------- external transactions ----------------------- //
     //*********************************************************************//
+
+    // /// @notice Launch a basic revnet.
+    // /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
+    // /// @param configuration The data needed to deploy a basic revnet.
+    // /// @param terminalConfigurations The terminals that the network uses to accept payments through.
+    // /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
+    // /// for new participants.
+    // /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
+    // /// @return revnetId The ID of the newly created revnet.
+    // function deployFor(
+    //     uint256 revnetId,
+    //     REVConfig memory configuration,
+    //     JBTerminalConfig[] memory terminalConfigurations,
+    //     REVBuybackHookConfig memory buybackHookConfiguration,
+    //     REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+    // )
+    //     external
+    //     override
+    //     returns (uint256)
+    // {
+    //     // Deploy main revnet.
+    //     return _launchRevnetFor({
+    //         revnetId: revnetId,
+    //         configuration: configuration,
+    //         terminalConfigurations: terminalConfigurations,
+    //         buybackHookConfiguration: buybackHookConfiguration,
+    //         extraHookMetadata: 0,
+    //         suckerDeploymentConfiguration: suckerDeploymentConfiguration
+    //     });
+    // }
+
+    /// @notice Launch a revnet that supports 721 sales.
+    /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
+    /// @param configuration The data needed to deploy a basic revnet.
+    /// @param terminalConfigurations The terminals that the network uses to accept payments through.
+    /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
+    /// for new participants.
+    /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
+    /// @param hookConfiguration Data used for setting up the 721 tiers.
+    /// @param otherPayHooksSpecifications Any hooks that should run when the revnet is paid alongside the 721 hook.
+    /// @param allowedPosts The type of posts that the revent should allow.
+    /// @return revnetId The ID of the newly created revnet.
+    /// @return hook The address of the 721 hook that was deployed on the revnet.
+    function deployFor(
+        uint256 revnetId,
+        REVConfig calldata configuration,
+        JBTerminalConfig[] memory terminalConfigurations,
+        REVBuybackHookConfig memory buybackHookConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration,
+        REVDeploy721TiersHookConfig memory hookConfiguration,
+        JBPayHookSpecification[] memory otherPayHooksSpecifications,
+        REVCroptopAllowedPost[] memory allowedPosts
+    )
+        external
+        override
+        returns (uint256, IJB721TiersHook hook)
+    {
+        // Deploy the revnet with tiered 721 hooks.
+        (revnetId, hook) = _launchCroptopRevnetFor({
+            revnetId: revnetId,
+            configuration: configuration,
+            terminalConfigurations: terminalConfigurations,
+            buybackHookConfiguration: buybackHookConfiguration,
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration,
+            hookConfiguration: hookConfiguration,
+            otherPayHooksSpecifications: otherPayHooksSpecifications,
+            allowedPosts: allowedPosts
+        });
+
+        return (revnetId, hook);
+    }
 
     /// @notice Processes the cashout fee from a redemption.
     /// @param context Redemption context passed in by the terminal.
@@ -446,13 +537,93 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     // --------------------- itnernal transactions ----------------------- //
     //*********************************************************************//
 
+    /// @notice Launch a revnet that supports 721 sales.
+    /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
+    /// @param configuration The data needed to deploy a basic revnet.
+    /// @param terminalConfigurations The terminals that the network uses to accept payments through.
+    /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
+    /// for new participants.
+    /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
+    /// @param hookConfiguration Data used for setting up the 721 tiers.
+    /// @param otherPayHooksSpecifications Any hooks that should run when the revnet is paid alongside the 721 hook.
+    /// @param allowedPosts The type of posts that the revent should allow.
+    /// @return revnetId The ID of the newly created revnet.
+    /// @return hook The address of the 721 hook that was deployed on the revnet.
+    function _launchCroptopRevnetFor(
+        uint256 revnetId,
+        REVConfig memory configuration,
+        JBTerminalConfig[] memory terminalConfigurations,
+        REVBuybackHookConfig memory buybackHookConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration,
+        REVDeploy721TiersHookConfig memory hookConfiguration,
+        JBPayHookSpecification[] memory otherPayHooksSpecifications,
+        REVCroptopAllowedPost[] memory allowedPosts
+    )
+        internal
+        returns (uint256, IJB721TiersHook hook)
+    {
+        // Keep a reference to the original revnet ID passed in.
+        uint256 originalRevnetId = revnetId;
+
+        // Get the revnet ID, optimistically knowing it will be one greater than the current count.
+        if (originalRevnetId == 0) revnetId = _projects().count() + 1;
+
+        // Keep a reference to the number of pay hooks passed in.
+        uint256 numberOfOtherPayHooks = otherPayHooksSpecifications.length;
+
+        // Repopulate the updated list with the params passed in.
+        for (uint256 i; i < numberOfOtherPayHooks; i++) {
+            _payHookSpecificationsOf[revnetId].push(otherPayHooksSpecifications[i]);
+        }
+
+        // Deploy the tiered 721 hook contract.
+        // slither-disable-next-line reentrancy-benign
+        hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration.baseline721HookConfiguration);
+
+        // Add the tiered 721 hook at the end.
+        _payHookSpecificationsOf[revnetId].push(JBPayHookSpecification({hook: IJBPayHook(address(hook)), amount: 0, metadata: bytes("")}));
+
+        // If needed, give the operator permission to add and remove tiers.
+        if (hookConfiguration.splitOperatorCanAdjustTiers) {
+            _extraOperatorPermissions[revnetId].push(JBPermissionIds.ADJUST_721_TIERS);
+        }
+
+        // If needed, give the operator permission to set the 721's metadata.
+        if (hookConfiguration.splitOperatorCanUpdateMetadata) {
+            _extraOperatorPermissions[revnetId].push(JBPermissionIds.SET_721_METADATA);
+        }
+
+        // If needed, give the operator permission to mint 721's from tiers that allow it.
+        if (hookConfiguration.splitOperatorCanMint) {
+            _extraOperatorPermissions[revnetId].push(JBPermissionIds.MINT_721);
+        }
+
+        _launchRevnetFor({
+            revnetId: originalRevnetId,
+            configuration: configuration,
+            terminalConfigurations: terminalConfigurations,
+            buybackHookConfiguration: buybackHookConfiguration,
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration
+        });
+
+        // Format the posts.
+        if (_configurePostingCriteriaFor({hook: address(hook), allowedPosts: allowedPosts})) {
+            // Give the croptop publisher permission to post on this contract's behalf.
+            _setPermission({
+                operator: address(PUBLISHER),
+                revnetId: revnetId,
+                permissionId: JBPermissionIds.ADJUST_721_TIERS
+            });
+        }
+
+        return (revnetId, hook);
+    }
+
     /// @notice Deploy a revnet, or convert an existing Juicebox project into a revnet.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration The revnet's rules and setup. See `REVConfig`.
     /// @param terminalConfigurations The terminals to set up for the revnet.
     /// @param buybackHookConfiguration The buyback hook and the pools to use for buybacks.
-    /// @param dataHook The address of the buyback data hook.
-    /// @param extraHookMetadata Customizeable per-project configuration for hooks to read.
     /// @param suckerDeploymentConfiguration The sucker deployer and mappings to set up for the revnet.
     /// @return revnetId The ID of the newly created revnet.
     /// @dev Note that `extraHookMetadata` defines project-specific hook configuration, defined by the hook in question.
@@ -462,8 +633,6 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
-        IJBBuybackHook dataHook,
-        uint256 extraHookMetadata,
         REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
     )
         internal
@@ -471,7 +640,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
     {
         // Normalize the configurations.
         (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration) =
-            _makeRulesetConfigurations(configuration, address(dataHook), extraHookMetadata);
+            _makeRulesetConfigurations(configuration);
 
         if (revnetId == 0) {
             // If we're deploying a new revnet, launch a Juicebox project for it.
@@ -571,6 +740,45 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
         );
 
         return revnetId;
+    }
+
+    /// @notice Configure croptop posting.
+    /// @param hook The hook that will be posted to.
+    /// @param allowedPosts The type of posts that the revent should allow.
+    /// @return flag A flag indicating if posts were configured.
+    function _configurePostingCriteriaFor(address hook, REVCroptopAllowedPost[] memory allowedPosts) internal returns (bool) {
+        // Keep a reference to the number of allowed posts.
+        uint256 numberOfAllowedPosts = allowedPosts.length;
+
+        // Exit if there are no post criteria to configure.
+        if (numberOfAllowedPosts == 0) return false;
+
+        // Keep a reference to the formatted allowed posts.
+        CTAllowedPost[] memory formattedAllowedPosts = new CTAllowedPost[](numberOfAllowedPosts);
+
+        // Keep a reference to the post being iterated on.
+        REVCroptopAllowedPost memory post;
+
+        // Specify the hook for each allowed post.
+        for (uint256 i; i < numberOfAllowedPosts; i++) {
+            // Set the post being iterated on.
+            post = allowedPosts[i];
+
+            // Set the formated post.
+            formattedAllowedPosts[i] = CTAllowedPost({
+                hook: hook,
+                category: post.category,
+                minimumPrice: post.minimumPrice,
+                minimumTotalSupply: post.minimumTotalSupply,
+                maximumTotalSupply: post.maximumTotalSupply,
+                allowedAddresses: post.allowedAddresses
+            });
+        }
+
+        // Configure allowed posts.
+        PUBLISHER.configurePostingCriteriaFor({allowedPosts: formattedAllowedPosts});
+
+        return true;
     }
 
     /// @notice Sets the cash out delay if the revnet's stages are already in progress.
@@ -743,14 +951,10 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
 
     /// @notice Schedules the initial ruleset for the revnet, and queues all subsequent rulesets that define the stages.
     /// @notice configuration The data that defines the revnet's characteristics.
-    /// @notice dataHook The address of the data hook.
-    /// @notice extraMetadata Extra info to send to the hook.
     /// @return rulesetConfigurations The ruleset configurations that define the revnet's stages.
     /// @return encodedConfiguration The encoded configuration of the revnet.
     function _makeRulesetConfigurations(
-        REVConfig memory configuration,
-        address dataHook,
-        uint256 extraMetadata
+        REVConfig memory configuration
     )
         internal
         view
@@ -787,6 +991,16 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
                 revert REVBasic_StageTimesMustIncrease();
             }
 
+            // Specificy the ruleset's metadata.
+            JBRulesetMetadata memory metadata;
+            metadata.reservedPercent = stageConfiguration.splitPercent;
+            metadata.redemptionRate = JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.cashOutTaxRate;
+            metadata.baseCurrency = configuration.baseCurrency;
+            metadata.allowOwnerMinting = true; // Allow this contract to auto mint tokens as the network owner.
+            metadata.useDataHookForPay = true; // Use the buyback data hook.
+            metadata.dataHook = address(this); // This contract is the data hook.
+            metadata.metadata = stageConfiguration.extraMetadata;
+
             // Specify the ruleset.
             rulesetConfigurations[i] = JBRulesetConfig({
                 mustStartAtOrAfter: stageConfiguration.startsAtOrAfter,
@@ -794,27 +1008,7 @@ abstract contract REVBasic is IREVBasic, IJBRulesetDataHook, IJBRedeemHook, IERC
                 weight: stageConfiguration.initialIssuance,
                 decayPercent: stageConfiguration.issuanceDecayPercent,
                 approvalHook: IJBRulesetApprovalHook(address(0)),
-                metadata: JBRulesetMetadata({
-                    reservedPercent: stageConfiguration.splitPercent,
-                    redemptionRate: JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.cashOutTaxRate,
-                    baseCurrency: configuration.baseCurrency,
-                    pausePay: false,
-                    pauseCreditTransfers: false,
-                    allowOwnerMinting: true, // Allow this contract to auto mint tokens as the network owner.
-                    allowSetCustomToken: false,
-                    allowTerminalMigration: false,
-                    allowSetTerminals: false,
-                    allowSetController: false,
-                    allowAddAccountingContext: false,
-                    allowAddPriceFeed: false,
-                    ownerMustSendPayouts: false,
-                    holdFees: false,
-                    useTotalSurplusForRedemptions: false,
-                    useDataHookForPay: true, // Use the buyback data hook.
-                    useDataHookForRedeem: false,
-                    dataHook: dataHook,
-                    metadata: uint16(extraMetadata)
-                }),
+                metadata: metadata,
                 splitGroups: new JBSplitGroup[](0),
                 fundAccessLimitGroups: fundAccessLimitGroups
             });

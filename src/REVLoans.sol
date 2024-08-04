@@ -22,7 +22,7 @@ import {JBSingleAllowance} from "@bananapus/core/src/structs/JBSingleAllowance.s
 import {JBRuleset} from "@bananapus/core/src/structs/JBRuleset.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
 
-import {IREVBasic} from "./interfaces/IREVBasic.sol";
+import {IREVDeployer} from "./interfaces/IREVDeployer.sol";
 import {IREVLoans} from "./interfaces/IREVLoans.sol";
 import {REVLoan} from "./structs/REVLoan.sol";
 import {REVLoanSource} from "./structs/REVLoanSource.sol";
@@ -148,7 +148,7 @@ contract REVLoans is ERC721, IREVLoans {
     /// @return borrowableAmount The amount that can be borrowed from the revnet.
     function borrowableAmountFrom(uint256 revnetId, uint256 collateral) external view returns (uint256) {
         // Keep a reference to the revnet's owner.
-        IREVBasic revnetOwner = IREVBasic(PROJECTS.ownerOf(revnetId));
+        IREVDeployer revnetOwner = IREVDeployer(PROJECTS.ownerOf(revnetId));
 
         // Keep a reference to the revnet's controller.
         IJBController controller = revnetOwner.CONTROLLER();
@@ -362,7 +362,7 @@ contract REVLoans is ERC721, IREVLoans {
         internal
     {
         // Keep a reference to the revnet's owner.
-        IREVBasic revnetOwner = IREVBasic(PROJECTS.ownerOf(loan.revnetId));
+        IREVDeployer revnetOwner = IREVDeployer(PROJECTS.ownerOf(loan.revnetId));
 
         // Keep a reference to the revnet's controller.
         IJBController controller = revnetOwner.CONTROLLER();
