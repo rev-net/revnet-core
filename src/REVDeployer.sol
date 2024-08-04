@@ -75,9 +75,11 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     // ------------------------- public constants ------------------------ //
     //*********************************************************************//
 
-    /// @notice The number of seconds until a revnet's participants can cash out, starting from the time when that revnet is deployed to a new network.
+    /// @notice The number of seconds until a revnet's participants can cash out, starting from the time when that
+    /// revnet is deployed to a new network.
     /// - Only applies to existing revnets which are deploying onto a new network.
-    /// - Intended to prevent liquidity/arbitrage issues which might arise when an existing revnet has a brand new treasury.
+    /// - Intended to prevent liquidity/arbitrage issues which might arise when an existing revnet has a brand new
+    /// treasury.
     /// @dev 30 days, in seconds.
     uint256 public constant override CASH_OUT_DELAY = 2_592_000;
 
@@ -174,8 +176,10 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @notice Before a revnet processes an incoming payment, determine the weight and pay hooks to use.
     /// @dev This function is part of `IJBRulesetDataHook`, and gets called before the revnet processes a payment.
     /// @param context Standard Juicebox payment context. See `JBBeforePayRecordedContext`.
-    /// @return weight The weight which revnet tokens are minted relative to. This can be used to customize how many tokens get minted by a payment.
-    /// @return hookSpecifications Amounts (out of what's being paid in) to be sent to pay hooks instead of being paid into the revnet. Useful for automatically routing funds from a treasury as payments come in.
+    /// @return weight The weight which revnet tokens are minted relative to. This can be used to customize how many
+    /// tokens get minted by a payment.
+    /// @return hookSpecifications Amounts (out of what's being paid in) to be sent to pay hooks instead of being paid
+    /// into the revnet. Useful for automatically routing funds from a treasury as payments come in.
     function beforePayRecordedWith(JBBeforePayRecordedContext calldata context)
         external
         view
@@ -230,7 +234,12 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         external
         view
         override
-        returns (uint256 redemptionRate, uint256 redeemCount, uint256 totalSupply, JBRedeemHookSpecification[] memory hookSpecifications)
+        returns (
+            uint256 redemptionRate,
+            uint256 redeemCount,
+            uint256 totalSupply,
+            JBRedeemHookSpecification[] memory hookSpecifications
+        )
     {
         // If the redeemer is a sucker, return the full redemption amount without taxes or fees.
         if (_isSuckerOf({revnetId: context.projectId, addr: context.holder})) {
@@ -325,7 +334,10 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @param feeRevnetId The Juicebox project ID of the revnet that will receive fees.
     /// @param hookDeployer The 721 tiers hook deployer.
     /// @param publisher The croptop publisher that facilitates the permissioned publishing of 721 posts to a revnet.
-    constructor(IJBController controller, IJBSuckerRegistry suckerRegistry, uint256 feeRevnetId, 
+    constructor(
+        IJBController controller,
+        IJBSuckerRegistry suckerRegistry,
+        uint256 feeRevnetId,
         IJB721TiersHookDeployer hookDeployer,
         CTPublisher publisher
     ) {
@@ -343,37 +355,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     // --------------------- external transactions ----------------------- //
     //*********************************************************************//
 
-    // /// @notice Launch a basic revnet.
-    // /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
-    // /// @param configuration The data needed to deploy a basic revnet.
-    // /// @param terminalConfigurations The terminals that the network uses to accept payments through.
-    // /// @param buybackHookConfiguration Data used for setting up the buyback hook to use when determining the best price
-    // /// for new participants.
-    // /// @param suckerDeploymentConfiguration Information about how this revnet relates to other's across chains.
-    // /// @return revnetId The ID of the newly created revnet.
-    // function deployFor(
-    //     uint256 revnetId,
-    //     REVConfig memory configuration,
-    //     JBTerminalConfig[] memory terminalConfigurations,
-    //     REVBuybackHookConfig memory buybackHookConfiguration,
-    //     REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
-    // )
-    //     external
-    //     override
-    //     returns (uint256)
-    // {
-    //     // Deploy main revnet.
-    //     return _launchRevnetFor({
-    //         revnetId: revnetId,
-    //         configuration: configuration,
-    //         terminalConfigurations: terminalConfigurations,
-    //         buybackHookConfiguration: buybackHookConfiguration,
-    //         extraHookMetadata: 0,
-    //         suckerDeploymentConfiguration: suckerDeploymentConfiguration
-    //     });
-    // }
-
-    /// @notice Launch a revnet that supports 721 sales.
+    /// @notice Launch a revnet, optionally supporting 721 sales.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration The data needed to deploy a basic revnet.
     /// @param terminalConfigurations The terminals that the network uses to accept payments through.
@@ -387,7 +369,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @return hook The address of the 721 hook that was deployed on the revnet.
     function deployFor(
         uint256 revnetId,
-        REVConfig calldata configuration,
+        REVConfig memory configuration,
         JBTerminalConfig[] memory terminalConfigurations,
         REVBuybackHookConfig memory buybackHookConfiguration,
         REVSuckerDeploymentConfig memory suckerDeploymentConfiguration,
@@ -416,7 +398,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
     /// @notice Processes the cashout fee from a redemption.
     /// @param context Redemption context passed in by the terminal.
-    function afterRedeemRecordedWith(JBAfterRedeemRecordedContext calldata context) external payable {
+    function afterRedeemRecordedWith(JBAfterRedeemRecordedContext memory context) external payable {
         // Only the revnet's payment terminals can access this function.
         if (!_directory().isTerminalOf(context.projectId, IJBTerminal(msg.sender))) {
             revert REVBasic_Unauthorized();
@@ -461,8 +443,8 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @param suckerDeploymentConfiguration The specifics about the suckers being deployed.
     function deploySuckersFor(
         uint256 revnetId,
-        bytes calldata encodedConfiguration,
-        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
+        bytes memory encodedConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
     )
         external
         override
@@ -581,7 +563,9 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         hook = HOOK_DEPLOYER.deployHookFor(revnetId, hookConfiguration.baseline721HookConfiguration);
 
         // Add the tiered 721 hook at the end.
-        _payHookSpecificationsOf[revnetId].push(JBPayHookSpecification({hook: IJBPayHook(address(hook)), amount: 0, metadata: bytes("")}));
+        _payHookSpecificationsOf[revnetId].push(
+            JBPayHookSpecification({hook: IJBPayHook(address(hook)), amount: 0, metadata: bytes("")})
+        );
 
         // If needed, give the operator permission to add and remove tiers.
         if (hookConfiguration.splitOperatorCanAdjustTiers) {
@@ -746,7 +730,13 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @param hook The hook that will be posted to.
     /// @param allowedPosts The type of posts that the revent should allow.
     /// @return flag A flag indicating if posts were configured.
-    function _configurePostingCriteriaFor(address hook, REVCroptopAllowedPost[] memory allowedPosts) internal returns (bool) {
+    function _configurePostingCriteriaFor(
+        address hook,
+        REVCroptopAllowedPost[] memory allowedPosts
+    )
+        internal
+        returns (bool)
+    {
         // Keep a reference to the number of allowed posts.
         uint256 numberOfAllowedPosts = allowedPosts.length;
 
@@ -876,7 +866,9 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                 }
                 // Store the amount of tokens that can be auto-minted on this chain during this stage.
                 else {
-                    emit StoreAutoMintAmount(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender);
+                    emit StoreAutoMintAmount(
+                        revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender
+                    );
 
                     // The first stage ID is stored at this block's timestamp,
                     // and further stage IDs have incrementally increasing IDs
@@ -953,9 +945,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @notice configuration The data that defines the revnet's characteristics.
     /// @return rulesetConfigurations The ruleset configurations that define the revnet's stages.
     /// @return encodedConfiguration The encoded configuration of the revnet.
-    function _makeRulesetConfigurations(
-        REVConfig memory configuration
-    )
+    function _makeRulesetConfigurations(REVConfig memory configuration)
         internal
         view
         returns (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration)
@@ -970,7 +960,12 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         rulesetConfigurations = new JBRulesetConfig[](numberOfStages);
 
         // Store the base currency in the encoding.
-        encodedConfiguration = _encodedConfig(configuration);
+        encodedConfiguration = abi.encode(
+            configuration.baseCurrency,
+            configuration.description.name,
+            configuration.description.ticker,
+            configuration.description.salt
+        );
 
         // Keep a reference to the stage configuration being iterated on.
         REVStageConfig memory stageConfiguration;
@@ -1083,18 +1078,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: splits});
     }
 
-    /// @notice Encodes a configuration into a hash.
-    /// @notice configuration The data that defines the revnet's characteristics.
-    /// @return encodedConfiguration The encoded config.
-    function _encodedConfig(REVConfig memory configuration) internal pure returns (bytes memory) {
-        return abi.encode(
-            configuration.baseCurrency,
-            configuration.description.name,
-            configuration.description.ticker,
-            configuration.description.salt
-        );
-    }
-
     /// @notice Encodes a stage configuration into a hash.
     /// @notice stageConfiguration The data that defines a revnet's stage characteristics.
     /// @notice stageNumber The number of the stage being encoded.
@@ -1134,12 +1117,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @return encodedMintConfig The encoded mint config.
     function _encodedMintConfig(REVMintConfig memory mintConfig) private pure returns (bytes memory) {
         return abi.encode(mintConfig.chainId, mintConfig.beneficiary, mintConfig.count);
-    }
-
-    /// @notice A reference to the controller's permissions contract.
-    /// @return permissions The permissions contract.
-    function _permissions() internal view returns (IJBPermissions) {
-        return IJBPermissioned(address(CONTROLLER)).PERMISSIONS();
     }
 
     /// @notice Set operator permissions for an account.
@@ -1218,6 +1195,12 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @return projects The projects contract.
     function _projects() internal view returns (IJBProjects) {
         return CONTROLLER.PROJECTS();
+    }
+
+    /// @notice A reference to the controller's permissions contract.
+    /// @return permissions The permissions contract.
+    function _permissions() internal view returns (IJBPermissions) {
+        return IJBPermissioned(address(CONTROLLER)).PERMISSIONS();
     }
 
     /// @notice Converts a uint256 array to a uint8 array.

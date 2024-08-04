@@ -34,9 +34,11 @@ import {REVLoanSource} from "./structs/REVLoanSource.sol";
 /// maximize the potential of issued loans while still favoring the next cash out rate from the revnet.
 /// @dev An upfront fee is taken when a loan is created. 2.5% is charged by the underlying protocol, 2.5% is charged
 /// by the
-/// revnet issuing the loan, and a variable amount charged by the revnet that receives the fees. This variable amount is chosen by the borrower, the more paid upfront, the longer the prepaid duration. The loan can be repaid anytime
+/// revnet issuing the loan, and a variable amount charged by the revnet that receives the fees. This variable amount is
+/// chosen by the borrower, the more paid upfront, the longer the prepaid duration. The loan can be repaid anytime
 /// within the prepaid duration without additional fees.
-/// After the prepaid duration, the loan will increasingly cost more to pay off. After 10 years, the loan collateral cannot be
+/// After the prepaid duration, the loan will increasingly cost more to pay off. After 10 years, the loan collateral
+/// cannot be
 /// recouped.
 contract REVLoans is ERC721, IREVLoans {
     // A library that parses the packed ruleset metadata into a friendlier format.
@@ -71,8 +73,10 @@ contract REVLoans is ERC721, IREVLoans {
     uint256 public constant override MAX_PREPAID_PERCENT = 500;
 
     /// @dev After the prepaid duration, the loan will cost more to pay off. After 10 years, the loan
-    /// collateral cannot be recouped. This means paying 50% of the loan amount upfront will pay for having access to the remaining 50% for 10 years,
-    /// whereas paying 0% of the loan upfront will cost 100% of the loan amount to be paid off after 10 years. After 10 years with repayment, both loans cost 100% and are liquidated.
+    /// collateral cannot be recouped. This means paying 50% of the loan amount upfront will pay for having access to
+    /// the remaining 50% for 10 years,
+    /// whereas paying 0% of the loan upfront will cost 100% of the loan amount to be paid off after 10 years. After 10
+    /// years with repayment, both loans cost 100% and are liquidated.
     uint256 public constant override LOAN_LIQUIDATION_DURATION = 3650 days;
 
     //*********************************************************************//

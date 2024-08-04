@@ -216,8 +216,9 @@ contract DeployScript is Script, Sphinx {
                 abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher)
             )
         ) {
-            REVDeployer _basicDeployer =
-                new REVDeployer{salt: BASIC_DEPLOYER}(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher);
+            REVDeployer _basicDeployer = new REVDeployer{salt: BASIC_DEPLOYER}(
+                core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher
+            );
 
             // Approve the basic deployer to configure the project.
             core.projects.approve(address(_basicDeployer), FEE_PROJECT_ID);

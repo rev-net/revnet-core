@@ -39,11 +39,7 @@ interface IREVDeployer {
         address caller
     );
 
-    event StoredPayHookSpecifications(
-        uint256 revnetId,
-        JBPayHookSpecification[] specifications,
-        address caller
-    );
+    event StoredPayHookSpecifications(uint256 revnetId, JBPayHookSpecification[] specifications, address caller);
 
     event SetCashOutDelay(uint256 indexed revnetId, uint256 cashOutDelay, address caller);
 
@@ -72,16 +68,6 @@ interface IREVDeployer {
     function payHookSpecificationsOf(uint256 revnetId) external view returns (JBPayHookSpecification[] memory);
     function isSplitOperatorOf(uint256 revnetId, address addr) external view returns (bool);
 
-//  function deployFor(
-//         uint256 revnetId,
-//         REVConfig memory configuration,
-//         JBTerminalConfig[] memory terminalConfigurations,
-//         REVBuybackHookConfig memory buybackHookConfiguration,
-//         REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
-//     )
-//         external
-//         returns (uint256);
-
     function deployFor(
         uint256 revnetId,
         REVConfig calldata configuration,
@@ -97,13 +83,11 @@ interface IREVDeployer {
 
     function setSplitOperatorOf(uint256 revnetId, address newSplitOperator) external;
     function autoMintFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
-    function deploySuckersFor(uint256 revnetId, bytes calldata encodedConfiguration, REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration) external;
-    function amountToAutoMint(
+    function deploySuckersFor(
         uint256 revnetId,
-        uint256 stageId,
-        address beneficiary
+        bytes calldata encodedConfiguration,
+        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
     )
-        external
-        view
-        returns (uint256);
+        external;
+    function amountToAutoMint(uint256 revnetId, uint256 stageId, address beneficiary) external view returns (uint256);
 }
