@@ -952,7 +952,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @notice Convert a revnet's stages into a series of Juicebox project rulesets.
     /// @param configuration The configuration containing the revnet's stages.
     /// @return rulesetConfigurations A list of ruleset configurations defined by the stages.
-    /// @return encodedConfiguration A hash based on the revnet's configuration. Used for sucker deployment salts.
+    /// @return encodedConfiguration A byte-encoded representation of the revnet's configuration. Used for sucker deployment salts.
     function _makeRulesetConfigurations(REVConfig memory configuration)
         internal
         view
@@ -967,7 +967,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Initialize the array of rulesets.
         rulesetConfigurations = new JBRulesetConfig[](numberOfStages);
 
-        // Add the base currency to the configuration hash.
+        // Add the base currency to the byte-encoded configuration.
         encodedConfiguration = abi.encode(
             configuration.baseCurrency,
             configuration.description.name,
@@ -1016,7 +1016,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                 fundAccessLimitGroups: fundAccessLimitGroups
             });
 
-            // Add the stage's properties to the configuration hash.
+            // Add the stage's properties to the byte-encoded configuration.
             encodedConfiguration = abi.encode(
                 encodedConfiguration, _encodedStageConfig({stageConfiguration: stageConfiguration, stageNumber: i})
             );
@@ -1089,7 +1089,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: splits});
     }
 
-    /// @notice Deterministically hashes a revnet stage. This is used for sucker deployment salts.
+    /// @notice Encodes a revnet stage. This is used for sucker deployment salts.
     /// @param stageConfiguration The stage's configuration.
     /// @param stageNumber The stage's number/ID.
     /// @return encodedConfiguration The encoded stage.
@@ -1104,7 +1104,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Encode the stage.
         encodedConfiguration = abi.encode(
             // If no start time is provided for the first stage, use the current block's timestamp.
-            // In the future, revnets deployed on other networks can match this revnet's stage hash by specifying the same start time.
+            // In the future, revnets deployed on other networks can match this revnet's encoded stage by specifying the same start time.
             (stageNumber == 0 && stageConfiguration.startsAtOrAfter == 0)
                 ? block.timestamp
                 : stageConfiguration.startsAtOrAfter,
@@ -1118,15 +1118,15 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Get a reference to the stage's auto-mints.
         uint256 numberOfAutoMints = stageConfiguration.autoMints.length;
 
-        // Add each auto-mint to the hash.
+        // Add each auto-mint to the byte-encoded representation.
         for (uint256 i; i < numberOfAutoMints; i++) {
             encodedConfiguration =
                 abi.encode(encodedConfiguration, _encodedAutoMint(stageConfiguration.autoMints[i]));
         }
     }
 
-    /// @notice Hashes an auto-mint.
-    /// @param autoMint The auto-mint to hash.
+    /// @notice Encodes an auto-mint.
+    /// @param autoMint The auto-mint to encode.
     /// @return encodedAutoMint The encoded auto-mint.
     function _encodedAutoMint(REVAutoMint memory autoMint) private pure returns (bytes memory) {
         return abi.encode(autoMint.chainId, autoMint.beneficiary, autoMint.count);
