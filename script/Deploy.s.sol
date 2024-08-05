@@ -14,7 +14,7 @@ import {Script} from "forge-std/Script.sol";
 import "./../src/REVDeployer.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
-import {REVStageConfig, REVMintConfig} from "../src/structs/REVStageConfig.sol";
+import {REVStageConfig, REVAutoMint} from "../src/structs/REVStageConfig.sol";
 import {REVLoanSource} from "../src/structs/REVLoanSource.sol";
 import {REVDescription} from "../src/structs/REVDescription.sol";
 import {REVBuybackPoolConfig} from "../src/structs/REVBuybackPoolConfig.sol";
@@ -131,8 +131,8 @@ contract DeployScript is Script, Sphinx {
         REVStageConfig[] memory stageConfigurations = new REVStageConfig[](3);
 
         {
-            REVMintConfig[] memory mintConfs = new REVMintConfig[](1);
-            mintConfs[0] = REVMintConfig({
+            REVAutoMint[] memory mintConfs = new REVAutoMint[](1);
+            mintConfs[0] = REVAutoMint({
                 chainId: uint32(block.chainid),
                 count: uint104(70_000 * decimalMultiplier),
                 beneficiary: OPERATOR
@@ -140,7 +140,7 @@ contract DeployScript is Script, Sphinx {
 
             stageConfigurations[0] = REVStageConfig({
                 startsAtOrAfter: uint40(block.timestamp),
-                mintConfigs: mintConfs,
+                autoMints: mintConfs,
                 splitPercent: 2000, // 20%
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceDecayFrequency: 90 days,
@@ -152,7 +152,7 @@ contract DeployScript is Script, Sphinx {
 
         stageConfigurations[1] = REVStageConfig({
             startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 720 days),
-            mintConfigs: new REVMintConfig[](0),
+            autoMints: new REVAutoMint[](0),
             splitPercent: 2000, // 20%
             initialIssuance: 0, // inherit from previous cycle.
             issuanceDecayFrequency: 180 days,
@@ -163,7 +163,7 @@ contract DeployScript is Script, Sphinx {
 
         stageConfigurations[2] = REVStageConfig({
             startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (20 * 365 days)),
-            mintConfigs: new REVMintConfig[](0),
+            autoMints: new REVAutoMint[](0),
             splitPercent: 0,
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
             issuanceDecayFrequency: 0,

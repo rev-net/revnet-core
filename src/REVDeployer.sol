@@ -43,7 +43,7 @@ import {CTAllowedPost} from "@croptop/core/src/structs/CTAllowedPost.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
 import {REVLoanSource} from "./structs/REVLoanSource.sol";
 import {IREVDeployer} from "./interfaces/IREVDeployer.sol";
-import {REVMintConfig} from "./structs/REVMintConfig.sol";
+import {REVAutoMint} from "./structs/REVAutoMint.sol";
 import {REVStageConfig} from "./structs/REVStageConfig.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
@@ -847,15 +847,15 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             stageConfiguration = configuration.stageConfigurations[i];
 
             // Keep a reference to the number of mints to store.
-            uint256 numberOfMints = stageConfiguration.mintConfigs.length;
+            uint256 numberOfMints = stageConfiguration.autoMints.length;
 
             // Keep a reference to the mint config being iterated on.
-            REVMintConfig memory mintConfig;
+            REVAutoMint memory mintConfig;
 
             // Loop through each mint to store its amount.
             for (uint256 j; j < numberOfMints; j++) {
                 // Set the mint config being iterated on.
-                mintConfig = stageConfiguration.mintConfigs[j];
+                mintConfig = stageConfiguration.autoMints[j];
 
                 // If the mint config is for another chain, skip it.
                 if (mintConfig.chainId != block.chainid) continue;
@@ -949,25 +949,25 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         }
     }
 
-    /// @notice Schedule a revnet's rulesets (which define its stages).
-    /// @param configuration The revnet's configuration.
-    /// @return rulesetConfigurations A normalized list of ruleset configurations (the stages).
-    /// @return encodedConfiguration The encoded configuration of the revnet, used for sucker deployment salts.
+    /// @notice Convert a revnet's stages into a series of Juicebox project rulesets.
+    /// @param configuration The configuration containing the revnet's stages.
+    /// @return rulesetConfigurations A list of ruleset configurations defined by the stages.
+    /// @return encodedConfiguration A hash based on the revnet's configuration. Used for sucker deployment salts.
     function _makeRulesetConfigurations(REVConfig memory configuration)
         internal
         view
         returns (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration)
     {
-        // Keep a reference to the number of stages to schedule.
+        // Keep a reference to the number of stages to queue as rulesets.
         uint256 numberOfStages = configuration.stageConfigurations.length;
 
         // If there are no stages, revert.
         if (numberOfStages == 0) revert REVBasic_StagesRequired();
 
-        // Initialize the array of normalized configurations.
+        // Initialize the array of rulesets.
         rulesetConfigurations = new JBRulesetConfig[](numberOfStages);
 
-        // Store the base currency in the encoded configuration.
+        // Add the base currency to the configuration hash.
         encodedConfiguration = abi.encode(
             configuration.baseCurrency,
             configuration.description.name,
@@ -975,18 +975,18 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             configuration.description.salt
         );
 
-        // Keep a reference to the stage configuration being iterated on.
+        // Keep a reference to the revnet stage being iterated on.
         REVStageConfig memory stageConfiguration;
 
-        // Make the fund access limit groups for the loan contract to use.
+        // Initialize fund access limit groups for the loan contract to use.
         JBFundAccessLimitGroup[] memory fundAccessLimitGroups = _makeLoanFundAccessLimits(configuration);
 
         // Keep a reference to the previous ruleset's start time.
         uint256 previousStartTime;
 
-        // Iterate through each stage to set up its ruleset configuration.
+        // Iterate through each stage to set up its ruleset.
         for (uint256 i; i < numberOfStages; i++) {
-            // Set the stage configuration being iterated on.
+            // Set the stage being iterated on.
             stageConfiguration = configuration.stageConfigurations[i];
 
             // If the stage's start time is not after the previous stage's start time, revert.
@@ -994,7 +994,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                 revert REVBasic_StageTimesMustIncrease();
             }
 
-            // Set the ruleset's metadata.
+            // Set up the ruleset's metadata.
             JBRulesetMetadata memory metadata;
             metadata.reservedPercent = stageConfiguration.splitPercent;
             metadata.redemptionRate = JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.cashOutTaxRate;
@@ -1004,7 +1004,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             metadata.dataHook = address(this); // This contract is the data hook.
             metadata.metadata = stageConfiguration.extraMetadata;
 
-            // Specify the ruleset.
+            // Set up the ruleset.
             rulesetConfigurations[i] = JBRulesetConfig({
                 mustStartAtOrAfter: stageConfiguration.startsAtOrAfter,
                 duration: stageConfiguration.issuanceDecayFrequency,
@@ -1016,18 +1016,19 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                 fundAccessLimitGroups: fundAccessLimitGroups
             });
 
-            // Add the stage's properties to the encoded configuration.
+            // Add the stage's properties to the configuration hash.
             encodedConfiguration = abi.encode(
                 encodedConfiguration, _encodedStageConfig({stageConfiguration: stageConfiguration, stageNumber: i})
             );
 
-            // Set the previous start time.
+            // Store the ruleset's start time for the next iteration.
             previousStartTime = stageConfiguration.startsAtOrAfter;
         }
     }
 
-    /// @notice Makes the fund access limit groups for the loans.
-    /// @param configuration The configuration of the revnet.
+    /// @notice Initialize a fund access limit group for the loan contract to use.
+    /// @dev Returns an unlimited surplus allowance for each token which can be loaned out.
+    /// @param configuration The revnet's configuration.
     /// @return fundAccessLimitGroups The fund access limit groups for the loans.
     function _makeLoanFundAccessLimits(REVConfig memory configuration)
         internal
@@ -1037,22 +1038,23 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Keep a reference to the number of loan access groups there are.
         uint256 numberOfLoanSources = configuration.loanSources.length;
 
-        // Keep a reference to the loan source that'll be iterated on.
+        // Keep a reference to the loan source to iterate on.
+        // Loans are sourced from a token accepted by one of the revnet's terminals.
         REVLoanSource memory loanSource;
 
-        // Keep a reference to the infinite surplus allowance currency amount.
+        // Set up an unlimited allowance for the loan contract to use.
         JBCurrencyAmount[] memory loanAllowances = new JBCurrencyAmount[](1);
         loanAllowances[0] = JBCurrencyAmount({currency: configuration.baseCurrency, amount: type(uint224).max});
 
-        // Initialize the groups.
+        // Initialize the fund access limit groups.
         fundAccessLimitGroups = new JBFundAccessLimitGroup[](numberOfLoanSources);
 
-        // Set the fund access  limits for the loans.
+        // Set up the fund access limits for the loans.
         for (uint256 i; i < numberOfLoanSources; i++) {
-            // Set the loan access group being iterated on.
+            // Set the loan source being iterated on.
             loanSource = configuration.loanSources[i];
 
-            // Set the fund access limits for the loans.
+            // Set up the fund access limits for the loans.
             fundAccessLimitGroups[i] = JBFundAccessLimitGroup({
                 terminal: address(loanSource.terminal),
                 token: loanSource.token,
@@ -1062,15 +1064,16 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         }
     }
 
-    /// @notice Creates a group of splits that goes entirely to the provided split operator.
+    /// @notice Creates a reserved token split group that goes entirely to the specified split operator.
+    /// @dev The operator can add other beneficiaries to the split group later, if they wish.
     /// @param splitOperator The address to send the entire split amount to.
-    /// @return splitGroups The split groups representing operator's split.
+    /// @return splitGroups The split group, entirely assigned to the operator.
     function _makeOperatorSplitGroupWith(address splitOperator)
         internal
         pure
         returns (JBSplitGroup[] memory splitGroups)
     {
-        // Send the operator all of the splits. They'll be able to change this later whenever they wish.
+        // Create a split group that assigns all of the splits to the operator.
         JBSplit[] memory splits = new JBSplit[](1);
         splits[0] = JBSplit({
             preferAddToBalance: false,
@@ -1086,10 +1089,10 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: splits});
     }
 
-    /// @notice Encodes a stage configuration into a hash.
-    /// @notice stageConfiguration The data that defines a revnet's stage characteristics.
-    /// @notice stageNumber The number of the stage being encoded.
-    /// @return encodedConfiguration The encoded config.
+    /// @notice Deterministically hashes a revnet stage. This is used for sucker deployment salts.
+    /// @param stageConfiguration The stage's configuration.
+    /// @param stageNumber The stage's number/ID.
+    /// @return encodedConfiguration The encoded stage.
     function _encodedStageConfig(
         REVStageConfig memory stageConfiguration,
         uint256 stageNumber
@@ -1098,8 +1101,10 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         view
         returns (bytes memory encodedConfiguration)
     {
+        // Encode the stage.
         encodedConfiguration = abi.encode(
-            // If no start time is provided for the first stage, use the current block timestamp.
+            // If no start time is provided for the first stage, use the current block's timestamp.
+            // In the future, revnets deployed on other networks can match this revnet's stage hash by specifying the same start time.
             (stageNumber == 0 && stageConfiguration.startsAtOrAfter == 0)
                 ? block.timestamp
                 : stageConfiguration.startsAtOrAfter,
@@ -1110,28 +1115,28 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             stageConfiguration.cashOutTaxRate
         );
 
-        // Get a reference to the mint configs.
-        uint256 numberOfMintConfigs = stageConfiguration.mintConfigs.length;
+        // Get a reference to the stage's auto-mints.
+        uint256 numberOfAutoMints = stageConfiguration.autoMints.length;
 
-        // Add each mint config to the hash.
-        for (uint256 i; i < numberOfMintConfigs; i++) {
+        // Add each auto-mint to the hash.
+        for (uint256 i; i < numberOfAutoMints; i++) {
             encodedConfiguration =
-                abi.encode(encodedConfiguration, _encodedMintConfig(stageConfiguration.mintConfigs[i]));
+                abi.encode(encodedConfiguration, _encodedAutoMint(stageConfiguration.autoMints[i]));
         }
     }
 
-    /// @notice Encodes a mint configuration into a hash.
-    /// @notice mintConfig The data that defines how many tokens are allowed to be minted at a stage.
-    /// @return encodedMintConfig The encoded mint config.
-    function _encodedMintConfig(REVMintConfig memory mintConfig) private pure returns (bytes memory) {
-        return abi.encode(mintConfig.chainId, mintConfig.beneficiary, mintConfig.count);
+    /// @notice Hashes an auto-mint.
+    /// @param autoMint The auto-mint to hash.
+    /// @return encodedAutoMint The encoded auto-mint.
+    function _encodedAutoMint(REVAutoMint memory autoMint) private pure returns (bytes memory) {
+        return abi.encode(autoMint.chainId, autoMint.beneficiary, autoMint.count);
     }
 
-    /// @notice Set operator permissions for an account.
-    /// @param account The account to set the permissions for.
-    /// @param operator The operator to allow.
-    /// @param revnetId The ID of the revnet to allow permissions for.
-    /// @param permissionIds The permissions to set for the operator.
+    /// @notice Grants a permission to an address (an "operator").
+    /// @param account The account granting the permission.
+    /// @param operator The address to give the permission to.
+    /// @param revnetId The ID of the revnet to scope the permission for.
+    /// @param permissionIds An array of permission IDs to set. See `JBPermissionIds`.
     function _setPermissionsFor(
         address account,
         address operator,
@@ -1140,7 +1145,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     )
         internal
     {
-        // Setup the permission data for the new split operator.
+        // Set up the permission data.
         JBPermissionsData memory permissionData =
             JBPermissionsData({operator: operator, projectId: uint56(revnetId), permissionIds: permissionIds});
 
@@ -1148,15 +1153,15 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         PERMISSIONS.setPermissionsFor({account: account, permissionsData: permissionData});
     }
 
-    /// @notice A flag indicating if an address is a sucker for a revnet.
+    /// @notice A flag indicating whether an address is a revnet's sucker.
     /// @param revnetId The ID of the revnet to check sucker status for.
-    /// @param addr The address to check sucker status for.
-    /// @return isSucker A flag indicating if the address is a sucker for the revnet.
+    /// @param addr The address being checked.
+    /// @return isSucker A flag indicating whether the address is one of the revnet's suckers.
     function _isSuckerOf(uint256 revnetId, address addr) internal view returns (bool) {
         return SUCKER_REGISTRY.isSuckerOf(revnetId, addr);
     }
 
-    /// @notice Mints tokens for a revnet.
+    /// @notice Mints a revnet's tokens.
     /// @param revnetId The ID of the revnet to mint tokens for.
     /// @param tokenCount The number of tokens to mint.
     /// @param beneficiary The address to send the tokens to.
@@ -1173,9 +1178,11 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
     /// @notice Deploy suckers for a revnet.
     /// @param revnetId The ID of the revnet to deploy suckers for.
-    /// @param operator The address of the operator that can later add new suckers.
-    /// @param encodedConfiguration The encoded configuration of the revnet.
-    /// @param suckerDeploymentConfiguration The configuration that specifies the deployment.
+    /// @param operator The address of the operator that can add new suckers in the future.
+    /// @param encodedConfiguration A byte-encoded representation of the revnet's configuration.
+    /// See `_makeRulesetConfigurations(…)` for encoding details. Clients can read the encoded configuration
+    /// from the `DeployRevnet` event emitted by this contract.
+    /// @param suckerDeploymentConfiguration The suckers to set up for the revnet.
     function _deploySuckersFor(
         uint256 revnetId,
         address operator,
@@ -1189,6 +1196,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
         emit DeploySuckers(revnetId, operator, salt, encodedConfiguration, suckerDeploymentConfiguration, msg.sender);
 
+        // Deploy the suckers.
         // slither-disable-next-line unused-return
         SUCKER_REGISTRY.deploySuckersFor({
             projectId: revnetId,
@@ -1197,14 +1205,14 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         });
     }
 
-    /// @notice Enforces that the message sender is the current split operator.
-    /// @param revnetId The ID of the revnet to check operator permissions for.
-    /// @param operator The address of the operator to check permissions for.
+    /// @notice If the specified address is not the revnet's current split operator, revert.
+    /// @param revnetId The ID of the revnet to check split operator status for.
+    /// @param operator The address being checked.
     function _checkIfSplitOperatorOf(uint256 revnetId, address operator) internal view {
         if (!isSplitOperatorOf(revnetId, operator)) revert REVBasic_Unauthorized();
     }
 
-    /// @notice Converts a uint256 array to a uint8 array.
+    /// @notice Converts a `uint256` array to a `uint8` array.
     /// @param array The array to convert.
     /// @return result The converted array.
     function _uint256ArrayToUint8Array(uint256[] memory array) internal returns (uint8[] memory result) {
