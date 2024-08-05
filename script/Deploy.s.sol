@@ -227,7 +227,7 @@ contract DeployScript is Script, Sphinx {
             FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
             // Empty hook config.
-            REVDeploy721TiersHookConfig memory hookConfiguration;
+            REVDeploy721TiersHookConfig memory tiered721HookConfiguration;
 
             // Configure the project.
             _basicDeployer.deployFor({
