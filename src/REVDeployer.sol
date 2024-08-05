@@ -86,7 +86,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// Cashout fees are paid to the revnet with the `FEE_REVNET_ID`.
     /// @dev Fees are charged on cashouts if the cashout tax rate is greater than 0%.
     /// @dev When suckers withdraw funds, they do not pay cashout fees.
-    uint256 public constant override FEE = 25; // 2.5%
+    uint256 public constant override FEE = 5; // 0.5%
 
     //*********************************************************************//
     // --------------- public immutable stored properties ---------------- //
