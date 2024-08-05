@@ -271,7 +271,8 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             metadata: abi.encode(feeTerminal)
         });
 
-        // Return the redemption rate and the number of revnet tokens to redeem, minus the tokens being used to pay the fee.
+        // Return the redemption rate and the number of revnet tokens to redeem, minus the tokens being used to pay the
+        // fee.
         return (context.redemptionRate, context.redeemCount - feeRedeemCount, context.totalSupply, hookSpecifications);
     }
 
@@ -570,7 +571,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Keep a reference to the revnet ID which was passed in.
         uint256 originalRevnetId = revnetId;
 
-        // If the caller is deploying a new revnet, calculate its ID 
+        // If the caller is deploying a new revnet, calculate its ID
         // (which will be 1 greater than the current count).
         if (originalRevnetId == 0) revnetId = PROJECTS.count() + 1;
 
@@ -952,7 +953,8 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @notice Convert a revnet's stages into a series of Juicebox project rulesets.
     /// @param configuration The configuration containing the revnet's stages.
     /// @return rulesetConfigurations A list of ruleset configurations defined by the stages.
-    /// @return encodedConfiguration A byte-encoded representation of the revnet's configuration. Used for sucker deployment salts.
+    /// @return encodedConfiguration A byte-encoded representation of the revnet's configuration. Used for sucker
+    /// deployment salts.
     function _makeRulesetConfigurations(REVConfig memory configuration)
         internal
         view
@@ -1104,7 +1106,8 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Encode the stage.
         encodedConfiguration = abi.encode(
             // If no start time is provided for the first stage, use the current block's timestamp.
-            // In the future, revnets deployed on other networks can match this revnet's encoded stage by specifying the same start time.
+            // In the future, revnets deployed on other networks can match this revnet's encoded stage by specifying the
+            // same start time.
             (stageNumber == 0 && stageConfiguration.startsAtOrAfter == 0)
                 ? block.timestamp
                 : stageConfiguration.startsAtOrAfter,
@@ -1120,8 +1123,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
         // Add each auto-mint to the byte-encoded representation.
         for (uint256 i; i < numberOfAutoMints; i++) {
-            encodedConfiguration =
-                abi.encode(encodedConfiguration, _encodedAutoMint(stageConfiguration.autoMints[i]));
+            encodedConfiguration = abi.encode(encodedConfiguration, _encodedAutoMint(stageConfiguration.autoMints[i]));
         }
     }
 
