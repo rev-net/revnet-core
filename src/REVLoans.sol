@@ -17,6 +17,7 @@ import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
 import {JBSurplus} from "@bananapus/core/src/libraries/JBSurplus.sol";
 import {JBRulesetMetadataResolver} from "@bananapus/core/src/libraries/JBRulesetMetadataResolver.sol";
 import {IJBPayoutTerminal} from "@bananapus/core/src/interfaces/IJBPayoutTerminal.sol";
+import {JBRedemptions} from "@bananapus/core/src/libraries/JBRedemptions.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBSingleAllowance} from "@bananapus/core/src/structs/JBSingleAllowance.sol";
 import {JBRuleset} from "@bananapus/core/src/structs/JBRuleset.sol";
@@ -30,8 +31,7 @@ import {REVLoanSource} from "./structs/REVLoanSource.sol";
 /// @notice A contract for borrowing from revnets.
 /// @dev Tokens used as collateral are burned, and reminted when the loan is paid off. This keeps the revnet's token
 /// structure orderly.
-/// @dev The borrowable amount is a linear proportionality between tokens and available funds. This works itself out to
-/// maximize the potential of issued loans while still favoring the next cash out rate from the revnet.
+/// @dev The borrowable amount is the same as the cash out amount. 
 /// @dev An upfront fee is taken when a loan is created. 2.5% is charged by the underlying protocol, 2.5% is charged
 /// by the
 /// revnet issuing the loan, and a variable amount charged by the revnet that receives the fees. This variable amount is
@@ -161,6 +161,7 @@ contract REVLoans is ERC721, IREVLoans {
             revnetId: revnetId,
             collateral: collateral,
             pendingAutomintTokens: revnetOwner.unrealizedAutoMintAmountOf(revnetId),
+            currentStage: controller.RULESETS().currentOf(revnetId),
             terminals: controller.DIRECTORY().terminalsOf(revnetId),
             prices: controller.PRICES(),
             tokens: controller.TOKENS()
@@ -382,6 +383,7 @@ contract REVLoans is ERC721, IREVLoans {
                     revnetId: loan.revnetId,
                     collateral: newCollateral,
                     pendingAutomintTokens: revnetOwner.unrealizedAutoMintAmountOf(loan.revnetId),
+                    currentStage: controller.RULESETS().currentOf(loan.revnetId),
                     terminals: directory.terminalsOf(loan.revnetId),
                     prices: controller.PRICES(),
                     tokens: controller.TOKENS()
@@ -628,10 +630,10 @@ contract REVLoans is ERC721, IREVLoans {
         });
     }
 
-    /// @notice Makes sure the provided loan is sufficiently collateralized given the new amounts.
-    /// @dev The borrowable amount is a linear proportionality between tokens and available funds.
+    /// @dev The amount that can be borrowed from a revnet given a certain amount of collateral.
     /// @param revnetId The ID of the revnet to check for borrowable assets from.
     /// @param collateral The amount of collateral that the loan will be collateralized with.
+    /// @param currentStage The current stage of the revnet.
     /// @param pendingAutomintTokens The amount of tokens pending automint from the revnet.
     /// @param terminals The terminals that the funds are being borrowed from.
     /// @param prices A contract that stores prices for each project.
@@ -640,6 +642,7 @@ contract REVLoans is ERC721, IREVLoans {
         uint256 revnetId,
         uint256 collateral,
         uint256 pendingAutomintTokens,
+        JBRuleset memory currentStage,
         IJBTerminal[] memory terminals,
         IJBPrices prices,
         IJBTokens tokens
@@ -672,7 +675,12 @@ contract REVLoans is ERC721, IREVLoans {
         uint256 totalCollateral = totalCollateralOf[revnetId];
 
         // Proportional.
-        return mulDiv(collateral, totalSurplus + totalBorrowed, totalSupply + totalCollateral + pendingAutomintTokens);
+        return JBRedemptions.reclaimFrom({
+            surplus: totalSurplus + totalBorrowed,
+            tokensRedeemed: collateral,
+            totalSupply: totalSupply + totalCollateral + pendingAutomintTokens,
+            redemptionRate: currentStage.redemptionRate()
+        });
     }
 
     /// @notice The total borrowed amount from a revnet.
