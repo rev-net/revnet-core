@@ -5,14 +5,10 @@ import {stdJson} from "forge-std/Script.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {SphinxConstants, NetworkInfo} from "@sphinx-labs/contracts/SphinxConstants.sol";
 
-import {REVBasicDeployer} from "../../src/REVBasicDeployer.sol";
-import {REVTiered721HookDeployer} from "../../src/REVTiered721HookDeployer.sol";
-import {REVCroptopDeployer} from "../../src/REVCroptopDeployer.sol";
+import {REVDeployer} from "./../../src/REVDeployer.sol";
 
 struct RevnetCoreDeployment {
-    REVBasicDeployer basic_deployer;
-    REVTiered721HookDeployer nft_hook_deployer;
-    REVCroptopDeployer croptop_deployer;
+    REVDeployer basic_deployer;
 }
 
 library RevnetCoreDeploymentLib {
@@ -47,14 +43,7 @@ library RevnetCoreDeploymentLib {
         returns (RevnetCoreDeployment memory deployment)
     {
         deployment.basic_deployer =
-            REVBasicDeployer(_getDeploymentAddress(path, "revnet-core-testnet", network_name, "REVBasicDeployer"));
-
-        deployment.nft_hook_deployer = REVTiered721HookDeployer(
-            _getDeploymentAddress(path, "revnet-core-testnet", network_name, "REVTiered721HookDeployer")
-        );
-
-        deployment.croptop_deployer =
-            REVCroptopDeployer(_getDeploymentAddress(path, "revnet-core-testnet", network_name, "REVCroptopDeployer"));
+            REVDeployer(_getDeploymentAddress(path, "revnet-core-testnet", network_name, "REVDeployer"));
     }
 
     /// @notice Get the address of a contract that was deployed by the Deploy script.
