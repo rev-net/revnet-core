@@ -31,7 +31,7 @@ import {REVLoanSource} from "./structs/REVLoanSource.sol";
 /// @notice A contract for borrowing from revnets.
 /// @dev Tokens used as collateral are burned, and reminted when the loan is paid off. This keeps the revnet's token
 /// structure orderly.
-/// @dev The borrowable amount is the same as the cash out amount. 
+/// @dev The borrowable amount is the same as the cash out amount.
 /// @dev An upfront fee is taken when a loan is created. 2.5% is charged by the underlying protocol, 2.5% is charged
 /// by the
 /// revnet issuing the loan, and a variable amount charged by the revnet that receives the fees. This variable amount is
@@ -810,4 +810,6 @@ contract REVLoans is ERC721, IREVLoans {
         // The amount should reflect the change in balance.
         return _balanceOf(token) - balanceBefore;
     }
+
+    fallback() external payable {}
 }
