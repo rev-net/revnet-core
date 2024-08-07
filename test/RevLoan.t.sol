@@ -62,6 +62,86 @@ contract REVLoansTests is TestBaseWorkflow, JBTest {
 
     address USER = makeAddr("user");
 
+    function launchAndConfigureFeeProject() public returns (uint256) {
+        JBRulesetMetadata memory _metadata = JBRulesetMetadata({
+            reservedPercent: JBConstants.MAX_RESERVED_PERCENT / 2, //50%
+            redemptionRate: JBConstants.MAX_REDEMPTION_RATE, //50%
+            baseCurrency: uint32(uint160(address(JBConstants.NATIVE_TOKEN))),
+            pausePay: false,
+            pauseCreditTransfers: false,
+            allowOwnerMinting: true,
+            allowSetCustomToken: false,
+            allowTerminalMigration: false,
+            allowSetTerminals: false,
+            allowSetController: false,
+            allowAddAccountingContext: true,
+            allowAddPriceFeed: true,
+            ownerMustSendPayouts: false,
+            holdFees: false,
+            useTotalSurplusForRedemptions: true,
+            useDataHookForPay: false,
+            useDataHookForRedeem: false,
+            dataHook: address(0),
+            metadata: 0
+        });
+
+        // Setup: terminal / project
+        // Package up the limits for the given terminal.
+        JBFundAccessLimitGroup[] memory _fundAccessLimitGroup = new JBFundAccessLimitGroup[](1);
+        {
+            // Specify a payout limit.
+            JBCurrencyAmount[] memory _payoutLimits = new JBCurrencyAmount[](1);
+            _payoutLimits[0] =
+                JBCurrencyAmount({amount: 10 * 10 ** 18, currency: uint32(uint160(JBConstants.NATIVE_TOKEN))});
+
+            // Specify a surplus allowance.
+            JBCurrencyAmount[] memory _surplusAllowances = new JBCurrencyAmount[](1);
+            _surplusAllowances[0] =
+                JBCurrencyAmount({amount: 5 * 10 ** 18, currency: uint32(uint160(JBConstants.NATIVE_TOKEN))});
+
+            _fundAccessLimitGroup[0] = JBFundAccessLimitGroup({
+                terminal: address(jbMultiTerminal()),
+                token: JBConstants.NATIVE_TOKEN,
+                payoutLimits: _payoutLimits,
+                surplusAllowances: _surplusAllowances
+            });
+        }
+
+        {
+            // Package up the ruleset configuration.
+            JBRulesetConfig[] memory _rulesetConfigurations = new JBRulesetConfig[](1);
+            _rulesetConfigurations[0].mustStartAtOrAfter = 0;
+            _rulesetConfigurations[0].duration = 0;
+            _rulesetConfigurations[0].weight = 1000 * 10 ** 18;
+            _rulesetConfigurations[0].decayPercent = 0;
+            _rulesetConfigurations[0].approvalHook = IJBRulesetApprovalHook(address(0));
+            _rulesetConfigurations[0].metadata = _metadata;
+            _rulesetConfigurations[0].splitGroups = new JBSplitGroup[](0);
+            _rulesetConfigurations[0].fundAccessLimitGroups = _fundAccessLimitGroup;
+
+            JBTerminalConfig[] memory _terminalConfigurations = new JBTerminalConfig[](1);
+            JBAccountingContext[] memory _tokensToAccept = new JBAccountingContext[](1);
+
+            _tokensToAccept[0] = JBAccountingContext({
+                token: JBConstants.NATIVE_TOKEN,
+                decimals: 18,
+                currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
+            });
+
+            _terminalConfigurations[0] =
+                JBTerminalConfig({terminal: jbMultiTerminal(), accountingContextsToAccept: _tokensToAccept});
+
+            // Create a first project to collect fees.
+            return jbController().launchProjectFor({
+                owner: multisig(),
+                projectUri: "whatever",
+                rulesetConfigurations: _rulesetConfigurations,
+                terminalConfigurations: _terminalConfigurations, // Set terminals to receive fees.
+                memo: ""
+            });
+        }
+    }
+
     function getFeeProjectConfig() internal view returns (FeeProjectConfig memory) {
         // Define constants
         string memory name = "Revnet";
@@ -168,7 +248,9 @@ contract REVLoansTests is TestBaseWorkflow, JBTest {
     function setUp() public override {
         super.setUp();
 
-        FEE_PROJECT_ID = jbProjects().createFor(multisig());
+        FEE_PROJECT_ID = launchAndConfigureFeeProject();
+
+        /* FEE_PROJECT_ID = jbProjects().createFor(multisig()); */
 
         SUCKER_REGISTRY = new JBSuckerRegistry(jbProjects(), jbPermissions(), multisig());
 
@@ -200,7 +282,7 @@ contract REVLoansTests is TestBaseWorkflow, JBTest {
 
         // Configure the project.
         REVLOAN_ID = BASIC_DEPLOYER.deployFor({
-            revnetId: FEE_PROJECT_ID,
+            revnetId: 0, // Zero to deploy a new revnet
             configuration: feeProjectConfig.configuration,
             terminalConfigurations: feeProjectConfig.terminalConfigurations,
             buybackHookConfiguration: feeProjectConfig.buybackHookConfiguration,
@@ -218,8 +300,15 @@ contract REVLoansTests is TestBaseWorkflow, JBTest {
         assertGt(REVLOAN_ID, 0);
     }
 
-    function test_pay() public {
-        vm.prank(USER);
+    function test_pay_borrow() public {
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVLOAN_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+
+        uint256 loanable = LOANS_CONTRACT.borrowableAmountFrom(REVLOAN_ID, tokens);
+        assertGt(loanable, 0);
+
+        vm.prank(USER);
+        LOANS_CONTRACT.borrowFrom(
+            REVLOAN_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN, loanable, tokens, payable(USER), 500
+        );
     }
 }
