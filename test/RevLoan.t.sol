@@ -210,8 +210,7 @@ contract REVLoansTests is TestBaseWorkflow, JBTest {
             extraMetadata: 0
         });
 
-        REVLoanSource[] memory _loanSources = new REVLoanSource[](1);
-        _loanSources[0] = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+        REVLoanSource[] memory _loanSources = new REVLoanSource[](0);
 
         // The project's revnet configuration
         REVConfig memory revnetConfiguration = REVConfig({
@@ -220,7 +219,7 @@ contract REVLoansTests is TestBaseWorkflow, JBTest {
             splitOperator: multisig(),
             stageConfigurations: stageConfigurations,
             loanSources: _loanSources,
-            loans: address(LOANS_CONTRACT)
+            loans: address(0)
         });
 
         // The project's buyback hook configuration.
@@ -245,12 +244,113 @@ contract REVLoansTests is TestBaseWorkflow, JBTest {
         });
     }
 
+    function getSecondProjectConfig() internal view returns (FeeProjectConfig memory) {
+        // Define constants
+        string memory name = "NANA";
+        string memory symbol = "$NANA";
+        string memory projectUri = "ipfs://QmNRHT91HcDgMcenebYX7rJigt77cgNxosvuhX21wkF3tx";
+        uint8 decimals = 18;
+        uint256 decimalMultiplier = 10 ** decimals;
+
+        // The tokens that the project accepts and stores.
+        JBAccountingContext[] memory accountingContextsToAccept = new JBAccountingContext[](1);
+
+        // Accept the chain's native currency through the multi terminal.
+        accountingContextsToAccept[0] = JBAccountingContext({
+            token: JBConstants.NATIVE_TOKEN,
+            decimals: 18,
+            currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
+        });
+
+        // The terminals that the project will accept funds through.
+        JBTerminalConfig[] memory terminalConfigurations = new JBTerminalConfig[](1);
+        terminalConfigurations[0] =
+            JBTerminalConfig({terminal: jbMultiTerminal(), accountingContextsToAccept: accountingContextsToAccept});
+
+        // The project's revnet stage configurations.
+        REVStageConfig[] memory stageConfigurations = new REVStageConfig[](3);
+
+        {
+            REVAutoMint[] memory mintConfs = new REVAutoMint[](1);
+            mintConfs[0] = REVAutoMint({
+                chainId: uint32(block.chainid),
+                count: uint104(70_000 * decimalMultiplier),
+                beneficiary: multisig()
+            });
+
+            stageConfigurations[0] = REVStageConfig({
+                startsAtOrAfter: uint40(block.timestamp),
+                autoMints: mintConfs,
+                splitPercent: 2000, // 20%
+                initialIssuance: uint112(1000 * decimalMultiplier),
+                issuanceDecayFrequency: 90 days,
+                issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+                cashOutTaxRate: 6000, // 0.6
+                extraMetadata: 0
+            });
+        }
+
+        stageConfigurations[1] = REVStageConfig({
+            startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 720 days),
+            autoMints: new REVAutoMint[](0),
+            splitPercent: 2000, // 20%
+            initialIssuance: 0, // inherit from previous cycle.
+            issuanceDecayFrequency: 180 days,
+            issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+            cashOutTaxRate: 6000, // 0.6
+            extraMetadata: 0
+        });
+
+        stageConfigurations[2] = REVStageConfig({
+            startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (20 * 365 days)),
+            autoMints: new REVAutoMint[](0),
+            splitPercent: 0,
+            initialIssuance: 1, // this is a special number that is as close to max price as we can get.
+            issuanceDecayFrequency: 0,
+            issuanceDecayPercent: 0,
+            cashOutTaxRate: 6000, // 0.6
+            extraMetadata: 0
+        });
+
+        REVLoanSource[] memory _loanSources = new REVLoanSource[](1);
+        _loanSources[0] = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
+        // The project's revnet configuration
+        REVConfig memory revnetConfiguration = REVConfig({
+            description: REVDescription(name, symbol, projectUri, "NANA_TOKEN"),
+            baseCurrency: uint32(uint160(JBConstants.NATIVE_TOKEN)),
+            splitOperator: multisig(),
+            stageConfigurations: stageConfigurations,
+            loanSources: _loanSources,
+            loans: address(LOANS_CONTRACT)
+        });
+
+        // The project's buyback hook configuration.
+        REVBuybackPoolConfig[] memory buybackPoolConfigurations = new REVBuybackPoolConfig[](1);
+        buybackPoolConfigurations[0] = REVBuybackPoolConfig({
+            token: JBConstants.NATIVE_TOKEN,
+            fee: 10_000,
+            twapWindow: 2 days,
+            twapSlippageTolerance: 9000
+        });
+        REVBuybackHookConfig memory buybackHookConfiguration =
+            REVBuybackHookConfig({hook: IJBBuybackHook(address(0)), poolConfigurations: buybackPoolConfigurations});
+
+        return FeeProjectConfig({
+            configuration: revnetConfiguration,
+            terminalConfigurations: terminalConfigurations,
+            buybackHookConfiguration: buybackHookConfiguration,
+            suckerDeploymentConfiguration: REVSuckerDeploymentConfig({
+                deployerConfigurations: new JBSuckerDeployerConfig[](0),
+                salt: keccak256(abi.encodePacked("NANA"))
+            })
+        });
+    }
+
     function setUp() public override {
         super.setUp();
 
-        FEE_PROJECT_ID = launchAndConfigureFeeProject();
-
-        /* FEE_PROJECT_ID = jbProjects().createFor(multisig()); */
+        FEE_PROJECT_ID = jbProjects().createFor(multisig());
 
         SUCKER_REGISTRY = new JBSuckerRegistry(jbProjects(), jbPermissions(), multisig());
 
@@ -282,11 +382,23 @@ contract REVLoansTests is TestBaseWorkflow, JBTest {
 
         // Configure the project.
         REVLOAN_ID = BASIC_DEPLOYER.deployFor({
-            revnetId: 0, // Zero to deploy a new revnet
+            revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
             configuration: feeProjectConfig.configuration,
             terminalConfigurations: feeProjectConfig.terminalConfigurations,
             buybackHookConfiguration: feeProjectConfig.buybackHookConfiguration,
             suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration
+        });
+
+        // Configure second revnet
+        FeeProjectConfig memory fee2Config = getSecondProjectConfig();
+
+        // Configure the project.
+        REVLOAN_ID = BASIC_DEPLOYER.deployFor({
+            revnetId: 0, // Zero to deploy a new revnet
+            configuration: fee2Config.configuration,
+            terminalConfigurations: fee2Config.terminalConfigurations,
+            buybackHookConfiguration: fee2Config.buybackHookConfiguration,
+            suckerDeploymentConfiguration: fee2Config.suckerDeploymentConfiguration
         });
 
         // Give Eth for the user experience
@@ -301,14 +413,31 @@ contract REVLoansTests is TestBaseWorkflow, JBTest {
     }
 
     function test_pay_borrow() public {
+        vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVLOAN_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
 
         uint256 loanable = LOANS_CONTRACT.borrowableAmountFrom(REVLOAN_ID, tokens);
         assertGt(loanable, 0);
 
+        // TODO: Address REVLoans burning permissions
+        // This is a spoof until then
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
         vm.prank(USER);
         LOANS_CONTRACT.borrowFrom(
             REVLOAN_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN, loanable, tokens, payable(USER), 500
         );
+
+        // Ensure loans contract isn't hodling
+        // TODO: Why does the borrow seem to travel through the loans contract, requiring a fallback function to
+        // receive?
+        assertEq(address(LOANS_CONTRACT).balance, 0);
+
+        // Ensure we actually received ETH from the borrow
+        assertGt(USER.balance, 100e18 - 1e18);
     }
 }

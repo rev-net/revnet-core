@@ -853,4 +853,6 @@ contract REVLoans is ERC721, IREVLoans {
         // The amount should reflect the change in balance.
         return _balanceOf(token) - balanceBefore;
     }
+
+    fallback() external payable {}
 }
