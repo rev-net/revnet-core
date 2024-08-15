@@ -1034,7 +1034,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @return fundAccessLimitGroups The fund access limit groups for the loans.
     function _makeLoanFundAccessLimits(REVConfig memory configuration)
         internal
-        view
+        pure
         returns (JBFundAccessLimitGroup[] memory fundAccessLimitGroups)
     {
         // Keep a reference to the number of loan access groups there are.
@@ -1217,7 +1217,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @notice Converts a `uint256` array to a `uint8` array.
     /// @param array The array to convert.
     /// @return result The converted array.
-    function _uint256ArrayToUint8Array(uint256[] memory array) internal returns (uint8[] memory result) {
+    function _uint256ArrayToUint8Array(uint256[] memory array) internal pure returns (uint8[] memory result) {
         result = new uint8[](array.length);
         for (uint256 i; i < array.length; i++) {
             result[i] = uint8(array[i]);

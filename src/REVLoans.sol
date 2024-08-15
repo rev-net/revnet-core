@@ -15,6 +15,7 @@ import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
 import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
 import {JBSurplus} from "@bananapus/core/src/libraries/JBSurplus.sol";
+import {JBFees} from "@bananapus/core/src/libraries/JBFees.sol";
 import {JBRulesetMetadataResolver} from "@bananapus/core/src/libraries/JBRulesetMetadataResolver.sol";
 import {IJBPayoutTerminal} from "@bananapus/core/src/interfaces/IJBPayoutTerminal.sol";
 import {JBRedemptions} from "@bananapus/core/src/libraries/JBRedemptions.sol";
@@ -392,6 +393,15 @@ contract REVLoans is ERC721, IREVLoans {
         JBAccountingContext memory accountingContext =
             loan.source.terminal.accountingContextForTokenOf({projectId: loan.revnetId, token: loan.source.token});
 
+        // Keep a reference to the pending automint tokens.
+        uint256 pendingAutomintTokens = revnetOwner.unrealizedAutoMintAmountOf(loan.revnetId);
+
+        // Keep a reference to the current stage.
+        JBRuleset memory currentStage = controller.RULESETS().currentOf(loan.revnetId);
+
+        // Keep a reference to the revnet's terminals.
+        IJBTerminal[] memory terminals = directory.terminalsOf(loan.revnetId);
+
         // If the borrowed amount is increasing or the collateral is changing, check that the loan will still be
         // properly collateralized.
         if (
@@ -399,11 +409,11 @@ contract REVLoans is ERC721, IREVLoans {
                 && _borrowableAmountFrom({
                     revnetId: loan.revnetId,
                     collateral: newCollateral,
-                    pendingAutomintTokens: revnetOwner.unrealizedAutoMintAmountOf(loan.revnetId),
+                    pendingAutomintTokens: pendingAutomintTokens,
                     decimals: accountingContext.decimals,
                     currency: accountingContext.currency,
-                    currentStage: controller.RULESETS().currentOf(loan.revnetId),
-                    terminals: directory.terminalsOf(loan.revnetId),
+                    currentStage: currentStage,
+                    terminals: terminals,
                     prices: controller.PRICES(),
                     tokens: controller.TOKENS()
                 }) < newAmount
@@ -411,10 +421,14 @@ contract REVLoans is ERC721, IREVLoans {
 
         // Add to the loan if needed...
         if (newAmount > loan.amount) {
+            // Keep a reference to the fee terminal.
+            IJBTerminal feeTerminal = directory.primaryTerminalOf(FEE_REVNET_ID, loan.source.token);
+
+            // Add the new amount to the loan.
             _addTo({
                 loan: loan,
                 amount: newAmount - loan.amount,
-                feeTerminal: directory.primaryTerminalOf(FEE_REVNET_ID, loan.source.token),
+                feeTerminal: feeTerminal,
                 beneficiary: beneficiary
             });
             // ... or pay off the loan if needed.
@@ -582,8 +596,24 @@ contract REVLoans is ERC721, IREVLoans {
             );
         }
 
+        // Get the amount of additional fee to take for REV.
+        uint256 revFeeAmount = JBFees.feeAmountIn({
+            amount: amount,
+            feePercent: REV_PREPAID_FEE
+        });
+
+
+        // Get the amount of additional fee to take for the revnet issuing the loan.
+        uint256 sourceFeeAmount = JBFees.feeAmountIn({
+            amount: amount,
+            feePercent: loan.prepaidFeePercent
+        });
+
+        // The amount to be loaned out, including the fee.
+        uint256 totalLoanAmount = amount + revFeeAmount + sourceFeeAmount;
+
         // Increment the amount of the token borrowed from the revnet from the terminal.
-        totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] += amount;
+        totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] += totalLoanAmount;
 
         {
             // Get a reference to the accounting context for the source.
@@ -595,45 +625,39 @@ contract REVLoans is ERC721, IREVLoans {
             loan.source.terminal.useAllowanceOf({
                 projectId: loan.revnetId,
                 token: loan.source.token,
-                amount: amount,
+                amount: totalLoanAmount,
                 currency: accountingContext.currency,
-                minTokensPaidOut: amount,
+                minTokensPaidOut: totalLoanAmount,
                 beneficiary: payable(address(this)),
                 feeBeneficiary: payable(msg.sender),
                 memo: "Lending out to a borrower"
             });
         }
 
-        // Get the amount of additional fee to take for REV.
-        uint256 feeAmount = mulDiv(amount, REV_PREPAID_FEE, JBConstants.MAX_FEE);
-
         // The amount to pay as a fee.
-        uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? feeAmount : 0;
+        uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? revFeeAmount : 0;
 
         // Pay the fee. Send the REV to the msg.sender.
         // slither-disable-next-line arbitrary-send-eth,unused-return
         try feeTerminal.pay{value: payValue}({
             projectId: FEE_REVNET_ID,
             token: loan.source.token,
-            amount: feeAmount,
+            amount: revFeeAmount,
             beneficiary: beneficiary,
             minReturnedTokens: 0,
             memo: "Fee from loan",
             metadata: bytes(abi.encodePacked(loan.revnetId))
         }) {} catch (bytes memory) {}
 
-        // Get the amount of additional fee to take for the revnet issuing the loan.
-        feeAmount = mulDiv(amount, loan.prepaidFeePercent, JBConstants.MAX_FEE);
-
         // The amount to pay as a fee.
-        payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? feeAmount : 0;
+        payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? sourceFeeAmount : 0;
 
         // Pay the fee. Add the tokens generated as collateral.
         // slither-disable-next-line unused-return
         try loan.source.terminal.pay{value: payValue}({
             projectId: loan.revnetId,
             token: loan.source.token,
-            amount: feeAmount,
+            amount: sourceFeeAmount,
             beneficiary: beneficiary,
             minReturnedTokens: 0,
             memo: "Fee from loan",

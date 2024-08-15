@@ -47,7 +47,7 @@ interface IREVLoans {
     function isLoanSourceOf(uint256 revnetId, IJBPayoutTerminal terminal, address token) external view returns (bool);
     function loanSourcesOf(uint256 revnetId) external view returns (REVLoanSource[] memory);
     function loanOf(uint256 loanId) external view returns (REVLoan memory);
-    function borrowableAmountFrom(uint256 revnetId, uint256 collateral) external view returns (uint256);
+    function borrowableAmountFrom(uint256 revnetId, uint256 collateral, uint256 decimals, uint256 currency) external view returns (uint256);
     function totalBorrowedFrom(
         uint256 revnetId,
         IJBPayoutTerminal terminal,
