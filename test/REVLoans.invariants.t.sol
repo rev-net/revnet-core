@@ -39,37 +39,59 @@ struct FeeProjectConfig {
     REVSuckerDeploymentConfig suckerDeploymentConfiguration;
 }
 
-abstract contract REVLoansInvariantHandler is Test, IREVLoans {
-    uint256 public SUM_BORROWED;
+contract REVLoansPayHandler is JBTest {
+    uint256 REVNET_ID;
+    address USER;
 
-    IREVLoans LOANS;
-
-    constructor(IREVLoans loans) {
-        LOANS = loans;
-    }
-
-    function borrowFrom(uint256 amount, uint256 prepaidFee) public virtual {
-        prepaidFee = bound(amount, 0, 25);
-    }
-}
-
-abstract contract REVLoansInvariantPayHandler is Test, IJBMultiTerminal {
     IJBMultiTerminal TERMINAL;
+    IREVLoans LOANS;
+    IJBPermissions PERMS;
 
-    constructor(IJBMultiTerminal terminal) {
+    constructor(
+        IJBMultiTerminal terminal,
+        IREVLoans loans,
+        IJBPermissions permissions,
+        uint256 revnetId,
+        address beneficiary
+    ) {
         TERMINAL = terminal;
+        LOANS = loans;
+        PERMS = permissions;
+        REVNET_ID = revnetId;
+        USER = beneficiary;
     }
 
-    function pay() public virtual {}
+    function pay(uint256 amount, uint256 borrowAmount, uint256 prepaidFee) public virtual {
+        uint256 payAmount = bound(amount, 1 ether, 10 ether);
+        uint256 prepaidFee = bound(amount, 0, 25);
+
+        vm.startPrank(USER);
+        uint256 receivedTokens =
+            TERMINAL.pay{value: payAmount}(REVNET_ID, JBConstants.NATIVE_TOKEN, payAmount, USER, 1, "", "");
+        uint256 borrowable = LOANS.borrowableAmountFrom(REVNET_ID, receivedTokens);
+
+        // TODO: Address REVLoans burning permissions
+        // This is a spoof until then
+        mockExpect(
+            address(PERMS),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS), USER, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
+        LOANS.borrowFrom(
+            REVNET_ID, TERMINAL, JBConstants.NATIVE_TOKEN, borrowable, receivedTokens, payable(USER), prepaidFee
+        );
+        vm.stopPrank();
+    }
 }
 
-contract InvariantREVLoansUnsourcedTests is StdInvariant, TestBaseWorkflow, JBTest {
+contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
     /// @notice the salts that are used to deploy the contracts.
     bytes32 BASIC_DEPLOYER_SALT = "REVDeployer";
     bytes32 ERC20_SALT = "REV_TOKEN";
 
     // Handlers
-    REVLoansInvariantHandler HANDLER;
+    REVLoansPayHandler PAY_HANDLER;
 
     REVDeployer BASIC_DEPLOYER;
     JB721TiersHook EXAMPLE_HOOK;
@@ -261,7 +283,8 @@ contract InvariantREVLoansUnsourcedTests is StdInvariant, TestBaseWorkflow, JBTe
             extraMetadata: 0
         });
 
-        REVLoanSource[] memory _loanSources = new REVLoanSource[](0);
+        REVLoanSource[] memory _loanSources = new REVLoanSource[](1);
+        _loanSources[0] = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
         // The project's revnet configuration
         REVConfig memory revnetConfiguration = REVConfig({
@@ -349,39 +372,38 @@ contract InvariantREVLoansUnsourcedTests is StdInvariant, TestBaseWorkflow, JBTe
             suckerDeploymentConfiguration: fee2Config.suckerDeploymentConfiguration
         });
 
+        // Deploy handlers and assign them as targets
+        PAY_HANDLER = new REVLoansPayHandler(jbMultiTerminal(), LOANS_CONTRACT, jbPermissions(), REVLOAN_ID, USER);
+
         // Give Eth for the user experience
-        vm.deal(USER, 100e18);
+        vm.deal(USER, type(uint256).max);
 
         // Performs random pay() calls
         bytes4[] memory selectors = new bytes4[](1);
-        selectors[0] = JBMultiTerminal.pay.selector;
+        selectors[0] = REVLoansPayHandler.pay.selector;
 
-        targetSelector(FuzzSelector({addr: address(jbMultiTerminal()), selectors: selectors}));
-        targetContract(address(jbMultiTerminal()));
+        targetContract(address(PAY_HANDLER));
+        targetSelector(FuzzSelector({addr: address(PAY_HANDLER), selectors: selectors}));
 
-        // Performs random borrows
-        selectors[0] = REVLoans.borrowFrom.selector;
-        targetSelector(FuzzSelector({addr: address(LOANS_CONTRACT), selectors: selectors}));
-        targetContract(address(LOANS_CONTRACT));
+        /* // Performs random borrows
+        selectors[0] = REVLoansBorrowHandler.borrowFrom.selector;
+        targetContract(address(BORROW_HANDLER));
+        targetSelector(FuzzSelector({addr: address(BORROW_HANDLER), selectors: selectors})); */
 
         targetSender(USER);
     }
 
-    /* function invariant_A() public {
-    } */
+    function invariant_A() public {
+        uint256 totalCollateral = LOANS_CONTRACT.totalCollateralOf(REVLOAN_ID);
+        uint256 redeemRate = JBConstants.MAX_REDEMPTION_RATE - 6000;
+        uint256 unrealizedAutoMint = BASIC_DEPLOYER.unrealizedAutoMintAmountOf(REVLOAN_ID);
+        uint256 surplus = jbMultiTerminal().currentSurplusOf(REVLOAN_ID, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
 
-    function test_Pay_Borrow_Without_Loan_Source() public {
-        vm.prank(USER);
-        uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVLOAN_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+        uint256 maxLoanable = (totalCollateral * redeemRate) + unrealizedAutoMint + surplus;
 
-        uint256 loanable = LOANS_CONTRACT.borrowableAmountFrom(REVLOAN_ID, tokens);
-        assertGt(loanable, 0);
+        uint256 totalBorrowed =
+            LOANS_CONTRACT.totalBorrowedFrom(REVLOAN_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
 
-        // TODO: Fix fund access limit setting within REVDeployer?
-        vm.expectRevert(abi.encodeWithSignature("INADEQUATE_CONTROLLER_ALLOWANCE()"));
-        vm.prank(USER);
-        LOANS_CONTRACT.borrowFrom(
-            REVLOAN_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN, loanable, tokens, payable(USER), 500
-        );
+        assertLe(totalBorrowed, maxLoanable);
     }
 }

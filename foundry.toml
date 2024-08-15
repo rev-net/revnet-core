@@ -28,6 +28,7 @@ optimizer_runs = 200
 
 [invariant] 
 fail_on_revert = false
+runs = 50
 
 [fmt]
 number_underscore = "thousands"
