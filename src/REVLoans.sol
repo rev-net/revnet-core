@@ -31,7 +31,7 @@ import {REVLoanSource} from "./structs/REVLoanSource.sol";
 /// @notice A contract for borrowing from revnets.
 /// @dev Tokens used as collateral are burned, and reminted when the loan is paid off. This keeps the revnet's token
 /// structure orderly.
-/// @dev The borrowable amount is the same as the cash out amount. 
+/// @dev The borrowable amount is the same as the cash out amount.
 /// @dev An upfront fee is taken when a loan is created. 2.5% is charged by the underlying protocol, 2.5% is charged
 /// by the
 /// revnet issuing the loan, and a variable amount charged by the revnet that receives the fees. This variable amount is
@@ -149,8 +149,19 @@ contract REVLoans is ERC721, IREVLoans {
     /// @notice The amount that can be borrowed from a revnet.
     /// @param revnetId The ID of the revnet to check for borrowable assets from.
     /// @param collateral The amount of collateral used to secure the loan.
+    /// @param decimals The decimals the resulting fixed point value will include.
+    /// @param currency The currency that the resulting amount should be in terms of.
     /// @return borrowableAmount The amount that can be borrowed from the revnet.
-    function borrowableAmountFrom(uint256 revnetId, uint256 collateral) external view returns (uint256) {
+    function borrowableAmountFrom(
+        uint256 revnetId,
+        uint256 collateral,
+        uint256 decimals,
+        uint256 currency
+    )
+        external
+        view
+        returns (uint256)
+    {
         // Keep a reference to the revnet's owner.
         IREVDeployer revnetOwner = IREVDeployer(PROJECTS.ownerOf(revnetId));
 
@@ -161,6 +172,8 @@ contract REVLoans is ERC721, IREVLoans {
             revnetId: revnetId,
             collateral: collateral,
             pendingAutomintTokens: revnetOwner.unrealizedAutoMintAmountOf(revnetId),
+            decimals: decimals,
+            currency: currency,
             currentStage: controller.RULESETS().currentOf(revnetId),
             terminals: controller.DIRECTORY().terminalsOf(revnetId),
             prices: controller.PRICES(),
@@ -375,6 +388,10 @@ contract REVLoans is ERC721, IREVLoans {
         // Keep a reference to the revnet's directory.
         IJBDirectory directory = controller.DIRECTORY();
 
+        // Get a reference to the accounting context for the source.
+        JBAccountingContext memory accountingContext =
+            loan.source.terminal.accountingContextForTokenOf({projectId: loan.revnetId, token: loan.source.token});
+
         // If the borrowed amount is increasing or the collateral is changing, check that the loan will still be
         // properly collateralized.
         if (
@@ -383,6 +400,8 @@ contract REVLoans is ERC721, IREVLoans {
                     revnetId: loan.revnetId,
                     collateral: newCollateral,
                     pendingAutomintTokens: revnetOwner.unrealizedAutoMintAmountOf(loan.revnetId),
+                    decimals: accountingContext.decimals,
+                    currency: accountingContext.currency,
                     currentStage: controller.RULESETS().currentOf(loan.revnetId),
                     terminals: directory.terminalsOf(loan.revnetId),
                     prices: controller.PRICES(),
@@ -635,6 +654,8 @@ contract REVLoans is ERC721, IREVLoans {
     /// @param collateral The amount of collateral that the loan will be collateralized with.
     /// @param currentStage The current stage of the revnet.
     /// @param pendingAutomintTokens The amount of tokens pending automint from the revnet.
+    /// @param decimals The decimals the resulting fixed point value will include.
+    /// @param currency The currency that the resulting amount should be in terms of.
     /// @param terminals The terminals that the funds are being borrowed from.
     /// @param prices A contract that stores prices for each project.
     /// @return borrowableAmount The amount that can be borrowed from the revnet.
@@ -642,6 +663,8 @@ contract REVLoans is ERC721, IREVLoans {
         uint256 revnetId,
         uint256 collateral,
         uint256 pendingAutomintTokens,
+        uint256 decimals,
+        uint256 currency,
         JBRuleset memory currentStage,
         IJBTerminal[] memory terminals,
         IJBPrices prices,
@@ -655,18 +678,14 @@ contract REVLoans is ERC721, IREVLoans {
         uint256 totalSurplus = JBSurplus.currentSurplusOf({
             projectId: revnetId,
             terminals: terminals,
-            decimals: 18,
-            currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
+            decimals: decimals,
+            currency: currency
         });
 
         // Get the total amount the revnet currently has loaned out, in terms of the native currency with 18
         // decimals.
-        uint256 totalBorrowed = _totalBorrowedFrom({
-            revnetId: revnetId,
-            decimals: 18,
-            currency: uint32(uint160(JBConstants.NATIVE_TOKEN)),
-            prices: prices
-        });
+        uint256 totalBorrowed =
+            _totalBorrowedFrom({revnetId: revnetId, decimals: decimals, currency: currency, prices: prices});
 
         // Get the total amount of tokens in circulation.
         uint256 totalSupply = tokens.totalSupplyOf(revnetId);
