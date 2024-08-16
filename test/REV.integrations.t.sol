@@ -235,4 +235,13 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
 
         assertEq(perStageMintAmount * 2, IJBToken(jbTokens().tokenOf(REVNET_ID)).balanceOf(multisig()));
     }
+
+    function test_change_split_operator() public {
+        vm.prank(multisig());
+        BASIC_DEPLOYER.setSplitOperatorOf(REVNET_ID, address(this));
+
+        bool isNewOperator = BASIC_DEPLOYER.isSplitOperatorOf(REVNET_ID, address(this));
+
+        assertEq(isNewOperator, true);
+    }
 }
