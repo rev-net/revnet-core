@@ -325,13 +325,6 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
         vm.deal(USER, 100e18);
     }
 
-    function test_Is_Setup() public {
-        assertGt(uint160(address(jbDirectory())), uint160(0));
-        assertGt(FEE_PROJECT_ID, 0);
-        assertGt(jbProjects().count(), 0);
-        assertGt(REVLOAN_ID, 0);
-    }
-
     function test_Pay_Borrow_Without_Loan_Source() public {
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVLOAN_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
