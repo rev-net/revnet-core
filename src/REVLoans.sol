@@ -3,8 +3,10 @@ pragma solidity 0.8.23;
 
 import {mulDiv} from "@prb/math/src/Common.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IAllowanceTransfer} from "@uniswap/permit2/src/interfaces/IAllowanceTransfer.sol";
 import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
@@ -42,7 +44,7 @@ import {REVLoanSource} from "./structs/REVLoanSource.sol";
 /// cannot be
 /// recouped.
 /// @dev The loaned amounts include the fees taken, meaning the amount paid back is the amount borrowed plus the fees.
-contract REVLoans is ERC721, IREVLoans {
+contract REVLoans is ERC721, ERC2771Context, IREVLoans {
     // A library that parses the packed ruleset metadata into a friendlier format.
     using JBRulesetMetadataResolver for JBRuleset;
 
@@ -201,7 +203,8 @@ contract REVLoans is ERC721, IREVLoans {
     /// @param projects A contract which mints ERC-721s that represent project ownership and transfers.
     /// @param revId The ID of the REV revnet that will receive the fees.
     /// @param permit2 A permit2 utility.
-    constructor(IJBProjects projects, uint256 revId, IPermit2 permit2) ERC721("REV Loans", "$REVLOAN") {
+    /// @param trustedForwarder A trusted forwarder of transactions to this contract.
+    constructor(IJBProjects projects, uint256 revId, IPermit2 permit2, address trustedForwarder) ERC721("REV Loans", "$REVLOAN") ERC2771Context(trustedForwarder) {
         PROJECTS = projects;
         REV_ID = revId;
         PERMIT2 = permit2;
@@ -245,7 +248,7 @@ contract REVLoans is ERC721, IREVLoans {
         loanId = ++numberOfLoans;
 
         // Mint the loan.
-        _mint({to: msg.sender, tokenId: loanId});
+        _mint({to: _msgSender(), tokenId: loanId});
 
         // Get a reference to the loan being created.
         REVLoan storage loan = _loanOf[loanId];
@@ -269,7 +272,7 @@ contract REVLoans is ERC721, IREVLoans {
             beneficiary: beneficiary
         });
 
-        emit Borrow(loanId, revnetId, loan, terminal, token, amount, collateral, beneficiary, msg.sender);
+        emit Borrow(loanId, revnetId, loan, terminal, token, amount, collateral, beneficiary, _msgSender());
     }
 
     /// @notice Allows the owner of a loan to pay it back or receive returned collateral no longer necessary to support
@@ -291,7 +294,7 @@ contract REVLoans is ERC721, IREVLoans {
         override
     {
         // Make sure only the loan's owner can manage it.
-        if (_ownerOf(loanId) != msg.sender) revert UNAUTHORIZED();
+        if (_ownerOf(loanId) != _msgSender()) revert UNAUTHORIZED();
 
         // Keep a reference to the fee being iterated on.
         REVLoan storage loan = _loanOf[loanId];
@@ -321,7 +324,7 @@ contract REVLoans is ERC721, IREVLoans {
         if (amount > loan.amount + sourceFeeAmount) {
             _transferFrom({
                 from: address(this),
-                to: payable(msg.sender),
+                to: payable(_msgSender()),
                 token: loan.source.token,
                 amount: amount - sourceFeeAmount - loan.amount
             });
@@ -341,7 +344,7 @@ contract REVLoans is ERC721, IREVLoans {
             _burn(loanId);
         }
 
-        emit PayOff(loanId, loan, amount, collateralToReturn, beneficiary, msg.sender);
+        emit PayOff(loanId, loan, amount, collateralToReturn, beneficiary, _msgSender());
     }
 
     /// @notice Cleans up any liquiditated loans.
@@ -376,7 +379,7 @@ contract REVLoans is ERC721, IREVLoans {
                 // Increment the number of loans liquidated.
                 numberOfLoansLiquidated++;
 
-                emit Liquidate(loanId, loan, msg.sender);
+                emit Liquidate(loanId, loan, _msgSender());
             } else {
                 // Store the latest liquidated loan.
                 if (numberOfLoansLiquidated > 0) lastLoanIdLiquidated += numberOfLoansLiquidated;
@@ -545,7 +548,7 @@ contract REVLoans is ERC721, IREVLoans {
 
         // Burn the tokens that are tracked as collateral.
         controller.burnTokensOf({
-            holder: msg.sender,
+            holder: _msgSender(),
             projectId: loan.revnetId,
             tokenCount: amount,
             memo: "Adding collateral to loan"
@@ -620,7 +623,7 @@ contract REVLoans is ERC721, IREVLoans {
                 currency: accountingContext.currency,
                 minTokensPaidOut: amount, //totalLoanAmount,
                 beneficiary: payable(address(this)),
-                feeBeneficiary: payable(msg.sender),
+                feeBeneficiary: payable(_msgSender()),
                 memo: "Lending out to a borrower"
             });
         }
@@ -831,5 +834,22 @@ contract REVLoans is ERC721, IREVLoans {
 
         // The amount should reflect the change in balance.
         return _balanceOf(token) - balanceBefore;
+    }
+
+    /// @notice The message's sender. Preferred to use over `msg.sender`.
+    /// @return sender The address which sent this call.
+    function _msgSender() internal view override(ERC2771Context, Context) returns (address sender) {
+        return ERC2771Context._msgSender();
+    }
+
+    /// @notice The calldata. Preferred to use over `msg.data`.
+    /// @return calldata The `msg.data` of this call.
+    function _msgData() internal view override(ERC2771Context, Context) returns (bytes calldata) {
+        return ERC2771Context._msgData();
+    }
+
+    /// @dev `ERC-2771` specifies the context as being a single address (20 bytes).
+    function _contextSuffixLength() internal view override(ERC2771Context, Context) returns (uint256) {
+        return super._contextSuffixLength();
     }
 }
