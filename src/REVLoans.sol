@@ -41,6 +41,7 @@ import {REVLoanSource} from "./structs/REVLoanSource.sol";
 /// After the prepaid duration, the loan will increasingly cost more to pay off. After 10 years, the loan collateral
 /// cannot be
 /// recouped.
+/// @dev The loaned amounts include the fees taken, meaning the amount paid back is the amount borrowed plus the fees.
 contract REVLoans is ERC721, IREVLoans {
     // A library that parses the packed ruleset metadata into a friendlier format.
     using JBRulesetMetadataResolver for JBRuleset;
@@ -53,14 +54,13 @@ contract REVLoans is ERC721, IREVLoans {
     //*********************************************************************//
 
     error UNAUTHORIZED();
-    error MISSING_VALUES();
+    error AMOUNT_NOT_SPECIFIED();
     error INVALID_PREPAID_FEE_PERCENT();
     error NOT_ENOUGH_COLLATERAL();
     error PERMIT_ALLOWANCE_NOT_ENOUGH();
     error NO_MSG_VALUE_ALLOWED();
     error LOAN_EXPIRED();
-    error CANT_BORROW_MORE_FROM_EXISTING_LOAN();
-    error CANT_ADD_MORE_COLLATERAL_TO_EXISTING_LOAN();
+    error OVERPAYMENT();
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -88,7 +88,7 @@ contract REVLoans is ERC721, IREVLoans {
     IJBProjects public immutable override PROJECTS;
 
     /// @notice The ID of the REV revnet that will receive the fees.
-    uint256 public immutable override FEE_REVNET_ID;
+    uint256 public immutable override REV_ID;
 
     /// @notice The permit2 utility.
     IPermit2 public immutable override PERMIT2;
@@ -199,11 +199,11 @@ contract REVLoans is ERC721, IREVLoans {
     //*********************************************************************//
 
     /// @param projects A contract which mints ERC-721s that represent project ownership and transfers.
-    /// @param feeRevnetId The ID of the REV revnet that will receive the fees.
+    /// @param revId The ID of the REV revnet that will receive the fees.
     /// @param permit2 A permit2 utility.
-    constructor(IJBProjects projects, uint256 feeRevnetId, IPermit2 permit2) ERC721("REV Loans", "$REVLOAN") {
+    constructor(IJBProjects projects, uint256 revId, IPermit2 permit2) ERC721("REV Loans", "$REVLOAN") {
         PROJECTS = projects;
-        FEE_REVNET_ID = feeRevnetId;
+        REV_ID = revId;
         PERMIT2 = permit2;
     }
 
@@ -235,7 +235,7 @@ contract REVLoans is ERC721, IREVLoans {
         returns (uint256 loanId)
     {
         // Make sure there is an amount being borrowed.
-        if (amount == 0) revert MISSING_VALUES();
+        if (amount == 0) revert AMOUNT_NOT_SPECIFIED();
 
         // Make sure the prepaid fee percent is between 0 and 20%. Meaning an 16 year loan can be paid upfront with a
         // payment of 50% of the borrowed assets, the cheapest possible rate.
@@ -257,16 +257,16 @@ contract REVLoans is ERC721, IREVLoans {
         loan.prepaidFeePercent = uint16(prepaidFeePercent);
         loan.prepaidDuration = uint32(mulDiv(prepaidFeePercent, LOAN_LIQUIDATION_DURATION, MAX_PREPAID_PERCENT));
 
-        // Make an empty allowance to satisfy the function.
-        JBSingleAllowance memory allowance;
+        // Get the amount of additional fee to take for the revnet issuing the loan.
+        uint256 sourceFeeAmount = JBFees.feeAmountFrom({amount: amount, feePercent: prepaidFeePercent});
 
         // Borrow the amount.
         _adjust({
             loan: loan,
             newAmount: amount,
             newCollateral: collateral,
-            beneficiary: beneficiary,
-            allowance: allowance
+            sourceFeeAmount: sourceFeeAmount,
+            beneficiary: beneficiary
         });
 
         emit Borrow(loanId, revnetId, loan, terminal, token, amount, collateral, beneficiary, msg.sender);
@@ -275,14 +275,14 @@ contract REVLoans is ERC721, IREVLoans {
     /// @notice Allows the owner of a loan to pay it back or receive returned collateral no longer necessary to support
     /// the loan.
     /// @param loanId The ID of the loan being adjusted.
-    /// @param newAmount The new amount of the loan.
-    /// @param newCollateral The new amount of collateral backing the loan.
+    /// @param amount The amount being paid off.
+    /// @param collateralToReturn The amount of collateral to return being returned from the loan.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     /// @param allowance An allowance to faciliate permit2 interactions.
     function payOff(
         uint256 loanId,
-        uint256 newAmount,
-        uint256 newCollateral,
+        uint256 amount,
+        uint256 collateralToReturn,
         address payable beneficiary,
         JBSingleAllowance memory allowance
     )
@@ -296,19 +296,44 @@ contract REVLoans is ERC721, IREVLoans {
         // Keep a reference to the fee being iterated on.
         REVLoan storage loan = _loanOf[loanId];
 
-        // Make sure the amount being paid off is less than the loan's amount.
-        if (newAmount > loan.amount) revert CANT_BORROW_MORE_FROM_EXISTING_LOAN();
+        // Keep a reference to the time since the loan was created.
+        uint256 timeSinceLoanCreated = block.timestamp - loan.createdAt;
 
-        // Make sure the amount of collateral being added is less than the loan's collateral.
-        if (newCollateral > loan.collateral) revert CANT_ADD_MORE_COLLATERAL_TO_EXISTING_LOAN();
+        // Keep a reference to the fee that'll be taken.
+        uint256 sourceFeeAmount;
+
+        // If the loan period has passed the prepaid time frame, take a fee.
+        if (timeSinceLoanCreated > loan.prepaidDuration) {
+            // If the loan period has passed the liqidation time frame, do not allow loan management.
+            if (timeSinceLoanCreated > LOAN_LIQUIDATION_DURATION) revert LOAN_EXPIRED();
+
+            // Calculate the prepaid fee for the amount being paid back.
+            uint256 prepaidAmount = JBFees.feeAmountFrom({amount: amount, feePercent: loan.prepaidFeePercent});
+
+            // Calculate the fee as a linear proportion given the amount of time that has passed.
+            sourceFeeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION) - prepaidAmount;
+        }
+
+        // Accept the funds that'll be used to pay off loans.
+        amount = _acceptFundsFor({token: loan.source.token, amount: amount, allowance: allowance});
+
+        // If the amount being paid is greater than the loan's amount, return extra to the payer.
+        if (amount > loan.amount + sourceFeeAmount) {
+            _transferFrom({
+                from: address(this),
+                to: payable(msg.sender),
+                token: loan.source.token,
+                amount: amount - sourceFeeAmount - loan.amount
+            });
+        }
 
         // Borrow in.
         _adjust({
             loan: loan,
-            newAmount: newAmount,
-            newCollateral: newCollateral,
-            beneficiary: beneficiary,
-            allowance: allowance
+            newAmount: loan.amount - (amount - sourceFeeAmount),
+            newCollateral: loan.collateral - collateralToReturn,
+            sourceFeeAmount: sourceFeeAmount,
+            beneficiary: beneficiary
         });
 
         // If there's no amount or collateral left, burn the loan.
@@ -316,7 +341,7 @@ contract REVLoans is ERC721, IREVLoans {
             _burn(loanId);
         }
 
-        emit PayOff(loanId, loan, newAmount, newCollateral, beneficiary, msg.sender);
+        emit PayOff(loanId, loan, amount, collateralToReturn, beneficiary, msg.sender);
     }
 
     /// @notice Cleans up any liquiditated loans.
@@ -369,14 +394,14 @@ contract REVLoans is ERC721, IREVLoans {
     /// @param loan The loan being adjusted.
     /// @param newAmount The new amount of the loan.
     /// @param newCollateral The new amount of collateral backing the loan.
+    /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
-    /// @param allowance An allowance to faciliate permit2 interactions.
     function _adjust(
         REVLoan storage loan,
         uint256 newAmount,
         uint256 newCollateral,
-        address payable beneficiary,
-        JBSingleAllowance memory allowance
+        uint256 sourceFeeAmount,
+        address payable beneficiary
     )
         internal
     {
@@ -389,51 +414,59 @@ contract REVLoans is ERC721, IREVLoans {
         // Keep a reference to the revnet's directory.
         IJBDirectory directory = controller.DIRECTORY();
 
-        // Get a reference to the accounting context for the source.
-        JBAccountingContext memory accountingContext =
-            loan.source.terminal.accountingContextForTokenOf({projectId: loan.revnetId, token: loan.source.token});
 
-        // Keep a reference to the pending automint tokens.
-        uint256 pendingAutomintTokens = revnetOwner.unrealizedAutoMintAmountOf(loan.revnetId);
+        {
+            // Get a reference to the accounting context for the source.
+            JBAccountingContext memory accountingContext =
+                loan.source.terminal.accountingContextForTokenOf({projectId: loan.revnetId, token: loan.source.token});
 
-        // Keep a reference to the current stage.
-        JBRuleset memory currentStage = controller.RULESETS().currentOf(loan.revnetId);
+            // Keep a reference to the pending automint tokens.
+            uint256 pendingAutomintTokens = revnetOwner.unrealizedAutoMintAmountOf(loan.revnetId);
 
-        // Keep a reference to the revnet's terminals.
-        IJBTerminal[] memory terminals = directory.terminalsOf(loan.revnetId);
+            // Keep a reference to the current stage.
+            JBRuleset memory currentStage = controller.RULESETS().currentOf(loan.revnetId);
 
-        // If the borrowed amount is increasing or the collateral is changing, check that the loan will still be
-        // properly collateralized.
-        if (
-            (newAmount > loan.amount || loan.collateral != newCollateral)
-                && _borrowableAmountFrom({
-                    revnetId: loan.revnetId,
-                    collateral: newCollateral,
-                    pendingAutomintTokens: pendingAutomintTokens,
-                    decimals: accountingContext.decimals,
-                    currency: accountingContext.currency,
-                    currentStage: currentStage,
-                    terminals: terminals,
-                    prices: controller.PRICES(),
-                    tokens: controller.TOKENS()
-                }) < newAmount
-        ) revert NOT_ENOUGH_COLLATERAL();
+            // Keep a reference to the revnet's terminals.
+            IJBTerminal[] memory terminals = directory.terminalsOf(loan.revnetId);
+
+            // If the borrowed amount is increasing or the collateral is changing, check that the loan will still be
+            // properly collateralized.
+            if (
+                (newAmount > loan.amount || loan.collateral != newCollateral)
+                    && _borrowableAmountFrom({
+                        revnetId: loan.revnetId,
+                        collateral: newCollateral,
+                        pendingAutomintTokens: pendingAutomintTokens,
+                        decimals: accountingContext.decimals,
+                        currency: accountingContext.currency,
+                        currentStage: currentStage,
+                        terminals: terminals,
+                        prices: controller.PRICES(),
+                        tokens: controller.TOKENS()
+                    }) < newAmount
+            ) revert NOT_ENOUGH_COLLATERAL();
+        }
 
         // Add to the loan if needed...
         if (newAmount > loan.amount) {
             // Keep a reference to the fee terminal.
-            IJBTerminal feeTerminal = directory.primaryTerminalOf(FEE_REVNET_ID, loan.source.token);
+            IJBTerminal feeTerminal = directory.primaryTerminalOf(REV_ID, loan.source.token);
 
             // Add the new amount to the loan.
             _addTo({
                 loan: loan,
                 amount: newAmount - loan.amount,
+                sourceFeeAmount: sourceFeeAmount,
                 feeTerminal: feeTerminal,
                 beneficiary: beneficiary
             });
             // ... or pay off the loan if needed.
         } else if (loan.amount > newAmount) {
-            _payOff({loan: loan, amount: loan.amount - newAmount, beneficiary: beneficiary, allowance: allowance});
+            _payOff({
+                loan: loan,
+                amount: loan.amount - newAmount,
+                sourceFeeAmount: sourceFeeAmount
+            });
         }
 
         // Add collateral if needed...
@@ -447,6 +480,27 @@ contract REVLoans is ERC721, IREVLoans {
                 beneficiary: beneficiary,
                 controller: controller
             });
+        }
+
+        // Get a reference to the amount remaining in this contract.
+        uint256 balance = _balanceOf(loan.source.token);
+
+        // The amount remaining in the contract should be the source fee.
+        if (balance > 0) {
+            // The amount to pay as a fee.
+            uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? balance : 0;
+
+            // Pay the fee.
+            // slither-disable-next-line unused-return
+            try loan.source.terminal.pay{value: payValue}({
+                projectId: loan.revnetId,
+                token: loan.source.token,
+                amount: balance,
+                beneficiary: beneficiary,
+                minReturnedTokens: 0,
+                memo: "Fee from loan",
+                metadata: bytes(abi.encodePacked(REV_ID))
+            }) {} catch (bytes memory) {}
         }
 
         // Store the loans updated values.
@@ -501,88 +555,41 @@ contract REVLoans is ERC721, IREVLoans {
     /// @notice Pays off a loan.
     /// @param loan The loan being paid off.
     /// @param amount The amount being paid off.
-    /// @param beneficiary The address receiving any tokens resulting from paying fees.
-    /// @param allowance An allowance to faciliate permit2 interactions.
+    /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
     function _payOff(
         REVLoan memory loan,
         uint256 amount,
-        address payable beneficiary,
-        JBSingleAllowance memory allowance
+        uint256 sourceFeeAmount
     )
         internal
     {
-        // Keep a reference to the time since the loan was created.
-        uint256 timeSinceLoanCreated = block.timestamp - loan.createdAt;
-
-        // Keep a reference to the fee that'll be taken.
-        uint256 feeAmount;
-
-        // If the loan period has passed the prepaid time frame, take a fee.
-        if (timeSinceLoanCreated > loan.prepaidDuration) {
-            // If the loan period has passed the liqidation time frame, do not allow loan management.
-            if (timeSinceLoanCreated > LOAN_LIQUIDATION_DURATION) revert LOAN_EXPIRED();
-
-            // Calculate the prepaid fee for the amount being paid back.
-            uint256 prepaidAmount = mulDiv(amount, loan.prepaidFeePercent, JBConstants.MAX_FEE);
-
-            // Calculate the fee as a linear proportion given the amount of time that has passed.
-            feeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION) - prepaidAmount;
-        }
-
         // Decrement the total amount of a token being loaned out by the revnet from its terminal.
         totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] -= amount;
 
-        // Accept the funds that'll be used to pay off loans.
-        uint256 amountPaidIn =
-            _acceptFundsFor({token: loan.source.token, amount: amount + feeAmount, allowance: allowance});
-
-        // If the loan is being overpaid, transfer any leftover amount back to the payer.
-        if (amountPaidIn > loan.amount + feeAmount) {
-            _transferFrom({
-                from: address(this),
-                to: payable(msg.sender),
-                token: loan.source.token,
-                amount: amountPaidIn - loan.amount - feeAmount
-            });
-        }
-
-        // The amount to pay as a fee.
-        uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? feeAmount : 0;
-
-        // Pay the fee.
-        // slither-disable-next-line unused-return
-        try loan.source.terminal.pay{value: payValue}({
-            projectId: loan.revnetId,
-            token: loan.source.token,
-            amount: feeAmount,
-            beneficiary: beneficiary,
-            minReturnedTokens: 0,
-            memo: "Fee from loan",
-            metadata: bytes(abi.encodePacked(FEE_REVNET_ID))
-        }) {} catch (bytes memory) {}
-
         // The borrowed amount to return to the revnet.
-        payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? amount : 0;
+        uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? amount : 0;
 
         // Add the loaned amount back to the revnet.
         try loan.source.terminal.addToBalanceOf{value: payValue}({
             projectId: loan.revnetId,
             token: loan.source.token,
-            amount: amount,
+            amount: _balanceOf(loan.source.token) - sourceFeeAmount,
             shouldReturnHeldFees: false,
             memo: "Paying off loan",
-            metadata: bytes(abi.encodePacked(loan.revnetId))
+            metadata: bytes(abi.encodePacked(REV_ID))
         }) {} catch (bytes memory) {}
     }
 
     /// @notice Add a new amount to the loan that is greater than the previous amount.
     /// @param loan The loan being added to.
     /// @param amount The amount being added to the loan.
+    /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
     /// @param feeTerminal The terminal that the fee will be paid to.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     function _addTo(
         REVLoan memory loan,
         uint256 amount,
+        uint256 sourceFeeAmount,
         IJBTerminal feeTerminal,
         address payable beneficiary
     )
@@ -596,24 +603,8 @@ contract REVLoans is ERC721, IREVLoans {
             );
         }
 
-        // Get the amount of additional fee to take for REV.
-        uint256 revFeeAmount = JBFees.feeAmountIn({
-            amount: amount,
-            feePercent: REV_PREPAID_FEE
-        });
-
-
-        // Get the amount of additional fee to take for the revnet issuing the loan.
-        uint256 sourceFeeAmount = JBFees.feeAmountIn({
-            amount: amount,
-            feePercent: loan.prepaidFeePercent
-        });
-
-        // The amount to be loaned out, including the fee.
-        uint256 totalLoanAmount = amount + revFeeAmount + sourceFeeAmount;
-
         // Increment the amount of the token borrowed from the revnet from the terminal.
-        totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] += totalLoanAmount;
+        totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] += amount;
 
         {
             // Get a reference to the accounting context for the source.
@@ -625,14 +616,17 @@ contract REVLoans is ERC721, IREVLoans {
             loan.source.terminal.useAllowanceOf({
                 projectId: loan.revnetId,
                 token: loan.source.token,
-                amount: totalLoanAmount,
+                amount: amount, //totalLoanAmount,
                 currency: accountingContext.currency,
-                minTokensPaidOut: totalLoanAmount,
+                minTokensPaidOut: amount, //totalLoanAmount,
                 beneficiary: payable(address(this)),
                 feeBeneficiary: payable(msg.sender),
                 memo: "Lending out to a borrower"
             });
         }
+
+        // Get the amount of additional fee to take for REV.
+        uint256 revFeeAmount = JBFees.feeAmountFrom({amount: amount, feePercent: REV_PREPAID_FEE});
 
         // The amount to pay as a fee.
         uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? revFeeAmount : 0;
@@ -640,7 +634,7 @@ contract REVLoans is ERC721, IREVLoans {
         // Pay the fee. Send the REV to the msg.sender.
         // slither-disable-next-line arbitrary-send-eth,unused-return
         try feeTerminal.pay{value: payValue}({
-            projectId: FEE_REVNET_ID,
+            projectId: REV_ID,
             token: loan.source.token,
             amount: revFeeAmount,
             beneficiary: beneficiary,
@@ -649,27 +643,12 @@ contract REVLoans is ERC721, IREVLoans {
             metadata: bytes(abi.encodePacked(loan.revnetId))
         }) {} catch (bytes memory) {}
 
-        // The amount to pay as a fee.
-        payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? sourceFeeAmount : 0;
-
-        // Pay the fee. Add the tokens generated as collateral.
-        // slither-disable-next-line unused-return
-        try loan.source.terminal.pay{value: payValue}({
-            projectId: loan.revnetId,
-            token: loan.source.token,
-            amount: sourceFeeAmount,
-            beneficiary: beneficiary,
-            minReturnedTokens: 0,
-            memo: "Fee from loan",
-            metadata: bytes(abi.encodePacked(FEE_REVNET_ID))
-        }) {} catch (bytes memory) {}
-
         // Transfer the remaining balance to the borrower.
         _transferFrom({
             from: address(this),
             to: beneficiary,
             token: loan.source.token,
-            amount: _balanceOf(loan.source.token)
+            amount: _balanceOf(loan.source.token) - sourceFeeAmount
         });
     }
 

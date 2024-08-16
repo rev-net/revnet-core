@@ -28,8 +28,8 @@ interface IREVLoans {
     event PayOff(
         uint256 indexed loanId,
         REVLoan loan,
-        uint256 newAmount,
-        uint256 newCollateral,
+        uint256 amount,
+        uint256 collateralToReturn,
         address payable beneficiary,
         address caller
     );
@@ -39,7 +39,7 @@ interface IREVLoans {
     function MAX_PREPAID_PERCENT() external view returns (uint256);
     function LOAN_LIQUIDATION_DURATION() external view returns (uint256);
     function PROJECTS() external view returns (IJBProjects);
-    function FEE_REVNET_ID() external view returns (uint256);
+    function REV_ID() external view returns (uint256);
     function PERMIT2() external view returns (IPermit2);
     function numberOfLoans() external view returns (uint256);
     function lastLoanIdLiquidated() external view returns (uint256);
@@ -47,7 +47,15 @@ interface IREVLoans {
     function isLoanSourceOf(uint256 revnetId, IJBPayoutTerminal terminal, address token) external view returns (bool);
     function loanSourcesOf(uint256 revnetId) external view returns (REVLoanSource[] memory);
     function loanOf(uint256 loanId) external view returns (REVLoan memory);
-    function borrowableAmountFrom(uint256 revnetId, uint256 collateral, uint256 decimals, uint256 currency) external view returns (uint256);
+    function borrowableAmountFrom(
+        uint256 revnetId,
+        uint256 collateral,
+        uint256 decimals,
+        uint256 currency
+    )
+        external
+        view
+        returns (uint256);
     function totalBorrowedFrom(
         uint256 revnetId,
         IJBPayoutTerminal terminal,
