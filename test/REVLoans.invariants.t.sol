@@ -340,7 +340,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
             jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER
         );
 
-        LOANS_CONTRACT = new REVLoans(jbProjects(), FEE_PROJECT_ID, permit2());
+        LOANS_CONTRACT = new REVLoans(jbProjects(), FEE_PROJECT_ID, permit2(), address(this));
 
         // Approve the basic deployer to configure the project.
         vm.prank(address(multisig()));
