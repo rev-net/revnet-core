@@ -425,12 +425,7 @@ contract REVLoans is ERC721, IREVLoans {
             IJBTerminal feeTerminal = directory.primaryTerminalOf(FEE_REVNET_ID, loan.source.token);
 
             // Add the new amount to the loan.
-            _addTo({
-                loan: loan,
-                amount: newAmount - loan.amount,
-                feeTerminal: feeTerminal,
-                beneficiary: beneficiary
-            });
+            _addTo({loan: loan, amount: newAmount - loan.amount, feeTerminal: feeTerminal, beneficiary: beneficiary});
             // ... or pay off the loan if needed.
         } else if (loan.amount > newAmount) {
             _payOff({loan: loan, amount: loan.amount - newAmount, beneficiary: beneficiary, allowance: allowance});
@@ -597,17 +592,10 @@ contract REVLoans is ERC721, IREVLoans {
         }
 
         // Get the amount of additional fee to take for REV.
-        uint256 revFeeAmount = JBFees.feeAmountIn({
-            amount: amount,
-            feePercent: REV_PREPAID_FEE
-        });
-
+        uint256 revFeeAmount = JBFees.feeAmountIn({amount: amount, feePercent: REV_PREPAID_FEE});
 
         // Get the amount of additional fee to take for the revnet issuing the loan.
-        uint256 sourceFeeAmount = JBFees.feeAmountIn({
-            amount: amount,
-            feePercent: loan.prepaidFeePercent
-        });
+        uint256 sourceFeeAmount = JBFees.feeAmountIn({amount: amount, feePercent: loan.prepaidFeePercent});
 
         // The amount to be loaned out, including the fee.
         uint256 totalLoanAmount = amount + revFeeAmount + sourceFeeAmount;

@@ -336,7 +336,8 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVLOAN_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
 
-        uint256 loanable = LOANS_CONTRACT.borrowableAmountFrom(REVLOAN_ID, tokens);
+        uint256 loanable =
+            LOANS_CONTRACT.borrowableAmountFrom(REVLOAN_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
         assertGt(loanable, 0);
 
         // TODO: Fix fund access limit setting within REVDeployer?

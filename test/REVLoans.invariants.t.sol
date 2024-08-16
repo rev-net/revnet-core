@@ -40,7 +40,7 @@ struct FeeProjectConfig {
 }
 
 contract REVLoansPayHandler is JBTest {
-    uint256 REVNET_ID;
+    uint256 REVLOAN_ID;
     address USER;
 
     IJBMultiTerminal TERMINAL;
@@ -57,7 +57,7 @@ contract REVLoansPayHandler is JBTest {
         TERMINAL = terminal;
         LOANS = loans;
         PERMS = permissions;
-        REVNET_ID = revnetId;
+        REVLOAN_ID = revnetId;
         USER = beneficiary;
     }
 
@@ -67,8 +67,9 @@ contract REVLoansPayHandler is JBTest {
 
         vm.startPrank(USER);
         uint256 receivedTokens =
-            TERMINAL.pay{value: payAmount}(REVNET_ID, JBConstants.NATIVE_TOKEN, payAmount, USER, 1, "", "");
-        uint256 borrowable = LOANS.borrowableAmountFrom(REVNET_ID, receivedTokens);
+            TERMINAL.pay{value: payAmount}(REVLOAN_ID, JBConstants.NATIVE_TOKEN, payAmount, USER, 1, "", "");
+        uint256 borrowable =
+            LOANS.borrowableAmountFrom(REVLOAN_ID, receivedTokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
 
         // TODO: Address REVLoans burning permissions
         // This is a spoof until then
@@ -79,7 +80,7 @@ contract REVLoansPayHandler is JBTest {
         );
 
         LOANS.borrowFrom(
-            REVNET_ID, TERMINAL, JBConstants.NATIVE_TOKEN, borrowable, receivedTokens, payable(USER), prepaidFee
+            REVLOAN_ID, TERMINAL, JBConstants.NATIVE_TOKEN, borrowable, receivedTokens, payable(USER), prepaidFee
         );
         vm.stopPrank();
     }
