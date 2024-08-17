@@ -204,7 +204,15 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
     /// @param revId The ID of the REV revnet that will receive the fees.
     /// @param permit2 A permit2 utility.
     /// @param trustedForwarder A trusted forwarder of transactions to this contract.
-    constructor(IJBProjects projects, uint256 revId, IPermit2 permit2, address trustedForwarder) ERC721("REV Loans", "$REVLOAN") ERC2771Context(trustedForwarder) {
+    constructor(
+        IJBProjects projects,
+        uint256 revId,
+        IPermit2 permit2,
+        address trustedForwarder
+    )
+        ERC721("REV Loans", "$REVLOAN")
+        ERC2771Context(trustedForwarder)
+    {
         PROJECTS = projects;
         REV_ID = revId;
         PERMIT2 = permit2;
@@ -317,18 +325,12 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
             sourceFeeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION) - prepaidAmount;
         }
 
+        // If we do not need to collect `amount` but less will do then we only transfer how much is needed.
+        uint256 totalLoanAmount = loan.amount + sourceFeeAmount;
+        amount = amount <= totalLoanAmount ? amount : totalLoanAmount;
+
         // Accept the funds that'll be used to pay off loans.
         amount = _acceptFundsFor({token: loan.source.token, amount: amount, allowance: allowance});
-
-        // If the amount being paid is greater than the loan's amount, return extra to the payer.
-        if (amount > loan.amount + sourceFeeAmount) {
-            _transferFrom({
-                from: address(this),
-                to: payable(_msgSender()),
-                token: loan.source.token,
-                amount: amount - sourceFeeAmount - loan.amount
-            });
-        }
 
         // Borrow in.
         _adjust({
@@ -417,7 +419,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
         // Keep a reference to the revnet's directory.
         IJBDirectory directory = controller.DIRECTORY();
 
-
         {
             // Get a reference to the accounting context for the source.
             JBAccountingContext memory accountingContext =
@@ -465,11 +466,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
             });
             // ... or pay off the loan if needed.
         } else if (loan.amount > newAmount) {
-            _payOff({
-                loan: loan,
-                amount: loan.amount - newAmount,
-                sourceFeeAmount: sourceFeeAmount
-            });
+            _payOff({loan: loan, amount: loan.amount - newAmount, sourceFeeAmount: sourceFeeAmount});
         }
 
         // Add collateral if needed...
@@ -559,13 +556,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
     /// @param loan The loan being paid off.
     /// @param amount The amount being paid off.
     /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
-    function _payOff(
-        REVLoan memory loan,
-        uint256 amount,
-        uint256 sourceFeeAmount
-    )
-        internal
-    {
+    function _payOff(REVLoan memory loan, uint256 amount, uint256 sourceFeeAmount) internal {
         // Decrement the total amount of a token being loaned out by the revnet from its terminal.
         totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] -= amount;
 
