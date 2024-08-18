@@ -984,9 +984,11 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Initialize the array of rulesets.
         rulesetConfigurations = new JBRulesetConfig[](numberOfStages);
 
-        // Add the base currency to the byte-encoded configuration.
+        // Add the base configuration to the byte-encoded configuration.
         encodedConfiguration = abi.encode(
             configuration.baseCurrency,
+            configuration.loans,
+            configuration.preventChainExtension,
             configuration.description.name,
             configuration.description.ticker,
             configuration.description.salt
