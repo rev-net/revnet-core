@@ -143,7 +143,8 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
             splitOperator: multisig(),
             stageConfigurations: stageConfigurations,
             loanSources: _loanSources,
-            loans: address(0)
+            loans: address(0),
+            preventChainExtension: false
         });
 
         // The project's buyback hook configuration.

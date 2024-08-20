@@ -155,7 +155,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// Participants can borrow up to the current cashout value of their tokens.
     /// @custom:param revnetId The ID of the revnet to get the loan contract of.
     mapping(uint256 revnetId => address) public override loansOf;
-    
+
     /// @notice A flag indicating if the revnet should not be extended to new chains via new suckers after deployment.
     /// @dev The ID of the revnet.
     mapping(uint256 revnetId => bool) public override preventChainExtensionOf;

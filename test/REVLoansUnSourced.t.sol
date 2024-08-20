@@ -139,7 +139,8 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
             splitOperator: multisig(),
             stageConfigurations: stageConfigurations,
             loanSources: _loanSources,
-            loans: address(0)
+            loans: address(0),
+            preventChainExtension: false
         });
 
         // The project's buyback hook configuration.
@@ -242,7 +243,8 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
             splitOperator: multisig(),
             stageConfigurations: stageConfigurations,
             loanSources: _loanSources,
-            loans: address(LOANS_CONTRACT)
+            loans: address(LOANS_CONTRACT),
+            preventChainExtension: false
         });
 
         // The project's buyback hook configuration.
