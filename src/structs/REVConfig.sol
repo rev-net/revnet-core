@@ -18,6 +18,7 @@ import {IREVLoans} from "../interfaces/IREVLoans.sol";
 /// @custom:member stageConfigurations The periods of changing constraints.
 /// @custom:member loanSources The sources for loans.
 /// @custom:member loans The loans contract, which can mint the revnet's tokens and use the revnet's balance.
+/// @custom:member preventChainExtension A flag indicating if the revnet should not later be extended to new chains after deployment.
 struct REVConfig {
     REVDescription description;
     uint32 baseCurrency;
@@ -25,4 +26,5 @@ struct REVConfig {
     REVStageConfig[] stageConfigurations;
     REVLoanSource[] loanSources;
     address loans;
+    bool preventChainExtension;
 }
