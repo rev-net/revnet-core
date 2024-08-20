@@ -40,7 +40,7 @@ struct FeeProjectConfig {
 }
 
 contract REVLoansPayHandler is JBTest {
-    uint256 REVLOAN_ID;
+    uint256 REVNET_ID;
     address USER;
 
     IJBMultiTerminal TERMINAL;
@@ -57,7 +57,7 @@ contract REVLoansPayHandler is JBTest {
         TERMINAL = terminal;
         LOANS = loans;
         PERMS = permissions;
-        REVLOAN_ID = revnetId;
+        REVNET_ID = revnetId;
         USER = beneficiary;
     }
 
@@ -67,9 +67,9 @@ contract REVLoansPayHandler is JBTest {
 
         vm.startPrank(USER);
         uint256 receivedTokens =
-            TERMINAL.pay{value: payAmount}(REVLOAN_ID, JBConstants.NATIVE_TOKEN, payAmount, USER, 1, "", "");
+            TERMINAL.pay{value: payAmount}(REVNET_ID, JBConstants.NATIVE_TOKEN, payAmount, USER, 1, "", "");
         uint256 borrowable =
-            LOANS.borrowableAmountFrom(REVLOAN_ID, receivedTokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+            LOANS.borrowableAmountFrom(REVNET_ID, receivedTokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
 
         // TODO: Address REVLoans burning permissions
         // This is a spoof until then
@@ -80,7 +80,7 @@ contract REVLoansPayHandler is JBTest {
         );
 
         LOANS.borrowFrom(
-            REVLOAN_ID, TERMINAL, JBConstants.NATIVE_TOKEN, borrowable, receivedTokens, payable(USER), prepaidFee
+            REVNET_ID, TERMINAL, JBConstants.NATIVE_TOKEN, borrowable, receivedTokens, payable(USER), prepaidFee
         );
         vm.stopPrank();
     }
@@ -110,7 +110,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
     CTPublisher PUBLISHER;
 
     uint256 FEE_PROJECT_ID;
-    uint256 REVLOAN_ID;
+    uint256 REVNET_ID;
 
     address USER = makeAddr("user");
 
@@ -355,7 +355,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         REVDeploy721TiersHookConfig memory tiered721HookConfiguration;
 
         // Configure the project.
-        REVLOAN_ID = BASIC_DEPLOYER.deployFor({
+        REVNET_ID = BASIC_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
             configuration: feeProjectConfig.configuration,
             terminalConfigurations: feeProjectConfig.terminalConfigurations,
@@ -367,7 +367,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         FeeProjectConfig memory fee2Config = getSecondProjectConfig();
 
         // Configure the project.
-        REVLOAN_ID = BASIC_DEPLOYER.deployFor({
+        REVNET_ID = BASIC_DEPLOYER.deployFor({
             revnetId: 0, // Zero to deploy a new revnet
             configuration: fee2Config.configuration,
             terminalConfigurations: fee2Config.terminalConfigurations,
@@ -376,7 +376,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         });
 
         // Deploy handlers and assign them as targets
-        PAY_HANDLER = new REVLoansPayHandler(jbMultiTerminal(), LOANS_CONTRACT, jbPermissions(), REVLOAN_ID, USER);
+        PAY_HANDLER = new REVLoansPayHandler(jbMultiTerminal(), LOANS_CONTRACT, jbPermissions(), REVNET_ID, USER);
 
         // Give Eth for the user experience
         vm.deal(USER, type(uint256).max);
@@ -397,15 +397,14 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
     }
 
     function invariant_A() public {
-        uint256 totalCollateral = LOANS_CONTRACT.totalCollateralOf(REVLOAN_ID);
+        uint256 totalCollateral = LOANS_CONTRACT.totalCollateralOf(REVNET_ID);
         uint256 redeemRate = JBConstants.MAX_REDEMPTION_RATE - 6000;
-        uint256 unrealizedAutoMint = BASIC_DEPLOYER.unrealizedAutoMintAmountOf(REVLOAN_ID);
-        uint256 surplus = jbMultiTerminal().currentSurplusOf(REVLOAN_ID, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        uint256 unrealizedAutoMint = BASIC_DEPLOYER.unrealizedAutoMintAmountOf(REVNET_ID);
+        uint256 surplus = jbMultiTerminal().currentSurplusOf(REVNET_ID, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
 
         uint256 maxLoanable = (totalCollateral * redeemRate) + unrealizedAutoMint + surplus;
 
-        uint256 totalBorrowed =
-            LOANS_CONTRACT.totalBorrowedFrom(REVLOAN_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
+        uint256 totalBorrowed = LOANS_CONTRACT.totalBorrowedFrom(REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
 
         assertLe(totalBorrowed, maxLoanable);
     }

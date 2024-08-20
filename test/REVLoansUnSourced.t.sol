@@ -58,7 +58,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
     CTPublisher PUBLISHER;
 
     uint256 FEE_PROJECT_ID;
-    uint256 REVLOAN_ID;
+    uint256 REVNET_ID;
 
     address USER = makeAddr("user");
 
@@ -303,7 +303,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
         REVDeploy721TiersHookConfig memory tiered721HookConfiguration;
 
         // Configure the project.
-        REVLOAN_ID = BASIC_DEPLOYER.deployFor({
+        REVNET_ID = BASIC_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
             configuration: feeProjectConfig.configuration,
             terminalConfigurations: feeProjectConfig.terminalConfigurations,
@@ -315,7 +315,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
         FeeProjectConfig memory fee2Config = getSecondProjectConfig();
 
         // Configure the project.
-        REVLOAN_ID = BASIC_DEPLOYER.deployFor({
+        REVNET_ID = BASIC_DEPLOYER.deployFor({
             revnetId: 0, // Zero to deploy a new revnet
             configuration: fee2Config.configuration,
             terminalConfigurations: fee2Config.terminalConfigurations,
@@ -329,17 +329,17 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
 
     function test_Pay_Borrow_Without_Loan_Source() public {
         vm.prank(USER);
-        uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVLOAN_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+        uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
 
         uint256 loanable =
-            LOANS_CONTRACT.borrowableAmountFrom(REVLOAN_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
         assertGt(loanable, 0);
 
         // TODO: Fix fund access limit setting within REVDeployer?
         vm.expectRevert(abi.encodeWithSignature("INADEQUATE_CONTROLLER_ALLOWANCE()"));
         vm.prank(USER);
         LOANS_CONTRACT.borrowFrom(
-            REVLOAN_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN, loanable, tokens, payable(USER), 500
+            REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN, loanable, tokens, payable(USER), 500
         );
     }
 }
