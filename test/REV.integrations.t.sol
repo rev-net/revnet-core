@@ -24,7 +24,9 @@ import {REVBuybackPoolConfig} from "../src/structs/REVBuybackPoolConfig.sol";
 import {IREVLoans} from "./../src/interfaces/IREVLoans.sol";
 import {JBSuckerDeployerConfig} from "@bananapus/suckers/src/structs/JBSuckerDeployerConfig.sol";
 import {JBSuckerRegistry} from "@bananapus/suckers/src/JBSuckerRegistry.sol";
+import {JBTokenMapping} from "@bananapus/suckers/src/structs/JBTokenMapping.sol";
 import {JB721TiersHookDeployer} from "@bananapus/721-hook/src/JB721TiersHookDeployer.sol";
+import {JBArbitrumSuckerDeployer} from "@bananapus/suckers/src/deployers/JBArbitrumSuckerDeployer.sol";
 import {JB721TiersHook} from "@bananapus/721-hook/src/JB721TiersHook.sol";
 import {JB721TiersHookStore} from "@bananapus/721-hook/src/JB721TiersHookStore.sol";
 import {JBAddressRegistry} from "@bananapus/address-registry/src/JBAddressRegistry.sol";
@@ -54,6 +56,8 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
 
     /// @notice Deploys and tracks suckers for revnets.
     IJBSuckerRegistry SUCKER_REGISTRY;
+    IJBSuckerDeployer ARB_SUCKER_DEPLOYER;
+    bytes ENCODED_CONFIG;
 
     CTPublisher PUBLISHER;
 
@@ -147,6 +151,15 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
             preventChainExtension: false
         });
 
+        ENCODED_CONFIG = abi.encode(
+            revnetConfiguration.baseCurrency,
+            revnetConfiguration.loans,
+            revnetConfiguration.preventChainExtension,
+            revnetConfiguration.description.name,
+            revnetConfiguration.description.ticker,
+            revnetConfiguration.description.salt
+        );
+
         // The project's buyback hook configuration.
         REVBuybackPoolConfig[] memory buybackPoolConfigurations = new REVBuybackPoolConfig[](1);
         buybackPoolConfigurations[0] = REVBuybackPoolConfig({
@@ -190,9 +203,14 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
             jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER
         );
 
+        ARB_SUCKER_DEPLOYER = new JBArbitrumSuckerDeployer(jbDirectory(), jbTokens(), jbPermissions(), multisig());
+
         // Approve the basic deployer to configure the project.
-        vm.prank(address(multisig()));
+        vm.startPrank(address(multisig()));
         jbProjects().approve(address(BASIC_DEPLOYER), FEE_PROJECT_ID);
+        SUCKER_REGISTRY.allowSuckerDeployer(address(ARB_SUCKER_DEPLOYER));
+
+        vm.stopPrank();
 
         // Build the config.
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
@@ -244,5 +262,39 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         bool isNewOperator = BASIC_DEPLOYER.isSplitOperatorOf(REVNET_ID, address(this));
 
         assertEq(isNewOperator, true);
+    }
+
+    function test_sucker_deploy() public {
+        JBSuckerDeployerConfig[] memory suckerDeployerConfig = new JBSuckerDeployerConfig[](1);
+
+        JBTokenMapping[] memory tokenMapping = new JBTokenMapping[](1);
+
+        tokenMapping[0] = JBTokenMapping({
+            localToken: makeAddr("someToken"),
+            minGas: 200_000,
+            remoteToken: makeAddr("someOtherToken"),
+            minBridgeAmount: 100 // emoji
+        });
+
+        suckerDeployerConfig[0] = JBSuckerDeployerConfig({deployer: ARB_SUCKER_DEPLOYER, mappings: tokenMapping});
+
+        REVSuckerDeploymentConfig memory revConfig =
+            REVSuckerDeploymentConfig({deployerConfigurations: suckerDeployerConfig, salt: "SALTY"});
+
+        // Arbitrum chainid so the deployer works
+        vm.chainId(42_161);
+        vm.prank(multisig());
+
+        // Ensure Registry is called
+        vm.expectEmit();
+        address[] memory suckers = new address[](1);
+        suckers[0] = 0xfF4c4c3Aa7bD09d9bbF713CE6dE7492F304540E3;
+        emit IJBSuckerRegistry.SuckersDeployedFor(REVNET_ID, suckers, suckerDeployerConfig, address(BASIC_DEPLOYER));
+
+        BASIC_DEPLOYER.deploySuckersFor(REVNET_ID, ENCODED_CONFIG, revConfig);
+
+        // Ensure it's registered
+        bool isSucker = SUCKER_REGISTRY.isSuckerOf(REVNET_ID, suckers[0]);
+        assertEq(isSucker, true);
     }
 }
