@@ -17,6 +17,7 @@ import "@bananapus/buyback-hook/script/helpers/BuybackDeploymentLib.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
 import {REVLoans} from "../src/REVLoans.sol";
+import {REVLoan} from "../src/structs/REVLoan.sol";
 import {REVStageConfig, REVAutoMint} from "../src/structs/REVStageConfig.sol";
 import {REVLoanSource} from "../src/structs/REVLoanSource.sol";
 import {REVDescription} from "../src/structs/REVDescription.sol";
@@ -37,7 +38,7 @@ struct FeeProjectConfig {
     REVSuckerDeploymentConfig suckerDeploymentConfiguration;
 }
 
-contract REVLoansTests is TestBaseWorkflow, JBTest {
+contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     /// @notice the salts that are used to deploy the contracts.
     bytes32 BASIC_DEPLOYER_SALT = "REVDeployer";
     bytes32 ERC20_SALT = "REV_TOKEN";
@@ -58,7 +59,7 @@ contract REVLoansTests is TestBaseWorkflow, JBTest {
     CTPublisher PUBLISHER;
 
     uint256 FEE_PROJECT_ID;
-    uint256 REVLOAN_ID;
+    uint256 REVNET_ID;
 
     address USER = makeAddr("user");
 
@@ -303,7 +304,7 @@ contract REVLoansTests is TestBaseWorkflow, JBTest {
         REVDeploy721TiersHookConfig memory tiered721HookConfiguration;
 
         // Configure the project.
-        REVLOAN_ID = BASIC_DEPLOYER.deployFor({
+        REVNET_ID = BASIC_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
             configuration: feeProjectConfig.configuration,
             terminalConfigurations: feeProjectConfig.terminalConfigurations,
@@ -315,7 +316,7 @@ contract REVLoansTests is TestBaseWorkflow, JBTest {
         FeeProjectConfig memory fee2Config = getSecondProjectConfig();
 
         // Configure the project.
-        REVLOAN_ID = BASIC_DEPLOYER.deployFor({
+        REVNET_ID = BASIC_DEPLOYER.deployFor({
             revnetId: 0, // Zero to deploy a new revnet
             configuration: fee2Config.configuration,
             terminalConfigurations: fee2Config.terminalConfigurations,
@@ -329,10 +330,10 @@ contract REVLoansTests is TestBaseWorkflow, JBTest {
 
     function test_Pay_Borrow_With_Loan_Source() public {
         vm.prank(USER);
-        uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVLOAN_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+        uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
 
         uint256 loanable =
-            LOANS_CONTRACT.borrowableAmountFrom(REVLOAN_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
         assertGt(loanable, 0);
 
         // TODO: Address REVLoans burning permissions
@@ -345,8 +346,23 @@ contract REVLoansTests is TestBaseWorkflow, JBTest {
 
         vm.prank(USER);
         LOANS_CONTRACT.borrowFrom(
-            REVLOAN_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN, loanable, tokens, payable(USER), 500
+            REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN, loanable, tokens, payable(USER), 500
         );
+
+        // Ensure loanOf view returns the correct properties
+
+        REVLoanSource memory expectedSource =
+            REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
+        REVLoan memory loan = LOANS_CONTRACT.loanOf(1);
+        assertEq(loan.revnetId, REVNET_ID);
+        assertEq(loan.amount, loanable);
+        assertEq(loan.collateral, tokens);
+        assertEq(loan.createdAt, block.timestamp);
+        assertEq(loan.prepaidFeePercent, 500);
+        assertEq(loan.prepaidDuration, mulDiv(500, 3650 days, 500));
+        assertEq(loan.source.token, JBConstants.NATIVE_TOKEN);
+        assertEq(address(loan.source.terminal), address(jbMultiTerminal()));
 
         // Ensure loans contract isn't hodling
         // TODO: Why does the borrow seem to travel through the loans contract, requiring a fallback function to
