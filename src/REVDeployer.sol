@@ -155,7 +155,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// Participants can borrow up to the current cashout value of their tokens.
     /// @custom:param revnetId The ID of the revnet to get the loan contract of.
     mapping(uint256 revnetId => address) public override loansOf;
-    
+
     /// @notice A flag indicating if the revnet should not be extended to new chains via new suckers after deployment.
     /// @dev The ID of the revnet.
     mapping(uint256 revnetId => bool) public override preventChainExtensionOf;
@@ -181,7 +181,9 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// tokens get minted by a payment.
     /// @return hookSpecifications Amounts (out of what's being paid in) to be sent to pay hooks instead of being paid
     /// into the revnet. Useful for automatically routing funds from a treasury as payments come in.
-    function beforePayRecordedWith(JBBeforePayRecordedContext calldata context)
+    function beforePayRecordedWith(
+        JBBeforePayRecordedContext calldata context
+    )
         external
         view
         override
@@ -231,7 +233,9 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @return redeemCount The number of revnet tokens that are redeemed.
     /// @return totalSupply The total revnet token supply.
     /// @return hookSpecifications The amount of funds and the data to send to redeem hooks (this contract).
-    function beforeRedeemRecordedWith(JBBeforeRedeemRecordedContext calldata context)
+    function beforeRedeemRecordedWith(
+        JBBeforeRedeemRecordedContext calldata context
+    )
         external
         view
         override
@@ -942,7 +946,9 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @param revnetId The ID of the revnet to get split operator permissions for.
     /// @return allOperatorPermissions The permissions that the split operator should be granted for the revnet,
     /// including both default and custom permissions.
-    function _splitOperatorPermissionIndexesOf(uint256 revnetId)
+    function _splitOperatorPermissionIndexesOf(
+        uint256 revnetId
+    )
         internal
         view
         returns (uint256[] memory allOperatorPermissions)
@@ -970,7 +976,9 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @return rulesetConfigurations A list of ruleset configurations defined by the stages.
     /// @return encodedConfiguration A byte-encoded representation of the revnet's configuration. Used for sucker
     /// deployment salts.
-    function _makeRulesetConfigurations(REVConfig memory configuration)
+    function _makeRulesetConfigurations(
+        REVConfig memory configuration
+    )
         internal
         view
         returns (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration)
@@ -1049,7 +1057,9 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @dev Returns an unlimited surplus allowance for each token which can be loaned out.
     /// @param configuration The revnet's configuration.
     /// @return fundAccessLimitGroups The fund access limit groups for the loans.
-    function _makeLoanFundAccessLimits(REVConfig memory configuration)
+    function _makeLoanFundAccessLimits(
+        REVConfig memory configuration
+    )
         internal
         pure
         returns (JBFundAccessLimitGroup[] memory fundAccessLimitGroups)
@@ -1087,7 +1097,9 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @dev The operator can add other beneficiaries to the split group later, if they wish.
     /// @param splitOperator The address to send the entire split amount to.
     /// @return splitGroups The split group, entirely assigned to the operator.
-    function _makeOperatorSplitGroupWith(address splitOperator)
+    function _makeOperatorSplitGroupWith(
+        address splitOperator
+    )
         internal
         pure
         returns (JBSplitGroup[] memory splitGroups)

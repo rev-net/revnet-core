@@ -204,7 +204,15 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
     /// @param revId The ID of the REV revnet that will receive the fees.
     /// @param permit2 A permit2 utility.
     /// @param trustedForwarder A trusted forwarder of transactions to this contract.
-    constructor(IJBProjects projects, uint256 revId, IPermit2 permit2, address trustedForwarder) ERC721("REV Loans", "$REVLOAN") ERC2771Context(trustedForwarder) {
+    constructor(
+        IJBProjects projects,
+        uint256 revId,
+        IPermit2 permit2,
+        address trustedForwarder
+    )
+        ERC721("REV Loans", "$REVLOAN")
+        ERC2771Context(trustedForwarder)
+    {
         PROJECTS = projects;
         REV_ID = revId;
         PERMIT2 = permit2;
@@ -233,7 +241,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
         address payable beneficiary,
         uint256 prepaidFeePercent
     )
-        external
+        public
         override
         returns (uint256 loanId)
     {
@@ -273,6 +281,65 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
         });
 
         emit Borrow(loanId, revnetId, loan, terminal, token, amount, collateral, beneficiary, _msgSender());
+    }
+
+    /// @notice Refinances a loan by transferring extra collateral from an existing loan to a new loan.
+    /// @dev Useful if a loan's collateral has gone up in value since the loan was created.
+    /// @param loanId The ID of the loan being refinanced.
+    /// @param collateralToTransfer The amount of collateral to transfer from the original loan.
+    /// @param terminal The terminal where the funds will be borrowed from.
+    /// @param token The token being borrowed.
+    /// @param amount The amount being borrowed.
+    /// @param collateralToAdd The amount of collateral to add to the loan.
+    /// @param beneficiary The address that'll receive the borrowed funds and the tokens resulting from fee payments.
+    /// @param prepaidFeePercent The fee percent that will be charged upfront from the revnet being borrowed from.
+    function refinanceLoan(
+        uint256 loanId,
+        uint256 collateralToTransfer,
+        IJBPayoutTerminal terminal,
+        address token,
+        uint256 amount,
+        uint256 collateralToAdd,
+        address payable beneficiary,
+        uint256 prepaidFeePercent
+    )
+        external
+        payable
+        override
+    {
+        // Make sure only the loan's owner can manage it.
+        if (_ownerOf(loanId) != _msgSender()) revert UNAUTHORIZED();
+
+        // Make sure there is an amount being borrowed.
+        if (amount == 0) revert AMOUNT_NOT_SPECIFIED();
+
+        // Keep a reference to loan having its collateral reduced.
+        REVLoan storage loan = _loanOf[loanId];
+
+        // Make sure there is enough collateral to transfer.
+        if (collateralToTransfer > loan.collateral) revert NOT_ENOUGH_COLLATERAL();
+
+        // Reduce the collateral of the original loan.
+        _adjust({
+            loan: loan,
+            newAmount: loan.amount,
+            newCollateral: loan.collateral - collateralToTransfer,
+            sourceFeeAmount: 0,
+            beneficiary: payable(_msgSender()) // use the msgSender as the beneficiary, who will have the returned collateral tokens debited from
+                // their balance for the new loan.
+        });
+
+        emit Refinance(loanId, collateralToTransfer, _msgSender());
+
+        borrowFrom({
+            revnetId: loan.revnetId,
+            terminal: terminal,
+            token: token,
+            amount: amount,
+            collateral: collateralToTransfer + collateralToAdd,
+            beneficiary: beneficiary,
+            prepaidFeePercent: prepaidFeePercent
+        });
     }
 
     /// @notice Allows the owner of a loan to pay it back or receive returned collateral no longer necessary to support
@@ -417,7 +484,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
         // Keep a reference to the revnet's directory.
         IJBDirectory directory = controller.DIRECTORY();
 
-
         {
             // Get a reference to the accounting context for the source.
             JBAccountingContext memory accountingContext =
@@ -465,11 +531,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
             });
             // ... or pay off the loan if needed.
         } else if (loan.amount > newAmount) {
-            _payOff({
-                loan: loan,
-                amount: loan.amount - newAmount,
-                sourceFeeAmount: sourceFeeAmount
-            });
+            _payOff({loan: loan, amount: loan.amount - newAmount, sourceFeeAmount: sourceFeeAmount});
         }
 
         // Add collateral if needed...
@@ -559,13 +621,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
     /// @param loan The loan being paid off.
     /// @param amount The amount being paid off.
     /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
-    function _payOff(
-        REVLoan memory loan,
-        uint256 amount,
-        uint256 sourceFeeAmount
-    )
-        internal
-    {
+    function _payOff(REVLoan memory loan, uint256 amount, uint256 sourceFeeAmount) internal {
         // Decrement the total amount of a token being loaned out by the revnet from its terminal.
         totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] -= amount;
 
@@ -623,7 +679,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
                 currency: accountingContext.currency,
                 minTokensPaidOut: amount, //totalLoanAmount,
                 beneficiary: payable(address(this)),
-                feeBeneficiary: payable(_msgSender()),
+                feeBeneficiary: beneficiary,
                 memo: "Lending out to a borrower"
             });
         }
