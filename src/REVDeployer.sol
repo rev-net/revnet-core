@@ -70,7 +70,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     error REVBasic_StagesRequired();
     error REVBasic_StageNotStarted();
     error REVBasic_Unauthorized();
-    error REVBasic_ChainExtensionPrevented();
+    error REVBasic_CashOutsCantBeTurnedOffCompletely();
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -155,10 +155,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// Participants can borrow up to the current cashout value of their tokens.
     /// @custom:param revnetId The ID of the revnet to get the loan contract of.
     mapping(uint256 revnetId => address) public override loansOf;
-
-    /// @notice A flag indicating if the revnet should not be extended to new chains via new suckers after deployment.
-    /// @dev The ID of the revnet.
-    mapping(uint256 revnetId => bool) public override preventChainExtensionOf;
 
     //*********************************************************************//
     // ------------------- internal stored properties -------------------- //
@@ -490,11 +486,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Make sure the caller is the revnet's split operator.
         _checkIfSplitOperatorOf({revnetId: revnetId, operator: msg.sender});
 
-        // Make sure the revnet can be extended to new chains.
-        if (preventChainExtensionOf[revnetId]) {
-            revert REVBasic_ChainExtensionPrevented();
-        }
-
         // Deploy the suckers.
         _deploySuckersFor({
             revnetId: revnetId,
@@ -708,11 +699,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                 permissionId: JBPermissionIds.USE_ALLOWANCE
             });
             loansOf[revnetId] = configuration.loans;
-        }
-
-        // If specified, prevent the revnet to later be extended to new chains.
-        if (configuration.preventChainExtension) {
-            preventChainExtensionOf[revnetId] = true;
         }
 
         // Set up the reserved token split group under the default ruleset (0).
@@ -996,7 +982,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         encodedConfiguration = abi.encode(
             configuration.baseCurrency,
             configuration.loans,
-            configuration.preventChainExtension,
+            configuration.allowCrosschainSuckerExtension,
             configuration.description.name,
             configuration.description.ticker,
             configuration.description.salt
@@ -1021,6 +1007,11 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                 revert REVBasic_StageTimesMustIncrease();
             }
 
+            // Make sure the revnet doesn't prevent cashouts all together.
+            if (stageConfiguration.cashOutTaxRate >= JBConstants.MAX_REDEMPTION_RATE) {
+                revert REVBasic_CashOutsCantBeTurnedOffCompletely();
+            }
+
             // Set up the ruleset's metadata.
             JBRulesetMetadata memory metadata;
             metadata.reservedPercent = stageConfiguration.splitPercent;
@@ -1028,6 +1019,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             metadata.baseCurrency = configuration.baseCurrency;
             metadata.allowOwnerMinting = true; // Allow this contract to auto-mint tokens as the revnet's owner.
             metadata.useDataHookForPay = true; // Call this contract's `beforePayRecordedWith(…)` callback on payments.
+            metadata.allowCrosschainSuckerExtension = configuration.allowCrosschainSuckerExtension;
             metadata.dataHook = address(this); // This contract is the data hook.
             metadata.metadata = stageConfiguration.extraMetadata;
 
