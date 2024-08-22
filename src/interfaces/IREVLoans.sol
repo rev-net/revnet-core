@@ -18,8 +18,7 @@ interface IREVLoans {
         uint256 indexed loanId,
         uint256 indexed revnetId,
         REVLoan loan,
-        IJBPayoutTerminal terminal,
-        address token,
+        REVLoanSource source,
         uint256 amount,
         uint256 collateral,
         address payable beneficiary,
@@ -69,27 +68,26 @@ interface IREVLoans {
 
     function borrowFrom(
         uint256 revnetId,
-        IJBPayoutTerminal terminal,
-        address token,
+        REVLoanSource memory source,
         uint256 amount,
         uint256 collateral,
         address payable beneficiary,
         uint256 prepaidFeePercent
     )
         external
-        returns (uint256 loanId);
+        returns (uint256 loanId, REVLoan memory loan);
     function refinanceLoan(
         uint256 loanId,
         uint256 collateralToTransfer,
-        IJBPayoutTerminal terminal,
-        address token,
+        REVLoanSource memory source,
         uint256 amount,
         uint256 collateralToAdd,
         address payable beneficiary,
         uint256 prepaidFeePercent
     )
         external
-        payable;
+        payable
+        returns (uint256 newLoanId, REVLoan memory oldLoan, REVLoan memory newLoan);
 
     function payOff(
         uint256 loanId,
@@ -99,7 +97,8 @@ interface IREVLoans {
         JBSingleAllowance memory allowance
     )
         external
-        payable;
+        payable
+        returns (REVLoan memory loan);
 
     function liquidateExpiredLoans(uint256 count) external;
 }
