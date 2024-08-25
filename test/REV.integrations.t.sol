@@ -148,13 +148,13 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
             stageConfigurations: stageConfigurations,
             loanSources: _loanSources,
             loans: address(0),
-            preventChainExtension: false
+            allowCrosschainSuckerExtension: true
         });
 
         ENCODED_CONFIG = abi.encode(
             revnetConfiguration.baseCurrency,
             revnetConfiguration.loans,
-            revnetConfiguration.preventChainExtension,
+            revnetConfiguration.allowCrosschainSuckerExtension,
             revnetConfiguration.description.name,
             revnetConfiguration.description.ticker,
             revnetConfiguration.description.salt
@@ -286,9 +286,9 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         vm.prank(multisig());
 
         // Ensure Registry is called
-        vm.expectEmit();
         address[] memory suckers = new address[](1);
-        suckers[0] = 0xfF4c4c3Aa7bD09d9bbF713CE6dE7492F304540E3;
+        suckers[0] = 0x09518ed7300D3479A1327e1566AbA7Db8040902C;
+        vm.expectEmit(false, false, true, true);
         emit IJBSuckerRegistry.SuckersDeployedFor(REVNET_ID, suckers, suckerDeployerConfig, address(BASIC_DEPLOYER));
 
         BASIC_DEPLOYER.deploySuckersFor(REVNET_ID, ENCODED_CONFIG, revConfig);

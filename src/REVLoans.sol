@@ -224,26 +224,25 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
 
     /// @notice Open a loan by borrowing from a revnet.
     /// @param revnetId The ID of the revnet being borrowed from.
-    /// @param terminal The terminal where the funds will be borrowed from.
-    /// @param token The token being borrowed.
+    /// @param source The source of the loan being borrowed.
     /// @param amount The amount being borrowed.
     /// @param collateral The amount of tokens to use as collateral for the loan.
     /// @param beneficiary The address that'll receive the borrowed funds and the tokens resulting from fee payments.
     /// @param prepaidFeePercent The fee percent that will be charged upfront from the revnet being borrowed from.
     /// Prepaying a fee is cheaper than paying later.
     /// @return loanId The ID of the loan created from borrowing.
+    /// @return loan The loan created from borrowing.
     function borrowFrom(
         uint256 revnetId,
-        IJBPayoutTerminal terminal,
-        address token,
+        REVLoanSource memory source,
         uint256 amount,
         uint256 collateral,
         address payable beneficiary,
         uint256 prepaidFeePercent
     )
-        external
+        public
         override
-        returns (uint256 loanId)
+        returns (uint256 loanId, REVLoan memory)
     {
         // Make sure there is an amount being borrowed.
         if (amount == 0) revert AMOUNT_NOT_SPECIFIED();
@@ -263,7 +262,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
 
         // Set the loan's values.
         loan.revnetId = uint56(revnetId);
-        loan.source = REVLoanSource({terminal: terminal, token: token});
+        loan.source = source;
         loan.createdAt = uint40(block.timestamp);
         loan.prepaidFeePercent = uint16(prepaidFeePercent);
         loan.prepaidDuration = uint32(mulDiv(prepaidFeePercent, LOAN_LIQUIDATION_DURATION, MAX_PREPAID_PERCENT));
@@ -280,7 +279,72 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
             beneficiary: beneficiary
         });
 
-        emit Borrow(loanId, revnetId, loan, terminal, token, amount, collateral, beneficiary, _msgSender());
+        emit Borrow(loanId, revnetId, loan, source, amount, collateral, beneficiary, _msgSender());
+
+        return (loanId, loan);
+    }
+
+    /// @notice Refinances a loan by transferring extra collateral from an existing loan to a new loan.
+    /// @dev Useful if a loan's collateral has gone up in value since the loan was created.
+    /// @param loanId The ID of the loan being refinanced.
+    /// @param collateralToTransfer The amount of collateral to transfer from the original loan.
+    /// @param source The source of the loan being refinanced.
+    /// @param amount The amount being borrowed.
+    /// @param collateralToAdd The amount of collateral to add to the loan.
+    /// @param beneficiary The address that'll receive the borrowed funds and the tokens resulting from fee payments.
+    /// @param prepaidFeePercent The fee percent that will be charged upfront from the revnet being borrowed from.
+    /// @return newLoanId The ID of the new loan.
+    /// @return oldLoan The loan being refinanced.
+    /// @return newLoan The new loan created from refinancing.
+    function refinanceLoan(
+        uint256 loanId,
+        uint256 collateralToTransfer,
+        REVLoanSource memory source,
+        uint256 amount,
+        uint256 collateralToAdd,
+        address payable beneficiary,
+        uint256 prepaidFeePercent
+    )
+        external
+        payable
+        override
+        returns (uint256 newLoanId, REVLoan memory, REVLoan memory newLoan)
+    {
+        // Make sure only the loan's owner can manage it.
+        if (_ownerOf(loanId) != _msgSender()) revert UNAUTHORIZED();
+
+        // Make sure there is an amount being borrowed.
+        if (amount == 0) revert AMOUNT_NOT_SPECIFIED();
+
+        // Keep a reference to loan having its collateral reduced.
+        REVLoan storage oldLoan = _loanOf[loanId];
+
+        // Make sure there is enough collateral to transfer.
+        if (collateralToTransfer > oldLoan.collateral) revert NOT_ENOUGH_COLLATERAL();
+
+        // Reduce the collateral of the original loan.
+        _adjust({
+            loan: oldLoan,
+            newAmount: oldLoan.amount,
+            newCollateral: oldLoan.collateral - collateralToTransfer,
+            sourceFeeAmount: 0,
+            beneficiary: payable(_msgSender()) // use the msgSender as the beneficiary, who will have the returned
+                // collateral tokens debited from
+                // their balance for the new loan.
+        });
+
+        emit Refinance(loanId, collateralToTransfer, _msgSender());
+
+        (newLoanId, newLoan) = borrowFrom({
+            revnetId: oldLoan.revnetId,
+            source: source,
+            amount: amount,
+            collateral: collateralToTransfer + collateralToAdd,
+            beneficiary: beneficiary,
+            prepaidFeePercent: prepaidFeePercent
+        });
+
+        return (newLoanId, oldLoan, newLoan);
     }
 
     /// @notice Allows the owner of a loan to pay it back or receive returned collateral no longer necessary to support
@@ -290,6 +354,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
     /// @param collateralToReturn The amount of collateral to return being returned from the loan.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     /// @param allowance An allowance to faciliate permit2 interactions.
+    /// @return loan The loan after it's been paid off.
     function payOff(
         uint256 loanId,
         uint256 amount,
@@ -300,6 +365,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
         external
         payable
         override
+        returns (REVLoan memory)
     {
         // Make sure only the loan's owner can manage it.
         if (_ownerOf(loanId) != _msgSender()) revert UNAUTHORIZED();
@@ -353,6 +419,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
         }
 
         emit PayOff(loanId, loan, amount, collateralToReturn, beneficiary, _msgSender());
+
+        return loan;
     }
 
     /// @notice Cleans up any liquiditated loans.
@@ -620,7 +688,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
                 currency: accountingContext.currency,
                 minTokensPaidOut: amount, //totalLoanAmount,
                 beneficiary: payable(address(this)),
-                feeBeneficiary: payable(_msgSender()),
+                feeBeneficiary: beneficiary,
                 memo: "Lending out to a borrower"
             });
         }

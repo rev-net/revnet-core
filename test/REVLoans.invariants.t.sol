@@ -79,9 +79,9 @@ contract REVLoansPayHandler is JBTest {
             abi.encode(true)
         );
 
-        LOANS.borrowFrom(
-            REVNET_ID, TERMINAL, JBConstants.NATIVE_TOKEN, borrowable, receivedTokens, payable(USER), prepaidFee
-        );
+        REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: TERMINAL});
+
+        LOANS.borrowFrom(REVNET_ID, sauce, borrowable, receivedTokens, payable(USER), prepaidFee);
         vm.stopPrank();
     }
 }
@@ -192,7 +192,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
             stageConfigurations: stageConfigurations,
             loanSources: _loanSources,
             loans: address(0),
-            preventChainExtension: false
+            allowCrosschainSuckerExtension: true
         });
 
         // The project's buyback hook configuration.
@@ -296,7 +296,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
             stageConfigurations: stageConfigurations,
             loanSources: _loanSources,
             loans: address(LOANS_CONTRACT),
-            preventChainExtension: false
+            allowCrosschainSuckerExtension: true
         });
 
         // The project's buyback hook configuration.

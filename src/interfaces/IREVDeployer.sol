@@ -71,7 +71,6 @@ interface IREVDeployer {
     function unrealizedAutoMintAmountOf(uint256 revnetId) external view returns (uint256);
     function loansOf(uint256 revnetId) external view returns (address);
     function isSplitOperatorOf(uint256 revnetId, address addr) external view returns (bool);
-    function preventChainExtensionOf(uint256 revnetId) external view returns (bool);
 
     function deployFor(
         uint256 revnetId,

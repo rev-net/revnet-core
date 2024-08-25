@@ -141,7 +141,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             stageConfigurations: stageConfigurations,
             loanSources: _loanSources,
             loans: address(0),
-            preventChainExtension: false
+            allowCrosschainSuckerExtension: true
         });
 
         // The project's buyback hook configuration.
@@ -245,7 +245,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             stageConfigurations: stageConfigurations,
             loanSources: _loanSources,
             loans: address(LOANS_CONTRACT),
-            preventChainExtension: false
+            allowCrosschainSuckerExtension: true
         });
 
         // The project's buyback hook configuration.
@@ -344,10 +344,10 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             abi.encode(true)
         );
 
+        REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
         vm.prank(USER);
-        LOANS_CONTRACT.borrowFrom(
-            REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN, loanable, tokens, payable(USER), 500
-        );
+        LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
 
         // Ensure loanOf view returns the correct properties
 
