@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
 import {mulDiv} from "@prb/math/src/Common.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
@@ -44,7 +46,7 @@ import {REVLoanSource} from "./structs/REVLoanSource.sol";
 /// cannot be
 /// recouped.
 /// @dev The loaned amounts include the fees taken, meaning the amount paid back is the amount borrowed plus the fees.
-contract REVLoans is ERC721, ERC2771Context, IREVLoans {
+contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     // A library that parses the packed ruleset metadata into a friendlier format.
     using JBRulesetMetadataResolver for JBRuleset;
 
@@ -241,6 +243,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
     )
         public
         override
+        nonReentrant
         returns (uint256 loanId, REVLoan memory)
     {
         // Make sure there is an amount being borrowed.
@@ -307,6 +310,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
         external
         payable
         override
+        nonReentrant
         returns (uint256 newLoanId, REVLoan memory, REVLoan memory newLoan)
     {
         // Make sure only the loan's owner can manage it.
@@ -364,6 +368,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
         external
         payable
         override
+        nonReentrant
         returns (REVLoan memory)
     {
         // Make sure only the loan's owner can manage it.
@@ -425,7 +430,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
     /// @notice Cleans up any liquiditated loans.
     /// @dev Since loans are created in incremental order, earlier IDs will always be liquidated before later ones.
     /// @param count The amount of loans iterate over since the last liquidated loan.
-    function liquidateExpiredLoans(uint256 count) external override {
+    function liquidateExpiredLoans(uint256 count) external override nonReentrant {
         // Keep a reference to the loan ID being iterated on.
         uint256 loanId;
 
