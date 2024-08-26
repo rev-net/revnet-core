@@ -686,7 +686,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
                 token: loan.source.token,
                 amount: amount, //totalLoanAmount,
                 currency: accountingContext.currency,
-                minTokensPaidOut: amount, //totalLoanAmount,
+                minTokensPaidOut: amount - JBFees.feeAmountFrom(amount, loan.prepaidFeePercent + 30), //totalLoanAmount
+                    // - fees,
                 beneficiary: payable(address(this)),
                 feeBeneficiary: beneficiary,
                 memo: "Lending out to a borrower"
