@@ -350,7 +350,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
 
         // Ensure loanOf view returns the correct properties
-
         REVLoanSource memory expectedSource =
             REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 

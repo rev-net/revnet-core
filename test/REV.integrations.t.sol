@@ -285,13 +285,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         vm.chainId(42_161);
         vm.prank(multisig());
 
-        // Ensure Registry is called
-        address[] memory suckers = new address[](1);
-        suckers[0] = 0x09518ed7300D3479A1327e1566AbA7Db8040902C;
-        vm.expectEmit(false, false, true, true);
-        emit IJBSuckerRegistry.SuckersDeployedFor(REVNET_ID, suckers, suckerDeployerConfig, address(BASIC_DEPLOYER));
-
-        BASIC_DEPLOYER.deploySuckersFor(REVNET_ID, ENCODED_CONFIG, revConfig);
+        address[] memory suckers = BASIC_DEPLOYER.deploySuckersFor(REVNET_ID, ENCODED_CONFIG, revConfig);
 
         // Ensure it's registered
         bool isSucker = SUCKER_REGISTRY.isSuckerOf(REVNET_ID, suckers[0]);

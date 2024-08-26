@@ -335,8 +335,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
             LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
         assertGt(loanable, 0);
 
-        // TODO: Fix fund access limit setting within REVDeployer?
-        vm.expectRevert(abi.encodeWithSignature("INADEQUATE_CONTROLLER_ALLOWANCE()"));
+        vm.expectRevert(JBTerminalStore.JBTerminalStore_InadequateControllerAllowance.selector);
 
         REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
