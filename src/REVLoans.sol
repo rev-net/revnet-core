@@ -68,8 +68,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
     // ------------------------- public constants ------------------------ //
     //*********************************************************************//
 
-    /// @dev A fee of 10% is charged at the time a loan is created. 2.5% is charged by the underlying protocol, 2.5% is
-    /// charged by REV, 5% is charge by the revnet issuing the loan.
+    /// @dev A fee of 2.5% is charged by the underlying protocol.
     uint256 public constant override REV_PREPAID_FEE = 25; // 2.5%
 
     /// @dev The maximum amount of a loan that can be prepaid at the time of borrowing, in terms of JBConstants.MAX_FEE.
@@ -686,8 +685,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans {
                 token: loan.source.token,
                 amount: amount, //totalLoanAmount,
                 currency: accountingContext.currency,
-                minTokensPaidOut: amount - JBFees.feeAmountFrom(amount, loan.prepaidFeePercent + 30), //totalLoanAmount
-                    // - fees,
+                minTokensPaidOut: amount - JBFees.feeAmountFrom(amount, loan.prepaidFeePercent + 30),
                 beneficiary: payable(address(this)),
                 feeBeneficiary: beneficiary,
                 memo: "Lending out to a borrower"
