@@ -478,17 +478,20 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     )
         external
         override
+        returns (address[] memory suckers)
     {
         // Make sure the caller is the revnet's split operator.
         _checkIfSplitOperatorOf({revnetId: revnetId, operator: msg.sender});
 
         // Deploy the suckers.
-        _deploySuckersFor({
+        address[] memory suckers = _deploySuckersFor({
             revnetId: revnetId,
             operator: msg.sender,
             encodedConfiguration: encodedConfiguration,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
+
+        return suckers;
     }
 
     /// @notice Auto-mint a revnet's tokens from a stage for a beneficiary.
@@ -1201,6 +1204,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
     )
         internal
+        returns (address[] memory suckers)
     {
         // Compose the salt.
         bytes32 salt = keccak256(abi.encode(operator, encodedConfiguration, suckerDeploymentConfiguration.salt));
@@ -1209,11 +1213,13 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
         // Deploy the suckers.
         // slither-disable-next-line unused-return
-        SUCKER_REGISTRY.deploySuckersFor({
+        address[] memory suckers = SUCKER_REGISTRY.deploySuckersFor({
             projectId: revnetId,
             salt: salt,
             configurations: suckerDeploymentConfiguration.deployerConfigurations
         });
+
+        return suckers;
     }
 
     /// @notice If the specified address is not the revnet's current split operator, revert.

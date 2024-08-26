@@ -101,6 +101,8 @@ interface IREVDeployer {
         bytes calldata encodedConfiguration,
         REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
     )
-        external;
+        external
+        returns (address[] memory suckers);
+
     function amountToAutoMint(uint256 revnetId, uint256 stageId, address beneficiary) external view returns (uint256);
 }
