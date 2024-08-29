@@ -30,6 +30,7 @@ interface IREVLoans {
         REVLoan loan,
         REVLoan paidOffLoan,
         uint256 amount,
+        uint256 sourceFeeAmount,
         uint256 collateralToReturn,
         address payable beneficiary,
         address caller
@@ -70,7 +71,7 @@ interface IREVLoans {
 
     function borrowFrom(
         uint256 revnetId,
-        REVLoanSource memory source,
+        REVLoanSource calldata source,
         uint256 amount,
         uint256 collateral,
         address payable beneficiary,
@@ -96,7 +97,7 @@ interface IREVLoans {
         uint256 newAmount,
         uint256 newCollateral,
         address payable beneficiary,
-        JBSingleAllowance memory allowance
+        JBSingleAllowance calldata allowance
     )
         external
         payable

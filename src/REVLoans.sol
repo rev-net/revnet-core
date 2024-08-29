@@ -237,7 +237,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @return loan The loan created from borrowing.
     function borrowFrom(
         uint256 revnetId,
-        REVLoanSource memory source,
+        REVLoanSource calldata source,
         uint256 amount,
         uint256 collateral,
         address payable beneficiary,
@@ -355,13 +355,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         uint256 amount,
         uint256 collateralToReturn,
         address payable beneficiary,
-        JBSingleAllowance memory allowance
+        JBSingleAllowance calldata allowance
     )
         external
         payable
         override
         nonReentrant
-        returns (uint256 paidOffLoanId, REVLoan memory)
+        returns (uint256, REVLoan memory)
     {
         // Make sure only the loan's owner can manage it.
         if (_ownerOf(loanId) != _msgSender()) revert UNAUTHORIZED();
@@ -369,30 +369,16 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Keep a reference to the fee being iterated on.
         REVLoan storage loan = _loanOf[loanId];
 
-        // Keep a reference to the time since the loan was created.
-        uint256 timeSinceLoanCreated = block.timestamp - loan.createdAt;
-
-        // Keep a reference to the fee that'll be taken.
-        uint256 sourceFeeAmount;
-
-        // If the loan period has passed the prepaid time frame, take a fee.
-        if (timeSinceLoanCreated > loan.prepaidDuration) {
-            // If the loan period has passed the liqidation time frame, do not allow loan management.
-            if (timeSinceLoanCreated > LOAN_LIQUIDATION_DURATION) revert LOAN_EXPIRED();
-
-            // Calculate the prepaid fee for the amount being paid back.
-            uint256 prepaidAmount = JBFees.feeAmountFrom({amount: amount, feePercent: loan.prepaidFeePercent});
-
-            // Calculate the fee as a linear proportion given the amount of time that has passed.
-            sourceFeeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION) - prepaidAmount;
-        }
+        if (collateralToReturn > loan.collateral) revert COLLATERAL_EXCEEDS_LOAN();
 
         // Accept the funds that'll be used to pay off loans.
         amount = _acceptFundsFor({token: loan.source.token, amount: amount, allowance: allowance});
 
+        // Keep a reference to the fee that'll be taken.
+        uint256 sourceFeeAmount = _determineSourceFeeAmount(loan, amount);
+
         // Make sure the amount being paid off is less than the loan's amount.
         if (amount - sourceFeeAmount > loan.amount) revert AMOUNT_EXCEEDS_LOAN();
-        if (collateralToReturn > loan.collateral) revert COLLATERAL_EXCEEDS_LOAN();
 
         // If the amount being paid is greater than the loan's amount, return extra to the payer.
         if (amount > loan.amount + sourceFeeAmount) {
@@ -418,12 +404,12 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                 beneficiary: beneficiary
             });
 
-            emit PayOff(loanId, loanId, loan, loan, amount, collateralToReturn, beneficiary, _msgSender());
+            emit PayOff(loanId, loanId, loan, loan, amount, sourceFeeAmount, collateralToReturn, beneficiary, _msgSender());
 
             return (loanId, loan);
         } else { // Make a new loan with the remaining amount and collateral.
             // Get a reference to the replacement loan ID.
-            paidOffLoanId = ++numberOfLoans;
+            uint256 paidOffLoanId = ++numberOfLoans;
 
             // Mint the replacement loan.
             _mint({to: _msgSender(), tokenId: paidOffLoanId});
@@ -431,7 +417,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             // Get a reference to the loan being paid off.
             REVLoan storage paidOffLoan = _loanOf[paidOffLoanId];
 
-            // Set the refinanced loan's values the same as the original loan.
+            // Set the paid off loan's values the same as the original loan.
             paidOffLoan = loan;
 
             // Borrow in.
@@ -443,13 +429,12 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                 beneficiary: beneficiary
             });
 
-            emit PayOff(loanId, paidOffLoanId, loan, paidOffLoan, amount, collateralToReturn, beneficiary, _msgSender());
+            emit PayOff(loanId, paidOffLoanId, loan, paidOffLoan, amount, sourceFeeAmount, collateralToReturn, beneficiary, _msgSender());
 
             return (paidOffLoanId,  paidOffLoan);
         }
-
     }
-
+    
     /// @notice Cleans up any liquiditated loans.
     /// @dev Since loans are created in incremental order, earlier IDs will always be liquidated before later ones.
     /// @param count The amount of loans iterate over since the last liquidated loan.
@@ -607,6 +592,27 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Store the loans updated values.
         loan.amount = uint112(newAmount);
         loan.collateral = uint112(newCollateral);
+    }
+
+    /// @notice Determines the source fee amount for a loan being paid off a certain amount.
+    /// @param loan The loan having its source fee amount determined.
+    /// @param amount The amount being paid off.
+    /// @return sourceFeeAmount The source fee amount for the loan.
+    function _determineSourceFeeAmount(REVLoan memory loan, uint256 amount) internal view returns (uint256 sourceFeeAmount) {
+        // Keep a reference to the time since the loan was created.
+        uint256 timeSinceLoanCreated = block.timestamp - loan.createdAt;
+
+        // If the loan period has passed the prepaid time frame, take a fee.
+        if (timeSinceLoanCreated > loan.prepaidDuration) {
+            // If the loan period has passed the liqidation time frame, do not allow loan management.
+            if (timeSinceLoanCreated > LOAN_LIQUIDATION_DURATION) revert LOAN_EXPIRED();
+
+            // Calculate the prepaid fee for the amount being paid back.
+            uint256 prepaidAmount = JBFees.feeAmountFrom({amount: amount, feePercent: loan.prepaidFeePercent});
+
+            // Calculate the fee as a linear proportion given the amount of time that has passed.
+            sourceFeeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION) - prepaidAmount;
+        }
     }
 
     /// @notice Refinances a loan by making a new loan based on the original, with reduced collateral.
