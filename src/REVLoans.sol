@@ -59,6 +59,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
     error UNAUTHORIZED();
     error AMOUNT_NOT_SPECIFIED();
+    error AMOUNT_EXCEEDS_LOAN();
+    error COLLATERAL_EXCEEDS_LOAN();
     error INVALID_PREPAID_FEE_PERCENT();
     error NOT_ENOUGH_COLLATERAL();
     error PERMIT_ALLOWANCE_NOT_ENOUGH();
@@ -346,7 +348,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @param collateralToReturn The amount of collateral to return being returned from the loan.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     /// @param allowance An allowance to faciliate permit2 interactions.
-    /// @return loan The loan after it's been paid off.
+    /// @return paidOffLoanId The ID of the loan after it's been paid off.
+    /// @return paidOffloan The loan after it's been paid off.
     function payOff(
         uint256 loanId,
         uint256 amount,
@@ -358,7 +361,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         payable
         override
         nonReentrant
-        returns (REVLoan memory)
+        returns (uint256 paidOffLoanId, REVLoan memory)
     {
         // Make sure only the loan's owner can manage it.
         if (_ownerOf(loanId) != _msgSender()) revert UNAUTHORIZED();
@@ -387,6 +390,10 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Accept the funds that'll be used to pay off loans.
         amount = _acceptFundsFor({token: loan.source.token, amount: amount, allowance: allowance});
 
+        // Make sure the amount being paid off is less than the loan's amount.
+        if (amount - sourceFeeAmount > loan.amount) revert AMOUNT_EXCEEDS_LOAN();
+        if (collateralToReturn > loan.collateral) revert COLLATERAL_EXCEEDS_LOAN();
+
         // If the amount being paid is greater than the loan's amount, return extra to the payer.
         if (amount > loan.amount + sourceFeeAmount) {
             _transferFrom({
@@ -397,23 +404,50 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             });
         }
 
-        // Borrow in.
-        _adjust({
-            loan: loan,
-            newAmount: loan.amount - (amount - sourceFeeAmount),
-            newCollateral: loan.collateral - collateralToReturn,
-            sourceFeeAmount: sourceFeeAmount,
-            beneficiary: beneficiary
-        });
+        // Burn the original loan.
+        _burn(loanId);
 
-        // If there's no amount or collateral left, burn the loan.
-        if (loan.amount == 0 && loan.collateral == 0) {
-            _burn(loanId);
+        // If the loan will carry no more amount or collateral, store its changes directly.
+        if (amount - sourceFeeAmount == loan.amount && collateralToReturn == loan.collateral) {
+            // Borrow in.
+            _adjust({
+                loan: loan,
+                newAmount: 0,
+                newCollateral: 0,
+                sourceFeeAmount: sourceFeeAmount,
+                beneficiary: beneficiary
+            });
+
+            emit PayOff(loanId, loanId, loan, loan, amount, collateralToReturn, beneficiary, _msgSender());
+
+            return (loanId, loan);
+        } else { // Make a new loan with the remaining amount and collateral.
+            // Get a reference to the replacement loan ID.
+            paidOffLoanId = ++numberOfLoans;
+
+            // Mint the replacement loan.
+            _mint({to: _msgSender(), tokenId: paidOffLoanId});
+
+            // Get a reference to the loan being paid off.
+            REVLoan storage paidOffLoan = _loanOf[paidOffLoanId];
+
+            // Set the refinanced loan's values the same as the original loan.
+            paidOffLoan = loan;
+
+            // Borrow in.
+            _adjust({
+                loan: paidOffLoan,
+                newAmount: paidOffLoan.amount - (amount - sourceFeeAmount),
+                newCollateral: paidOffLoan.collateral - collateralToReturn,
+                sourceFeeAmount: sourceFeeAmount,
+                beneficiary: beneficiary
+            });
+
+            emit PayOff(loanId, paidOffLoanId, loan, paidOffLoan, amount, collateralToReturn, beneficiary, _msgSender());
+
+            return (paidOffLoanId,  paidOffLoan);
         }
 
-        emit PayOff(loanId, loan, amount, collateralToReturn, beneficiary, _msgSender());
-
-        return loan;
     }
 
     /// @notice Cleans up any liquiditated loans.

@@ -26,7 +26,9 @@ interface IREVLoans {
     );
     event PayOff(
         uint256 indexed loanId,
+        uint256 indexed paidOffLoanId,
         REVLoan loan,
+        REVLoan paidOffLoan,
         uint256 amount,
         uint256 collateralToReturn,
         address payable beneficiary,
@@ -87,7 +89,7 @@ interface IREVLoans {
     )
         external
         payable
-        returns (uint256 refinancedLoanId, uint256 newLoanId, REVLoan memory, REVLoan memory newLoan);
+        returns (uint256 refinancedLoanId, uint256 newLoanId, REVLoan memory refinancedLoan, REVLoan memory newLoan);
 
     function payOff(
         uint256 loanId,
@@ -98,7 +100,7 @@ interface IREVLoans {
     )
         external
         payable
-        returns (REVLoan memory loan);
+        returns (uint256 paidOffLoanId, REVLoan memory loan);
 
     function liquidateExpiredLoans(uint256 count) external;
 }
