@@ -59,7 +59,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
     error UNAUTHORIZED();
     error AMOUNT_NOT_SPECIFIED();
-    error AMOUNT_EXCEEDS_LOAN();
     error COLLATERAL_EXCEEDS_LOAN();
     error INVALID_PREPAID_FEE_PERCENT();
     error NOT_ENOUGH_COLLATERAL();
@@ -377,9 +376,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Keep a reference to the fee that'll be taken.
         uint256 sourceFeeAmount = _determineSourceFeeAmount(loan, amount);
 
-        // Make sure the amount being paid off is less than the loan's amount.
-        if (amount - sourceFeeAmount > loan.amount) revert AMOUNT_EXCEEDS_LOAN();
-
         // If the amount being paid is greater than the loan's amount, return extra to the payer.
         if (amount > loan.amount + sourceFeeAmount) {
             _transferFrom({
@@ -388,6 +384,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                 token: loan.source.token,
                 amount: amount - sourceFeeAmount - loan.amount
             });
+
+            // Set the amount as the amount that can be paid off.
+            amount -= (sourceFeeAmount + loan.amount);
         }
 
         // Burn the original loan.
