@@ -377,6 +377,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         uint256 sourceFeeAmount = _determineSourceFeeAmount(loan, amount);
 
         // If the amount being paid is greater than the loan's amount, return extra to the payer.
+        // amount is msg.value if token == JBConstants.NATIVE_TOKEN
         if (amount > loan.amount + sourceFeeAmount) {
             _transferFrom({
                 from: address(this),
