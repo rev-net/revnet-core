@@ -477,26 +477,27 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             // Get a reference to the loan being iterated on.
             REVLoan memory loan = _loanOf[loanId];
 
-            // If the the loan has passed its liquidation timeframe, liquidate it.
-            if (block.timestamp - loan.createdAt > LOAN_LIQUIDATION_DURATION) {
-                // Decrement the amount loaned.
-                totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] -= loan.amount;
-
-                // Decrement the total amount of collateral tokens supporting loans from this revnet.
-                totalCollateralOf[loan.revnetId] -= loan.collateral;
-
-                // Burn the loan.
-                _burn(loanId);
-
-                // Increment the number of loans liquidated.
-                numberOfLoansLiquidated++;
-
-                emit Liquidate(loanId, loan, _msgSender());
-            } else {
+            if (block.timestamp <= loan.createdAt + LOAN_LIQUIDATION_DURATION) {
                 // Store the latest liquidated loan.
                 if (numberOfLoansLiquidated > 0) lastLoanIdLiquidated += numberOfLoansLiquidated;
                 return;
             }
+
+            // If the the loan has passed its liquidation timeframe, liquidate it.
+
+            // Decrement the amount loaned.
+            totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] -= loan.amount;
+
+            // Decrement the total amount of collateral tokens supporting loans from this revnet.
+            totalCollateralOf[loan.revnetId] -= loan.collateral;
+
+            // Burn the loan.
+            _burn(loanId);
+
+            // Increment the number of loans liquidated.
+            numberOfLoansLiquidated++;
+
+            emit Liquidate(loanId, loan, _msgSender());
         }
     }
 
