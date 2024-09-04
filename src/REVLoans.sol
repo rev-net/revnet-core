@@ -453,7 +453,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @param count The amount of loans iterate over since the last liquidated loan.
     function liquidateExpiredLoans(uint256 count) external override nonReentrant {
         // Keep a reference to the loan ID being iterated on.
-        uint256 loanId = lastLoanIdLiquidated;
+        uint256 _lastLoanIdLiquidated = lastLoanIdLiquidated;
 
         // Keep a reference to the number of loans liquiditated.
         uint256 numberOfLoansLiquidated;
@@ -461,7 +461,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Iterate over the desired number of loans to check for liquidation.
         for (uint256 i; i < count; i++) {
             // Get a reference to the loan's ID being iterated on.
-            loanId += i;
+            uint256 loanId = _lastLoanIdLiquidated + i;
 
             // If the loan is already burned, continue.
             if (ownerOf(loanId) == address(0)) {
