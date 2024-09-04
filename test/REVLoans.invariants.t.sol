@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import {StdInvariant} from "forge-std/StdInvariant.sol";
 import /* {*} from */ "@bananapus/core/test/helpers/TestBaseWorkflow.sol";
 import /* {*} from "@bananapus/721-hook/src/JB721TiersHookDeployer.sol";
-import /* {*} from */ "./../src/REVDeployer.sol";
+    import /* {*} from */ "./../src/REVDeployer.sol";
 import /* {*} from */ "./../src/REVLoans.sol";
 import "@croptop/core/src/CTPublisher.sol";
 
@@ -82,7 +82,8 @@ contract REVLoansPayHandler is JBTest {
 
         REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: TERMINAL});
 
-        (uint256 loanId, REVLoan memory lastLoan) = LOANS.borrowFrom(REVNET_ID, sauce, borrowable, receivedTokens, payable(USER), prepaidFee);
+        (uint256 loanId, REVLoan memory lastLoan) =
+            LOANS.borrowFrom(REVNET_ID, sauce, borrowable, receivedTokens, payable(USER), prepaidFee);
 
         vm.stopPrank();
     }

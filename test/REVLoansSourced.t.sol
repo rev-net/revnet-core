@@ -432,7 +432,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // @note: REVNet price feeds are set custodially by contract owner of jbPrices unless we change the permissions
         vm.prank(multisig());
         vm.expectRevert(JBPermissioned.JBPermissioned_Unauthorized.selector);
-        jbController().addPriceFeed(REVNET_ID, uint32(uint160(JBConstants.NATIVE_TOKEN)), uint32(uint160(address(REV_TOKEN))), priceFeed);
+        jbController().addPriceFeed(
+            REVNET_ID, uint32(uint160(JBConstants.NATIVE_TOKEN)), uint32(uint160(address(REV_TOKEN))), priceFeed
+        );
 
         // try a different way - warp to after redemption rate is higher in the second ruleset
         vm.warp(block.timestamp + 721 days);
@@ -442,7 +444,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
 
         // loanable amount is higher with the lower tax rate per second stage configuration
-        assertGt(loanableSecondStage /* second stage */, loanable /* first stage */);
+        assertGt(loanableSecondStage, /* second stage */ loanable /* first stage */ );
 
         // Got caught up reviewing REVLoans but will continue here
     }

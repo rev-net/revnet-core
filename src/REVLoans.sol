@@ -320,11 +320,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
         // Make sure there is an amount being borrowed.
         if (amount == 0) revert AMOUNT_NOT_SPECIFIED();
-    
+
         // Get a reference to the loan that'll replace the existing loan.
         REVLoan storage refinancedLoan;
 
-        // Refinance the loan. 
+        // Refinance the loan.
         (refinancedLoanId, refinancedLoan) = _refinanceLoan(loanId, collateralToTransfer);
 
         // Make a new loan with the leftover collateral from refinancing.
@@ -404,10 +404,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                 beneficiary: beneficiary
             });
 
-            emit PayOff(loanId, loanId, loan, loan, amount, sourceFeeAmount, collateralToReturn, beneficiary, _msgSender());
+            emit PayOff(
+                loanId, loanId, loan, loan, amount, sourceFeeAmount, collateralToReturn, beneficiary, _msgSender()
+            );
 
             return (loanId, loan);
-        } else { // Make a new loan with the remaining amount and collateral.
+        } else {
+            // Make a new loan with the remaining amount and collateral.
             // Get a reference to the replacement loan ID.
             uint256 paidOffLoanId = ++numberOfLoans;
 
@@ -429,12 +432,22 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                 beneficiary: beneficiary
             });
 
-            emit PayOff(loanId, paidOffLoanId, loan, paidOffLoan, amount, sourceFeeAmount, collateralToReturn, beneficiary, _msgSender());
+            emit PayOff(
+                loanId,
+                paidOffLoanId,
+                loan,
+                paidOffLoan,
+                amount,
+                sourceFeeAmount,
+                collateralToReturn,
+                beneficiary,
+                _msgSender()
+            );
 
-            return (paidOffLoanId,  paidOffLoan);
+            return (paidOffLoanId, paidOffLoan);
         }
     }
-    
+
     /// @notice Cleans up any liquiditated loans.
     /// @dev Since loans are created in incremental order, earlier IDs will always be liquidated before later ones.
     /// @param count The amount of loans iterate over since the last liquidated loan.
@@ -598,7 +611,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @param loan The loan having its source fee amount determined.
     /// @param amount The amount being paid off.
     /// @return sourceFeeAmount The source fee amount for the loan.
-    function _determineSourceFeeAmount(REVLoan memory loan, uint256 amount) internal view returns (uint256 sourceFeeAmount) {
+    function _determineSourceFeeAmount(
+        REVLoan memory loan,
+        uint256 amount
+    )
+        internal
+        view
+        returns (uint256 sourceFeeAmount)
+    {
         // Keep a reference to the time since the loan was created.
         uint256 timeSinceLoanCreated = block.timestamp - loan.createdAt;
 
@@ -620,7 +640,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @param collateralToRemove The amount of collateral to remove from the loan.
     /// @return refinancedLoanId The ID of the refinanced loan.
     /// @return refinancedLoan The refinanced loan.
-    function _refinanceLoan(uint256 loanId, uint256 collateralToRemove) internal returns (uint256 refinancedLoanId, REVLoan storage refinancedLoan) {
+    function _refinanceLoan(
+        uint256 loanId,
+        uint256 collateralToRemove
+    )
+        internal
+        returns (uint256 refinancedLoanId, REVLoan storage refinancedLoan)
+    {
         // Burn the original loan.
         _burn(loanId);
 
