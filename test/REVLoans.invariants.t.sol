@@ -5,7 +5,8 @@ import "forge-std/Test.sol";
 import {StdInvariant} from "forge-std/StdInvariant.sol";
 import /* {*} from */ "@bananapus/core/test/helpers/TestBaseWorkflow.sol";
 import /* {*} from "@bananapus/721-hook/src/JB721TiersHookDeployer.sol";
-    import /* {*} from */ "./../src/REVDeployer.sol";
+import /* {*} from */ "./../src/REVDeployer.sol";
+import /* {*} from */ "./../src/REVLoans.sol";
 import "@croptop/core/src/CTPublisher.sol";
 
 import "@bananapus/core/script/helpers/CoreDeploymentLib.sol";
@@ -61,7 +62,7 @@ contract REVLoansPayHandler is JBTest {
         USER = beneficiary;
     }
 
-    function pay(uint256 amount, uint256 borrowAmount, uint256 prepaidFee) public virtual {
+    function payBorrow(uint256 amount, uint256 borrowAmount, uint256 prepaidFee) public virtual {
         uint256 payAmount = bound(amount, 1 ether, 10 ether);
         uint256 prepaidFee = bound(amount, 0, 25);
 
@@ -81,7 +82,8 @@ contract REVLoansPayHandler is JBTest {
 
         REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: TERMINAL});
 
-        LOANS.borrowFrom(REVNET_ID, sauce, borrowable, receivedTokens, payable(USER), prepaidFee);
+        (uint256 loanId, REVLoan memory lastLoan) = LOANS.borrowFrom(REVNET_ID, sauce, borrowable, receivedTokens, payable(USER), prepaidFee);
+
         vm.stopPrank();
     }
 }
@@ -381,17 +383,12 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         // Give Eth for the user experience
         vm.deal(USER, type(uint256).max);
 
-        // Performs random pay() calls
+        // Performs random pay() calls via the handler
         bytes4[] memory selectors = new bytes4[](1);
-        selectors[0] = REVLoansPayHandler.pay.selector;
+        selectors[0] = REVLoansPayHandler.payBorrow.selector;
 
         targetContract(address(PAY_HANDLER));
         targetSelector(FuzzSelector({addr: address(PAY_HANDLER), selectors: selectors}));
-
-        /* // Performs random borrows
-        selectors[0] = REVLoansBorrowHandler.borrowFrom.selector;
-        targetContract(address(BORROW_HANDLER));
-        targetSelector(FuzzSelector({addr: address(BORROW_HANDLER), selectors: selectors})); */
 
         targetSender(USER);
     }
