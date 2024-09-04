@@ -16,6 +16,7 @@ import "@bananapus/buyback-hook/script/helpers/BuybackDeploymentLib.sol";
 
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
+import {MockPriceFeed} from "@bananapus/core/test/mock/MockPriceFeed.sol";
 import {REVLoans} from "../src/REVLoans.sol";
 import {REVLoan} from "../src/structs/REVLoan.sol";
 import {REVStageConfig, REVAutoMint} from "../src/structs/REVStageConfig.sol";
@@ -116,7 +117,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             initialIssuance: 0, // inherit from previous cycle.
             issuanceDecayFrequency: 180 days,
             issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
-            cashOutTaxRate: 6000, // 0.6
+            cashOutTaxRate: 1000, // 0.6
             extraMetadata: 0
         });
 
@@ -370,5 +371,79 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // Ensure we actually received ETH from the borrow
         assertGt(USER.balance, 100e18 - 1e18);
+    }
+
+    function test_Refinance() public {
+        // get a reference to our project token for assertions later
+        IJBToken REV_TOKEN = jbTokens().tokenOf(REVNET_ID);
+
+        vm.prank(USER);
+        uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+
+        uint256 loanable =
+            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        assertGt(loanable, 0);
+
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
+        REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
+        // reference to our token amount before borrowing
+        uint256 tokensBeforeBorrow = REV_TOKEN.balanceOf(USER);
+
+        // before we borrow, make sure token balances make sense
+        assertEq(tokens, tokensBeforeBorrow);
+
+        vm.prank(USER);
+        LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
+
+        // Ensure loanOf view returns the correct properties
+        REVLoanSource memory expectedSource =
+            REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
+        REVLoan memory loan = LOANS_CONTRACT.loanOf(1);
+        assertEq(loan.revnetId, REVNET_ID);
+        assertEq(loan.amount, loanable);
+        assertEq(loan.collateral, tokens);
+        assertEq(loan.createdAt, block.timestamp);
+        assertEq(loan.prepaidFeePercent, 500);
+        assertEq(loan.prepaidDuration, mulDiv(500, 3650 days, 500));
+        assertEq(loan.source.token, JBConstants.NATIVE_TOKEN);
+        assertEq(address(loan.source.terminal), address(jbMultiTerminal()));
+
+        // Ensure loans contract isn't hodling
+        // TODO: Why does the borrow seem to travel through the loans contract, requiring a fallback function to
+        // receive?
+        assertEq(address(LOANS_CONTRACT).balance, 0);
+
+        // Ensure we actually received ETH from the borrow
+        assertGt(USER.balance, 100e18 - 1e18);
+
+        uint256 tokensAfterBorrow = REV_TOKEN.balanceOf(USER);
+
+        assertLt(tokensAfterBorrow, tokensBeforeBorrow);
+
+        IJBPriceFeed priceFeed = new MockPriceFeed(1e18, 18);
+
+        // @note: REVNet price feeds are set custodially by contract owner of jbPrices unless we change the permissions
+        vm.prank(multisig());
+        vm.expectRevert(JBPermissioned.JBPermissioned_Unauthorized.selector);
+        jbController().addPriceFeed(REVNET_ID, uint32(uint160(JBConstants.NATIVE_TOKEN)), uint32(uint160(address(REV_TOKEN))), priceFeed);
+
+        // try a different way - warp to after redemption rate is higher in the second ruleset
+        vm.warp(block.timestamp + 721 days);
+
+        // get the updated loanableFrom the same amount as earlier
+        uint256 loanableSecondStage =
+            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+
+        // loanable amount is higher with the lower tax rate per second stage configuration
+        assertGt(loanableSecondStage /* second stage */, loanable /* first stage */);
+
+        // Got caught up reviewing REVLoans but will continue here
     }
 }
