@@ -27,6 +27,7 @@ interface IREVLoans {
     event PayOff(
         uint256 indexed loanId,
         uint256 indexed paidOffLoanId,
+        uint256 indexed revnetId,
         REVLoan loan,
         REVLoan paidOffLoan,
         uint256 amount,
@@ -36,9 +37,19 @@ interface IREVLoans {
         address caller
     );
     event Refinance(
-        uint256 loanId, uint256 refinancedLoanId, REVLoan refinancedLoan, uint256 removedCollateral, address caller
+        uint256 indexed loanId,
+        uint256 indexed refinancedLoanId,
+        uint256 indexed revnetId,
+        REVLoan refinancedLoan,
+        uint256 removedCollateral,
+        address caller
     );
-    event Liquidate(uint256 indexed loanId, REVLoan loan, address caller);
+    event Liquidate(
+        uint256 indexed loanId,
+        uint256 indexed revnetId,
+        REVLoan loan,
+        address caller
+    );
 
     function REV_PREPAID_FEE() external view returns (uint256);
     function MAX_PREPAID_PERCENT() external view returns (uint256);
@@ -46,9 +57,9 @@ interface IREVLoans {
     function PROJECTS() external view returns (IJBProjects);
     function REV_ID() external view returns (uint256);
     function PERMIT2() external view returns (IPermit2);
-    function numberOfLoans() external view returns (uint256);
-    function lastLoanIdLiquidated() external view returns (uint256);
 
+    function numberOfLoansFor(uint256 revnetId) external view returns (uint256);
+    function lastLoanIdLiquidatedFrom(uint256 revnetId) external view returns (uint256);
     function isLoanSourceOf(uint256 revnetId, IJBPayoutTerminal terminal, address token) external view returns (bool);
     function loanSourcesOf(uint256 revnetId) external view returns (REVLoanSource[] memory);
     function loanOf(uint256 loanId) external view returns (REVLoan memory);
@@ -70,6 +81,7 @@ interface IREVLoans {
         view
         returns (uint256);
     function totalCollateralOf(uint256 revnetId) external view returns (uint256);
+    function revnetIdOfLoanWithId(uint256 loanId) external view returns (uint256);
 
     function borrowFrom(
         uint256 revnetId,
@@ -105,5 +117,5 @@ interface IREVLoans {
         payable
         returns (uint256 paidOffLoanId, REVLoan memory loan);
 
-    function liquidateExpiredLoans(uint256 count) external;
+    function liquidateExpiredLoansFrom(uint256 revnetId, uint256 count) external;
 }

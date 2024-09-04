@@ -70,6 +70,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
     //*********************************************************************//
+    
 
     /// @dev A fee of 2.5% is charged by the underlying protocol.
     uint256 public constant override REV_PREPAID_FEE = 25; // 2.5%
@@ -85,6 +86,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     uint256 public constant override LOAN_LIQUIDATION_DURATION = 3650 days;
 
     //*********************************************************************//
+    // -------------------- private constant properties ------------------ //
+    //*********************************************************************//
+
+    /// @notice Just a kind reminder to our readers.
+    /// @dev Used in loan token ID generation.
+    uint256 private constant _ONE_TRILLION = 1_000_000_000_000;
+
+    //*********************************************************************//
     // --------------- public immutable stored properties ---------------- //
     //*********************************************************************//
 
@@ -98,29 +107,31 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     IPermit2 public immutable override PERMIT2;
 
     /// @notice The amount of loans that have been created.
-    uint256 public override numberOfLoans;
+    /// @custom:param revnetId The ID of the revnet to get the number of loans from.
+    mapping(uint256 revnetId => uint256) public override numberOfLoansFor;
 
     /// @notice The ID of the last revnet that has been successfully liquiditated after passing the duration.
-    uint256 public override lastLoanIdLiquidated;
+    /// @custom:param The ID of the revnet to get the last liquidated loan ID from.
+    mapping(uint256 revnetId => uint256) public override lastLoanIdLiquidatedFrom;
 
     /// @notice An indication if a revnet currently has outstanding loans from the specified terminal in the specified
     /// token.
-    /// @custom:member revnetId The ID of the revnet issuing the loan.
-    /// @custom:member terminal The terminal that the loan is issued from.
-    /// @custom:member token The token being loaned.
+    /// @custom:param revnetId The ID of the revnet issuing the loan.
+    /// @custom:param terminal The terminal that the loan is issued from.
+    /// @custom:param token The token being loaned.
     mapping(uint256 revnetId => mapping(IJBPayoutTerminal terminal => mapping(address token => bool))) public override
         isLoanSourceOf;
 
     /// @notice The total amount loaned out by a revnet from a specified terminal in a specified token.
-    /// @custom:member revnetId The ID of the revnet issuing the loan.
-    /// @custom:member terminal The terminal that the loan is issued from.
-    /// @custom:member token The token being loaned.
+    /// @custom:param revnetId The ID of the revnet issuing the loan.
+    /// @custom:param terminal The terminal that the loan is issued from.
+    /// @custom:param token The token being loaned.
     mapping(uint256 revnetId => mapping(IJBPayoutTerminal terminal => mapping(address token => uint256)))
         public
         override totalBorrowedFrom;
 
     /// @notice The total amount of collateral supporting a revnet's loans.
-    /// @custom:member revnetId The ID of the revnet issuing the loan.
+    /// @custom:param revnetId The ID of the revnet issuing the loan.
     mapping(uint256 revnetId => uint256) public override totalCollateralOf;
 
     //*********************************************************************//
@@ -198,6 +209,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         return token == JBConstants.NATIVE_TOKEN ? address(this).balance : IERC20(token).balanceOf(address(this));
     }
 
+    /// @notice The revnet ID for the loan with the provided loan ID.
+    /// @param loanId The loan ID of the loan to get the revent ID of.
+    /// @return The ID of the revnet.
+    function revnetIdOfLoanWithId(uint256 loanId) public pure override returns (uint256) {
+        return loanId / _ONE_TRILLION;
+    }
+
     //*********************************************************************//
     // -------------------------- constructor ---------------------------- //
     //*********************************************************************//
@@ -255,7 +273,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         if (prepaidFeePercent > MAX_PREPAID_PERCENT) revert INVALID_PREPAID_FEE_PERCENT();
 
         // Get a reference to the loan ID.
-        loanId = ++numberOfLoans;
+        loanId = _generateLoanId(revnetId, ++numberOfLoansFor[revnetId]);
 
         // Mint the loan.
         _mint({to: _msgSender(), tokenId: loanId});
@@ -264,7 +282,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         REVLoan storage loan = _loanOf[loanId];
 
         // Set the loan's values.
-        loan.revnetId = uint56(revnetId);
         loan.source = source;
         loan.createdAt = uint40(block.timestamp);
         loan.prepaidFeePercent = uint16(prepaidFeePercent);
@@ -276,6 +293,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Borrow the amount.
         _adjust({
             loan: loan,
+            revnetId: revnetId,
             newAmount: amount,
             newCollateral: collateral,
             sourceFeeAmount: sourceFeeAmount,
@@ -325,11 +343,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         REVLoan storage refinancedLoan;
 
         // Refinance the loan.
-        (refinancedLoanId, refinancedLoan) = _refinanceLoan(loanId, collateralToTransfer);
+        (refinancedLoanId, refinancedLoan) = _refinanceLoan({loanId: loanId, revnetId: revnetIdOfLoanWithId(loanId), collateralToRemove: collateralToTransfer});
 
         // Make a new loan with the leftover collateral from refinancing.
         (newLoanId, newLoan) = borrowFrom({
-            revnetId: refinancedLoan.revnetId,
+            revnetId: revnetIdOfLoanWithId(refinancedLoanId),
             source: source,
             amount: amount,
             collateral: collateralToTransfer + collateralToAdd,
@@ -393,11 +411,15 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Burn the original loan.
         _burn(loanId);
 
+        // Get a reference to the revnet ID.
+        uint256 revnetId = revnetIdOfLoanWithId(loanId);
+
         // If the loan will carry no more amount or collateral, store its changes directly.
         if (amount - sourceFeeAmount == loan.amount && collateralToReturn == loan.collateral) {
             // Borrow in.
             _adjust({
                 loan: loan,
+                revnetId: revnetId,
                 newAmount: 0,
                 newCollateral: 0,
                 sourceFeeAmount: sourceFeeAmount,
@@ -405,14 +427,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             });
 
             emit PayOff(
-                loanId, loanId, loan, loan, amount, sourceFeeAmount, collateralToReturn, beneficiary, _msgSender()
+                loanId, loanId, revnetId, loan, loan, amount, sourceFeeAmount, collateralToReturn, beneficiary, _msgSender()
             );
 
             return (loanId, loan);
         } else {
             // Make a new loan with the remaining amount and collateral.
             // Get a reference to the replacement loan ID.
-            uint256 paidOffLoanId = ++numberOfLoans;
+            uint256 paidOffLoanId = _generateLoanId(revnetId, ++numberOfLoansFor[revnetId]);
 
             // Mint the replacement loan.
             _mint({to: _msgSender(), tokenId: paidOffLoanId});
@@ -426,6 +448,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             // Borrow in.
             _adjust({
                 loan: paidOffLoan,
+                revnetId: revnetId,
                 newAmount: paidOffLoan.amount - (amount - sourceFeeAmount),
                 newCollateral: paidOffLoan.collateral - collateralToReturn,
                 sourceFeeAmount: sourceFeeAmount,
@@ -434,6 +457,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
             emit PayOff(
                 loanId,
+                revnetId,
                 paidOffLoanId,
                 loan,
                 paidOffLoan,
@@ -450,54 +474,57 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
     /// @notice Cleans up any liquiditated loans.
     /// @dev Since loans are created in incremental order, earlier IDs will always be liquidated before later ones.
+    /// @param revnetId The ID of the revnet to liquidate loans from.
     /// @param count The amount of loans iterate over since the last liquidated loan.
-    function liquidateExpiredLoans(uint256 count) external override nonReentrant {
+    function liquidateExpiredLoansFrom(uint256 revnetId, uint256 count) external override nonReentrant {
         // Keep a reference to the loan ID being iterated on.
-        uint256 _lastLoanIdLiquidated = lastLoanIdLiquidated;
+        uint256 lastLoanIdLiquidated = lastLoanIdLiquidatedFrom[revnetId];
 
-        // Keep a reference to the number of loans liquiditated.
-        uint256 numberOfLoansLiquidated;
+        // Keep a reference to the latest liquidated loan ID.
+        uint256 newLastLoanIdLiquidated;
 
         // Iterate over the desired number of loans to check for liquidation.
         for (uint256 i; i < count; i++) {
-            // Get a reference to the loan's ID being iterated on.
-            uint256 loanId = _lastLoanIdLiquidated + i;
 
-            // If the loan is already burned, continue.
-            if (ownerOf(loanId) == address(0)) {
-                numberOfLoansLiquidated++;
-                if (i == count - 1) {
-                    lastLoanIdLiquidated += numberOfLoansLiquidated;
-                    return;
-                } else {
-                    continue;
-                }
-            }
+            // Get a reference to the next loan ID.
+            uint256 loanId = lastLoanIdLiquidated + i;
 
             // Get a reference to the loan being iterated on.
             REVLoan memory loan = _loanOf[loanId];
 
+            // Get a reference to the next loan. 
+            loan = _loanOf[loanId];
+
+            // If the loan is already burned, continue.
+            if (ownerOf(loanId) == address(0)) {
+                newLastLoanIdLiquidated = loanId;
+                continue;
+            }
+
             if (block.timestamp <= loan.createdAt + LOAN_LIQUIDATION_DURATION) {
-                // Store the latest liquidated loan.
-                if (numberOfLoansLiquidated > 0) lastLoanIdLiquidated += numberOfLoansLiquidated;
-                return;
+                break;
             }
 
             // If the the loan has passed its liquidation timeframe, liquidate it.
 
             // Decrement the amount loaned.
-            totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] -= loan.amount;
+            totalBorrowedFrom[revnetId][loan.source.terminal][loan.source.token] -= loan.amount;
 
             // Decrement the total amount of collateral tokens supporting loans from this revnet.
-            totalCollateralOf[loan.revnetId] -= loan.collateral;
+            totalCollateralOf[revnetId] -= loan.collateral;
 
             // Burn the loan.
             _burn(loanId);
 
             // Increment the number of loans liquidated.
-            numberOfLoansLiquidated++;
+            newLastLoanIdLiquidated = loanId;
 
-            emit Liquidate(loanId, loan, _msgSender());
+            emit Liquidate(loanId, revnetId, loan, _msgSender());
+        }
+
+        // Store the latest liquidated loan.
+        if (lastLoanIdLiquidated != newLastLoanIdLiquidated) {
+            lastLoanIdLiquidatedFrom[revnetId] = newLastLoanIdLiquidated;
         }
     }
 
@@ -508,12 +535,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @notice Allows the owner of a loan to pay it back, add more, or receive returned collateral no longer necessary
     /// to support the loan.
     /// @param loan The loan being adjusted.
+    /// @param revnetId The ID of the revnet the loan is being adjusted in.
     /// @param newAmount The new amount of the loan.
     /// @param newCollateral The new amount of collateral backing the loan.
     /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     function _adjust(
         REVLoan storage loan,
+        uint256 revnetId,
         uint256 newAmount,
         uint256 newCollateral,
         uint256 sourceFeeAmount,
@@ -522,7 +551,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         internal
     {
         // Keep a reference to the revnet's owner.
-        IREVDeployer revnetOwner = IREVDeployer(PROJECTS.ownerOf(loan.revnetId));
+        IREVDeployer revnetOwner = IREVDeployer(PROJECTS.ownerOf(revnetId));
 
         // Keep a reference to the revnet's controller.
         IJBController controller = revnetOwner.CONTROLLER();
@@ -533,23 +562,23 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         {
             // Get a reference to the accounting context for the source.
             JBAccountingContext memory accountingContext =
-                loan.source.terminal.accountingContextForTokenOf({projectId: loan.revnetId, token: loan.source.token});
+                loan.source.terminal.accountingContextForTokenOf({projectId: revnetId, token: loan.source.token});
 
             // Keep a reference to the pending automint tokens.
-            uint256 pendingAutomintTokens = revnetOwner.unrealizedAutoMintAmountOf(loan.revnetId);
+            uint256 pendingAutomintTokens = revnetOwner.unrealizedAutoMintAmountOf(revnetId);
 
             // Keep a reference to the current stage.
-            JBRuleset memory currentStage = controller.RULESETS().currentOf(loan.revnetId);
+            JBRuleset memory currentStage = controller.RULESETS().currentOf(revnetId);
 
             // Keep a reference to the revnet's terminals.
-            IJBTerminal[] memory terminals = directory.terminalsOf(loan.revnetId);
+            IJBTerminal[] memory terminals = directory.terminalsOf(revnetId);
 
             // If the borrowed amount is increasing or the collateral is changing, check that the loan will still be
             // properly collateralized.
             if (
                 (newAmount > loan.amount || loan.collateral != newCollateral)
                     && _borrowableAmountFrom({
-                        revnetId: loan.revnetId,
+                        revnetId: revnetId,
                         collateral: newCollateral,
                         pendingAutomintTokens: pendingAutomintTokens,
                         decimals: accountingContext.decimals,
@@ -570,6 +599,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             // Add the new amount to the loan.
             _addTo({
                 loan: loan,
+                revnetId: revnetId,
                 amount: newAmount - loan.amount,
                 sourceFeeAmount: sourceFeeAmount,
                 feeTerminal: feeTerminal,
@@ -577,16 +607,17 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             });
             // ... or pay off the loan if needed.
         } else if (loan.amount > newAmount) {
-            _payOff({loan: loan, amount: loan.amount - newAmount, sourceFeeAmount: sourceFeeAmount});
+            _payOff({loan: loan, revnetId: revnetId, amount: loan.amount - newAmount, sourceFeeAmount: sourceFeeAmount});
         }
 
         // Add collateral if needed...
         if (newCollateral > loan.collateral) {
-            _addCollateralTo({loan: loan, amount: newCollateral - loan.collateral, controller: controller});
+            _addCollateralTo({loan: loan, revnetId: revnetId, amount: newCollateral - loan.collateral, controller: controller});
             // ... or return collateral if needed.
         } else if (loan.collateral > newCollateral) {
             _returnCollateralFrom({
                 loan: loan,
+                revnetId: revnetId,
                 amount: loan.collateral - newCollateral,
                 beneficiary: beneficiary,
                 controller: controller
@@ -604,7 +635,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             // Pay the fee.
             // slither-disable-next-line unused-return
             try loan.source.terminal.pay{value: payValue}({
-                projectId: loan.revnetId,
+                projectId: revnetId,
                 token: loan.source.token,
                 amount: balance,
                 beneficiary: beneficiary,
@@ -649,11 +680,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
     /// @notice Refinances a loan by making a new loan based on the original, with reduced collateral.
     /// @param loanId The ID of the loan being refinanced.
+    /// @param revnetId The ID of the revnet the loan is being refinanced in.
     /// @param collateralToRemove The amount of collateral to remove from the loan.
     /// @return refinancedLoanId The ID of the refinanced loan.
     /// @return refinancedLoan The refinanced loan.
     function _refinanceLoan(
         uint256 loanId,
+        uint256 revnetId,
         uint256 collateralToRemove
     )
         internal
@@ -669,7 +702,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         if (collateralToRemove > loan.collateral) revert NOT_ENOUGH_COLLATERAL();
 
         // Get a reference to the replacement loan ID.
-        refinancedLoanId = ++numberOfLoans;
+        refinancedLoanId = _generateLoanId(revnetId, ++numberOfLoansFor[revnetId]);
 
         // Mint the replacement loan.
         _mint({to: _msgSender(), tokenId: refinancedLoanId});
@@ -683,6 +716,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Reduce the collateral of the replacement loan.
         _adjust({
             loan: refinancedLoan,
+            revnetId: revnetId,
             newAmount: refinancedLoan.amount,
             newCollateral: refinancedLoan.collateral - collateralToRemove,
             sourceFeeAmount: 0,
@@ -691,16 +725,18 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                 // their balance for the new loan.
         });
 
-        emit Refinance(loanId, refinancedLoanId, refinancedLoan, collateralToRemove, _msgSender());
+        emit Refinance(loanId, revnetId, refinancedLoanId, refinancedLoan, collateralToRemove, _msgSender());
     }
 
     /// @notice Returns collateral from a loan.
     /// @param loan The loan having its collateral returned from.
+    /// @param revnetId The ID of the revnet the loan is being returned in.
     /// @param amount The amount of collateral being returned from the loan.
     /// @param beneficiary The address receiving the returned collateral.
     /// @param controller The controller of the revnet.
     function _returnCollateralFrom(
         REVLoan memory loan,
+        uint256 revnetId,
         uint256 amount,
         address payable beneficiary,
         IJBController controller
@@ -708,12 +744,12 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         internal
     {
         // Decrement the total amount of collateral tokens.
-        totalCollateralOf[loan.revnetId] -= amount;
+        totalCollateralOf[revnetId] -= amount;
 
         // Mint the collateral tokens back to the loan payer.
         // slither-disable-next-line unused-return
         controller.mintTokensOf({
-            projectId: loan.revnetId,
+            projectId: revnetId,
             tokenCount: amount,
             beneficiary: beneficiary,
             memo: "Removing collateral from loan",
@@ -723,16 +759,17 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
     /// @notice Adds collateral to a loan.
     /// @param loan The loan being added to.
+    /// @param revnetId The ID of the revnet the loan is being added in.
     /// @param amount The new amount of collateral being added to the loan.
     /// @param controller The controller of the revnet.
-    function _addCollateralTo(REVLoan memory loan, uint256 amount, IJBController controller) internal {
+    function _addCollateralTo(REVLoan memory loan, uint256 revnetId, uint256 amount, IJBController controller) internal {
         // Increment the total amount of collateral tokens.
-        totalCollateralOf[loan.revnetId] += amount;
+        totalCollateralOf[revnetId] += amount;
 
         // Burn the tokens that are tracked as collateral.
         controller.burnTokensOf({
             holder: _msgSender(),
-            projectId: loan.revnetId,
+            projectId: revnetId,
             tokenCount: amount,
             memo: "Adding collateral to loan"
         });
@@ -740,18 +777,19 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
     /// @notice Pays off a loan.
     /// @param loan The loan being paid off.
+    /// @param revnetId The ID of the revnet the loan is being paid off in.
     /// @param amount The amount being paid off.
     /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
-    function _payOff(REVLoan memory loan, uint256 amount, uint256 sourceFeeAmount) internal {
+    function _payOff(REVLoan memory loan, uint256 revnetId, uint256 amount, uint256 sourceFeeAmount) internal {
         // Decrement the total amount of a token being loaned out by the revnet from its terminal.
-        totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] -= amount;
+        totalBorrowedFrom[revnetId][loan.source.terminal][loan.source.token] -= amount;
 
         // The borrowed amount to return to the revnet.
         uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? amount : 0;
 
         // Add the loaned amount back to the revnet.
         try loan.source.terminal.addToBalanceOf{value: payValue}({
-            projectId: loan.revnetId,
+            projectId: revnetId,
             token: loan.source.token,
             amount: _balanceOf(loan.source.token) - sourceFeeAmount,
             shouldReturnHeldFees: false,
@@ -762,12 +800,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
     /// @notice Add a new amount to the loan that is greater than the previous amount.
     /// @param loan The loan being added to.
+    /// @param revnetId The ID of the revnet the loan is being added in.
     /// @param amount The amount being added to the loan.
     /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
     /// @param feeTerminal The terminal that the fee will be paid to.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     function _addTo(
         REVLoan memory loan,
+        uint256 revnetId,
         uint256 amount,
         uint256 sourceFeeAmount,
         IJBTerminal feeTerminal,
@@ -776,25 +816,25 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         internal
     {
         // Register the source if this is the first time its being used for this revnet.
-        if (!isLoanSourceOf[loan.revnetId][loan.source.terminal][loan.source.token]) {
-            isLoanSourceOf[loan.revnetId][loan.source.terminal][loan.source.token] = true;
-            _loanSourcesOf[loan.revnetId].push(
+        if (!isLoanSourceOf[revnetId][loan.source.terminal][loan.source.token]) {
+            isLoanSourceOf[revnetId][loan.source.terminal][loan.source.token] = true;
+            _loanSourcesOf[revnetId].push(
                 REVLoanSource({token: loan.source.token, terminal: loan.source.terminal})
             );
         }
 
         // Increment the amount of the token borrowed from the revnet from the terminal.
-        totalBorrowedFrom[loan.revnetId][loan.source.terminal][loan.source.token] += amount;
+        totalBorrowedFrom[revnetId][loan.source.terminal][loan.source.token] += amount;
 
         {
             // Get a reference to the accounting context for the source.
             JBAccountingContext memory accountingContext =
-                loan.source.terminal.accountingContextForTokenOf({projectId: loan.revnetId, token: loan.source.token});
+                loan.source.terminal.accountingContextForTokenOf({projectId: revnetId, token: loan.source.token});
 
             // Pull the amount to be loaned out of the revnet. This will incure the protocol fee.
             // slither-disable-next-line unused-return
             loan.source.terminal.useAllowanceOf({
-                projectId: loan.revnetId,
+                projectId: revnetId,
                 token: loan.source.token,
                 amount: amount, //totalLoanAmount,
                 currency: accountingContext.currency,
@@ -820,7 +860,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             beneficiary: beneficiary,
             minReturnedTokens: 0,
             memo: "Fee from loan",
-            metadata: bytes(abi.encodePacked(loan.revnetId))
+            metadata: bytes(abi.encodePacked(revnetId))
         }) {} catch (bytes memory) {}
 
         // Transfer the remaining balance to the borrower.
@@ -1031,4 +1071,12 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     }
 
     fallback() external payable {}
+
+    /// @notice Generate a ID for a loan given a revnet ID and a loan number within that revnet.
+    /// @param revnetId The ID of the revnet to generate a loan ID for.
+    /// @param loanNumber The loan number of the loan within the revnet.
+    /// @return The token ID of the 721.
+    function _generateLoanId(uint256 revnetId, uint256 loanNumber) internal pure returns (uint256) {
+        return (revnetId * _ONE_TRILLION) + loanNumber;
+    }
 }

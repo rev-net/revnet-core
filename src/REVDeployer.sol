@@ -484,14 +484,12 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         _checkIfSplitOperatorOf({revnetId: revnetId, operator: msg.sender});
 
         // Deploy the suckers.
-        address[] memory suckers = _deploySuckersFor({
+        suckers = _deploySuckersFor({
             revnetId: revnetId,
             operator: msg.sender,
             encodedConfiguration: encodedConfiguration,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
-
-        return suckers;
     }
 
     /// @notice Auto-mint a revnet's tokens from a stage for a beneficiary.
@@ -1213,13 +1211,11 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
         // Deploy the suckers.
         // slither-disable-next-line unused-return
-        address[] memory suckers = SUCKER_REGISTRY.deploySuckersFor({
+        suckers = SUCKER_REGISTRY.deploySuckersFor({
             projectId: revnetId,
             salt: salt,
             configurations: suckerDeploymentConfiguration.deployerConfigurations
         });
-
-        return suckers;
     }
 
     /// @notice If the specified address is not the revnet's current split operator, revert.
