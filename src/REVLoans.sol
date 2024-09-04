@@ -463,6 +463,17 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             // Get a reference to the loan's ID being iterated on.
             loanId = lastLoanIdLiquidated + i;
 
+            // If the loan is already burned, continue.
+            if (ownerOf(loanId) == address(0)) {
+                numberOfLoansLiquidated++;
+                if (i == count - 1) {
+                    lastLoanIdLiquidated += numberOfLoansLiquidated;
+                    return;
+                } else {
+                    continue;
+                }
+            }
+
             // Get a reference to the loan being iterated on.
             REVLoan memory loan = _loanOf[loanId];
 
