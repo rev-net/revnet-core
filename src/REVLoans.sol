@@ -494,6 +494,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
             // Get a reference to the next loan. 
             loan = _loanOf[loanId];
+            
+            // If the loan doesn't exist, there's nothing left to liquidate.
+            if (loan.createdAt == 0) {
+                break;
+            }
 
             // If the loan is already burned, continue.
             if (ownerOf(loanId) == address(0)) {
@@ -501,11 +506,10 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                 continue;
             }
 
+            // If the loan has not yet passed its liquidation timeframe, no subsequent loans have either.
             if (block.timestamp <= loan.createdAt + LOAN_LIQUIDATION_DURATION) {
                 break;
             }
-
-            // If the the loan has passed its liquidation timeframe, liquidate it.
 
             // Decrement the amount loaned.
             totalBorrowedFrom[revnetId][loan.source.terminal][loan.source.token] -= loan.amount;
