@@ -348,13 +348,14 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
         vm.prank(USER);
-        LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
+        (uint256 newLoanId, REVLoan memory newLoan) =
+            LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
 
         // Ensure loanOf view returns the correct properties
         REVLoanSource memory expectedSource =
             REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
-        REVLoan memory loan = LOANS_CONTRACT.loanOf(1);
+        REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
         assertEq(loan.amount, loanable);
         assertEq(loan.collateral, tokens);
         assertEq(loan.createdAt, block.timestamp);
@@ -398,13 +399,14 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(tokens, tokensBeforeBorrow);
 
         vm.prank(USER);
-        LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
+        (uint256 newLoanId, REVLoan memory newLoan) =
+            LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
 
         // Ensure loanOf view returns the correct properties
         REVLoanSource memory expectedSource =
             REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
-        REVLoan memory loan = LOANS_CONTRACT.loanOf(1);
+        REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
         assertEq(loan.amount, loanable);
         assertEq(loan.collateral, tokens);
         assertEq(loan.createdAt, block.timestamp);

@@ -404,7 +404,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         uint256 collateralToReturn,
         address payable beneficiary
     )
-        internal returns (uint256, REVLoan memory)
+        internal
+        returns (uint256, REVLoan memory)
     {
         // Keep a reference to the fee that'll be taken.
         uint256 sourceFeeAmount = _determineSourceFeeAmount(loan, amount);
@@ -442,7 +443,16 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             });
 
             emit PayOff(
-                loanId, revnetId, loanId, loan, loan, amount, sourceFeeAmount, collateralToReturn, beneficiary, _msgSender()
+                loanId,
+                revnetId,
+                loanId,
+                loan,
+                loan,
+                amount,
+                sourceFeeAmount,
+                collateralToReturn,
+                beneficiary,
+                _msgSender()
             );
 
             return (loanId, loan);
@@ -508,7 +518,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
             // Get a reference to the next loan.
             loan = _loanOf[loanId];
-            
+
             // If the loan doesn't exist, there's nothing left to liquidate.
             if (loan.createdAt == 0) {
                 break;
