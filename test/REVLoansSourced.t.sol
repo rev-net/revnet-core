@@ -337,8 +337,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
         assertGt(loanable, 0);
 
-        // TODO: Address REVLoans burning permissions
-        // This is a spoof until then
+        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
         mockExpect(
             address(jbPermissions()),
             abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
@@ -365,8 +364,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(address(loan.source.terminal), address(jbMultiTerminal()));
 
         // Ensure loans contract isn't hodling
-        // TODO: Why does the borrow seem to travel through the loans contract, requiring a fallback function to
-        // receive?
         assertEq(address(LOANS_CONTRACT).balance, 0);
 
         // Ensure we actually received ETH from the borrow
@@ -416,8 +413,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(address(loan.source.terminal), address(jbMultiTerminal()));
 
         // Ensure loans contract isn't hodling
-        // TODO: Why does the borrow seem to travel through the loans contract, requiring a fallback function to
-        // receive?
         assertEq(address(LOANS_CONTRACT).balance, 0);
 
         // Ensure we actually received ETH from the borrow
