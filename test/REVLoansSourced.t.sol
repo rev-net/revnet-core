@@ -355,7 +355,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
         REVLoan memory loan = LOANS_CONTRACT.loanOf(1);
-        assertEq(loan.revnetId, REVNET_ID);
         assertEq(loan.amount, loanable);
         assertEq(loan.collateral, tokens);
         assertEq(loan.createdAt, block.timestamp);
@@ -406,7 +405,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
         REVLoan memory loan = LOANS_CONTRACT.loanOf(1);
-        assertEq(loan.revnetId, REVNET_ID);
         assertEq(loan.amount, loanable);
         assertEq(loan.collateral, tokens);
         assertEq(loan.createdAt, block.timestamp);

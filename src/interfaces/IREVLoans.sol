@@ -27,7 +27,6 @@ interface IREVLoans {
     event PayOff(
         uint256 indexed loanId,
         uint256 indexed paidOffLoanId,
-        uint256 indexed revnetId,
         REVLoan loan,
         REVLoan paidOffLoan,
         uint256 amount,
@@ -44,12 +43,7 @@ interface IREVLoans {
         uint256 removedCollateral,
         address caller
     );
-    event Liquidate(
-        uint256 indexed loanId,
-        uint256 indexed revnetId,
-        REVLoan loan,
-        address caller
-    );
+    event Liquidate(uint256 indexed loanId, uint256 indexed revnetId, REVLoan loan, address caller);
 
     function REV_PREPAID_FEE() external view returns (uint256);
     function MAX_PREPAID_PERCENT() external view returns (uint256);

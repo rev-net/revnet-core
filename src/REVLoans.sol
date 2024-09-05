@@ -70,7 +70,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
     //*********************************************************************//
-    
 
     /// @dev A fee of 2.5% is charged by the underlying protocol.
     uint256 public constant override REV_PREPAID_FEE = 25; // 2.5%
@@ -343,7 +342,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         REVLoan storage refinancedLoan;
 
         // Refinance the loan.
-        (refinancedLoanId, refinancedLoan) = _refinanceLoan({loanId: loanId, revnetId: revnetIdOfLoanWithId(loanId), collateralToRemove: collateralToTransfer});
+        (refinancedLoanId, refinancedLoan) = _refinanceLoan({
+            loanId: loanId,
+            revnetId: revnetIdOfLoanWithId(loanId),
+            collateralToRemove: collateralToTransfer
+        });
 
         // Make a new loan with the leftover collateral from refinancing.
         (newLoanId, newLoan) = borrowFrom({
@@ -427,7 +430,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             });
 
             emit PayOff(
-                loanId, loanId, revnetId, loan, loan, amount, sourceFeeAmount, collateralToReturn, beneficiary, _msgSender()
+                loanId, loanId, loan, loan, amount, sourceFeeAmount, collateralToReturn, beneficiary, _msgSender()
             );
 
             return (loanId, loan);
@@ -457,7 +460,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
             emit PayOff(
                 loanId,
-                revnetId,
                 paidOffLoanId,
                 loan,
                 paidOffLoan,
@@ -485,14 +487,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
         // Iterate over the desired number of loans to check for liquidation.
         for (uint256 i; i < count; i++) {
-
             // Get a reference to the next loan ID.
             uint256 loanId = lastLoanIdLiquidated + i;
 
             // Get a reference to the loan being iterated on.
             REVLoan memory loan = _loanOf[loanId];
 
-            // Get a reference to the next loan. 
+            // Get a reference to the next loan.
             loan = _loanOf[loanId];
             
             // If the loan doesn't exist, there's nothing left to liquidate.
@@ -616,7 +617,12 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
         // Add collateral if needed...
         if (newCollateral > loan.collateral) {
-            _addCollateralTo({loan: loan, revnetId: revnetId, amount: newCollateral - loan.collateral, controller: controller});
+            _addCollateralTo({
+                loan: loan,
+                revnetId: revnetId,
+                amount: newCollateral - loan.collateral,
+                controller: controller
+            });
             // ... or return collateral if needed.
         } else if (loan.collateral > newCollateral) {
             _returnCollateralFrom({
@@ -766,7 +772,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @param revnetId The ID of the revnet the loan is being added in.
     /// @param amount The new amount of collateral being added to the loan.
     /// @param controller The controller of the revnet.
-    function _addCollateralTo(REVLoan memory loan, uint256 revnetId, uint256 amount, IJBController controller) internal {
+    function _addCollateralTo(
+        REVLoan memory loan,
+        uint256 revnetId,
+        uint256 amount,
+        IJBController controller
+    )
+        internal
+    {
         // Increment the total amount of collateral tokens.
         totalCollateralOf[revnetId] += amount;
 
@@ -822,9 +835,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Register the source if this is the first time its being used for this revnet.
         if (!isLoanSourceOf[revnetId][loan.source.terminal][loan.source.token]) {
             isLoanSourceOf[revnetId][loan.source.terminal][loan.source.token] = true;
-            _loanSourcesOf[revnetId].push(
-                REVLoanSource({token: loan.source.token, terminal: loan.source.terminal})
-            );
+            _loanSourcesOf[revnetId].push(REVLoanSource({token: loan.source.token, terminal: loan.source.terminal}));
         }
 
         // Increment the amount of the token borrowed from the revnet from the terminal.
