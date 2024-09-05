@@ -394,6 +394,18 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Accept the funds that'll be used to pay off loans.
         amount = _acceptFundsFor({token: loan.source.token, amount: amount, allowance: allowance});
 
+        return _payOff(loanId, loan, amount, collateralToReturn, beneficiary);
+    }
+
+    function _payOff(
+        uint256 loanId,
+        REVLoan storage loan,
+        uint256 amount,
+        uint256 collateralToReturn,
+        address payable beneficiary
+    )
+        internal returns (uint256, REVLoan memory)
+    {
         // Keep a reference to the fee that'll be taken.
         uint256 sourceFeeAmount = _determineSourceFeeAmount(loan, amount);
 
@@ -430,7 +442,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             });
 
             emit PayOff(
-                loanId, loanId, loan, loan, amount, sourceFeeAmount, collateralToReturn, beneficiary, _msgSender()
+                loanId, revnetId, loanId, loan, loan, amount, sourceFeeAmount, collateralToReturn, beneficiary, _msgSender()
             );
 
             return (loanId, loan);
@@ -460,6 +472,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
             emit PayOff(
                 loanId,
+                revnetId,
                 paidOffLoanId,
                 loan,
                 paidOffLoan,

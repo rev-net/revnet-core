@@ -26,6 +26,7 @@ interface IREVLoans {
     );
     event PayOff(
         uint256 indexed loanId,
+        uint256 indexed revnetId,
         uint256 indexed paidOffLoanId,
         REVLoan loan,
         REVLoan paidOffLoan,
