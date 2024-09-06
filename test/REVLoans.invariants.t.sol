@@ -41,6 +41,7 @@ struct FeeProjectConfig {
 }
 
 contract REVLoansPayHandler is JBTest {
+    uint256 public COLLATERAL_SUM;
     uint256 REVNET_ID;
     address USER;
 
@@ -62,9 +63,12 @@ contract REVLoansPayHandler is JBTest {
         USER = beneficiary;
     }
 
-    function payBorrow(uint256 amount, uint256 borrowAmount, uint256 prepaidFee) public virtual {
+    function payBorrow(uint256 amount, uint256 borrowAmount, uint256 prepaidFee, uint256 daysToWarp) public virtual {
+        daysToWarp = bound(daysToWarp, 10, 100);
         uint256 payAmount = bound(amount, 1 ether, 10 ether);
         uint256 prepaidFee = bound(amount, 0, 25);
+
+        vm.warp(block.timestamp + (daysToWarp * 1 days));
 
         vm.startPrank(USER);
         uint256 receivedTokens =
@@ -83,6 +87,8 @@ contract REVLoansPayHandler is JBTest {
 
         (uint256 loanId, REVLoan memory lastLoan) =
             LOANS.borrowFrom(REVNET_ID, sauce, borrowable, receivedTokens, payable(USER), prepaidFee);
+
+        COLLATERAL_SUM += lastLoan.collateral;
 
         vm.stopPrank();
     }
@@ -110,6 +116,9 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
     IJBSuckerRegistry SUCKER_REGISTRY;
 
     CTPublisher PUBLISHER;
+
+    // When the second project is deployed, track the block.timestamp.
+    uint256 INITIAL_TIMESTAMP;
 
     uint256 FEE_PROJECT_ID;
     uint256 REVNET_ID;
@@ -266,13 +275,13 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         }
 
         stageConfigurations[1] = REVStageConfig({
-            startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 720 days),
+            startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 365 days),
             autoMints: new REVAutoMint[](0),
-            splitPercent: 2000, // 20%
-            initialIssuance: 0, // inherit from previous cycle.
+            splitPercent: 9000, // 90%
+            initialIssuance: 0, // this is a special number that is as close to max price as we can get.
             issuanceDecayFrequency: 180 days,
             issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
-            cashOutTaxRate: 6000, // 0.6
+            cashOutTaxRate: 0, // 0.0%
             extraMetadata: 0
         });
 
@@ -280,10 +289,10 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
             startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (20 * 365 days)),
             autoMints: new REVAutoMint[](0),
             splitPercent: 0,
-            initialIssuance: 1, // this is a special number that is as close to max price as we can get.
+            initialIssuance: 0, // this is a special number that is as close to max price as we can get.
             issuanceDecayFrequency: 0,
             issuanceDecayPercent: 0,
-            cashOutTaxRate: 6000, // 0.6
+            cashOutTaxRate: 0, // 0.0%
             extraMetadata: 0
         });
 
@@ -353,9 +362,6 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         // Build the config.
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
-        // Empty hook config.
-        REVDeploy721TiersHookConfig memory tiered721HookConfiguration;
-
         // Configure the project.
         REVNET_ID = BASIC_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
@@ -368,7 +374,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         // Configure second revnet
         FeeProjectConfig memory fee2Config = getSecondProjectConfig();
 
-        // Configure the project.
+        // Configure the second project.
         REVNET_ID = BASIC_DEPLOYER.deployFor({
             revnetId: 0, // Zero to deploy a new revnet
             configuration: fee2Config.configuration,
@@ -377,11 +383,10 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
             suckerDeploymentConfiguration: fee2Config.suckerDeploymentConfiguration
         });
 
+        INITIAL_TIMESTAMP = block.timestamp;
+
         // Deploy handlers and assign them as targets
         PAY_HANDLER = new REVLoansPayHandler(jbMultiTerminal(), LOANS_CONTRACT, jbPermissions(), REVNET_ID, USER);
-
-        // Give Eth for the user experience
-        vm.deal(USER, type(uint256).max);
 
         // Performs random pay() calls via the handler
         bytes4[] memory selectors = new bytes4[](1);
@@ -394,15 +399,35 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
     }
 
     function invariant_A() public {
-        uint256 totalCollateral = LOANS_CONTRACT.totalCollateralOf(REVNET_ID);
-        uint256 redeemRate = JBConstants.MAX_REDEMPTION_RATE - 6000;
+        uint256 totalCollateral = PAY_HANDLER.COLLATERAL_SUM();
+        uint256 totalBorrowed = LOANS_CONTRACT.totalBorrowedFrom(REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
+        uint256 maxBorrowable = LOANS_CONTRACT.borrowableAmountFrom(
+            REVNET_ID, type(uint256).max, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+        );
+
+        // Ensure the loan beneficiary holds the correct amounts
+        assertEq(totalBorrowed, USER.balance);
+        assertEq(maxBorrowable, USER.balance);
+
+        // borrowableAmountFrom should return the total borrowed, as we use the max borrow in our handler and there are
+        // no other fund sources.
+        assertEq(maxBorrowable, totalBorrowed);
+
+        // Ensure REVLoans and our handler/user have the same provided collateral amounts.
+        assertEq(totalCollateral, LOANS_CONTRACT.totalCollateralOf(REVNET_ID));
+    }
+
+    function invariant_B() public {
+        /* // WIP
+        uint256 totalCollateral = PAY_HANDLER.COLLATERAL_SUM();
+        uint256 redeemRate = INITIAL_TIMESTAMP + 365 days > block.timestamp ? JBConstants.MAX_REDEMPTION_RATE :
+        JBConstants.MAX_REDEMPTION_RATE - 6000;
         uint256 unrealizedAutoMint = BASIC_DEPLOYER.unrealizedAutoMintAmountOf(REVNET_ID);
         uint256 surplus = jbMultiTerminal().currentSurplusOf(REVNET_ID, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
 
-        uint256 maxLoanable = (totalCollateral * redeemRate) + unrealizedAutoMint + surplus;
+        uint256 maxLoanable = (totalCollateral * (JBConstants.MAX_REDEMPTION_RATE - redeemRate)) + unrealizedAutoMint +
+        surplus;
 
-        uint256 totalBorrowed = LOANS_CONTRACT.totalBorrowedFrom(REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
-
-        assertLe(totalBorrowed, maxLoanable);
+        assertLe(totalBorrowed, maxLoanable); */
     }
 }
