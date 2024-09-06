@@ -66,6 +66,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     error NO_MSG_VALUE_ALLOWED();
     error LOAN_EXPIRED();
     error OVERPAYMENT();
+    error ZERO_AMOUNT();
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -391,6 +392,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
         if (collateralToReturn > loan.collateral) revert COLLATERAL_EXCEEDS_LOAN();
 
+        if (amount == 0) revert ZERO_AMOUNT();
+
         // Accept the funds that'll be used to pay off loans.
         amount = _acceptFundsFor({token: loan.source.token, amount: amount, allowance: allowance});
 
@@ -641,7 +644,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Add collateral if needed...
         if (newCollateral > loan.collateral) {
             _addCollateralTo({
-                loan: loan,
                 revnetId: revnetId,
                 amount: newCollateral - loan.collateral,
                 controller: controller
@@ -649,7 +651,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             // ... or return collateral if needed.
         } else if (loan.collateral > newCollateral) {
             _returnCollateralFrom({
-                loan: loan,
                 revnetId: revnetId,
                 amount: loan.collateral - newCollateral,
                 beneficiary: beneficiary,
@@ -762,13 +763,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     }
 
     /// @notice Returns collateral from a loan.
-    /// @param loan The loan having its collateral returned from.
     /// @param revnetId The ID of the revnet the loan is being returned in.
     /// @param amount The amount of collateral being returned from the loan.
     /// @param beneficiary The address receiving the returned collateral.
     /// @param controller The controller of the revnet.
     function _returnCollateralFrom(
-        REVLoan memory loan,
         uint256 revnetId,
         uint256 amount,
         address payable beneficiary,
@@ -791,12 +790,10 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     }
 
     /// @notice Adds collateral to a loan.
-    /// @param loan The loan being added to.
     /// @param revnetId The ID of the revnet the loan is being added in.
     /// @param amount The new amount of collateral being added to the loan.
     /// @param controller The controller of the revnet.
     function _addCollateralTo(
-        REVLoan memory loan,
         uint256 revnetId,
         uint256 amount,
         IJBController controller
