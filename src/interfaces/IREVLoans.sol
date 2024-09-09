@@ -113,4 +113,12 @@ interface IREVLoans {
         returns (uint256 paidOffLoanId, REVLoan memory loan);
 
     function liquidateExpiredLoansFrom(uint256 revnetId, uint256 count) external;
+
+    function determineSourceFeeAmount(
+        REVLoan memory loan,
+        uint256 amount
+    )
+        external
+        view
+        returns (uint256 sourceFeeAmount);
 }

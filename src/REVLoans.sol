@@ -392,10 +392,10 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
         if (collateralToReturn > loan.collateral) revert COLLATERAL_EXCEEDS_LOAN();
 
-        if (amount == 0) revert ZERO_AMOUNT();
-
         // Accept the funds that'll be used to pay off loans.
         amount = _acceptFundsFor({token: loan.source.token, amount: amount, allowance: allowance});
+
+        if (amount == 0) revert ZERO_AMOUNT();
 
         return _payOff(loanId, loan, amount, collateralToReturn, beneficiary);
     }
@@ -411,6 +411,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         returns (uint256, REVLoan memory)
     {
         // Keep a reference to the fee that'll be taken.
+        // TODO: This is getting source fee for the amount paid down, not the new loan amount, is that correct?
         uint256 sourceFeeAmount = _determineSourceFeeAmount(loan, amount);
 
         // If the amount being paid is greater than the loan's amount, return extra to the payer.
@@ -643,11 +644,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
         // Add collateral if needed...
         if (newCollateral > loan.collateral) {
-            _addCollateralTo({
-                revnetId: revnetId,
-                amount: newCollateral - loan.collateral,
-                controller: controller
-            });
+            _addCollateralTo({revnetId: revnetId, amount: newCollateral - loan.collateral, controller: controller});
             // ... or return collateral if needed.
         } else if (loan.collateral > newCollateral) {
             _returnCollateralFrom({
@@ -682,6 +679,21 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Store the loans updated values.
         loan.amount = uint112(newAmount);
         loan.collateral = uint112(newCollateral);
+    }
+
+    /// @notice Determines the source fee amount for a loan being paid off a certain amount.
+    /// @param loan The loan having its source fee amount determined.
+    /// @param amount The amount being paid off.
+    /// @return sourceFeeAmount The source fee amount for the loan.
+    function determineSourceFeeAmount(
+        REVLoan memory loan,
+        uint256 amount
+    )
+        public
+        view
+        returns (uint256 sourceFeeAmount)
+    {
+        sourceFeeAmount = _determineSourceFeeAmount(loan, amount);
     }
 
     /// @notice Determines the source fee amount for a loan being paid off a certain amount.
@@ -793,13 +805,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @param revnetId The ID of the revnet the loan is being added in.
     /// @param amount The new amount of collateral being added to the loan.
     /// @param controller The controller of the revnet.
-    function _addCollateralTo(
-        uint256 revnetId,
-        uint256 amount,
-        IJBController controller
-    )
-        internal
-    {
+    function _addCollateralTo(uint256 revnetId, uint256 amount, IJBController controller) internal {
         // Increment the total amount of collateral tokens.
         totalCollateralOf[revnetId] += amount;
 
