@@ -370,6 +370,84 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertGt(USER.balance, 100e18 - 1e18);
     }
 
+    function test_Pay_Borrow_PayOff_With_Loan_Source() public {
+        vm.prank(USER);
+        uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+
+        uint256 loanable =
+            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        assertGt(loanable, 0);
+
+        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
+        REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
+        vm.prank(USER);
+        (uint256 newLoanId, REVLoan memory newLoan) =
+            LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
+
+        // Ensure loanOf view returns the correct properties
+        REVLoanSource memory expectedSource =
+            REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
+        REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
+        assertEq(loan.amount, loanable);
+        assertEq(loan.collateral, tokens);
+        assertEq(loan.createdAt, block.timestamp);
+        assertEq(loan.prepaidFeePercent, 500);
+        assertEq(loan.prepaidDuration, mulDiv(500, 3650 days, 500));
+        assertEq(loan.source.token, JBConstants.NATIVE_TOKEN);
+        assertEq(address(loan.source.terminal), address(jbMultiTerminal()));
+
+        // Ensure loans contract isn't hodling
+        assertEq(address(LOANS_CONTRACT).balance, 0);
+
+        // Ensure we actually received ETH from the borrow
+        assertGt(USER.balance, 100e18 - 1e18);
+
+        // Payoff half
+        uint256 percentToPayDown = 5000;
+
+        // used for percentage payoff calcs
+        uint256 denominator = 10_000;
+
+        // another reference to the loan
+        REVLoan memory latestLoan = loan;
+
+        // calc percentage to pay down, and add the source fee to that amount.
+        uint256 amountPaidDown = mulDiv(latestLoan.amount, percentToPayDown, denominator);
+        uint256 sourceFee = LOANS_CONTRACT.determineSourceFeeAmount(latestLoan, amountPaidDown);
+        amountPaidDown += sourceFee;
+
+        // prob incorrect
+        uint256 collateralReturned = mulDiv(latestLoan.collateral, percentToPayDown - 30, denominator);
+
+        // ensure we have the balance
+        vm.deal(USER, amountPaidDown);
+
+        // empty allowance data
+        JBSingleAllowance memory allowance;
+
+        // call to pay-down the loan
+        vm.prank(USER);
+        (uint256 reducedLoanId, REVLoan memory reducedLoan) = LOANS_CONTRACT.payOff{value: amountPaidDown}(
+            newLoanId, amountPaidDown, collateralReturned, payable(USER), allowance
+        );
+
+        assertEq(reducedLoan.amount, latestLoan.amount - amountPaidDown);
+        assertEq(reducedLoan.collateral, latestLoan.collateral - collateralReturned);
+        assertEq(reducedLoan.createdAt, block.timestamp);
+        assertEq(reducedLoan.prepaidFeePercent, 500);
+        assertEq(reducedLoan.prepaidDuration, mulDiv(500, 3650 days, 500));
+        assertEq(reducedLoan.source.token, JBConstants.NATIVE_TOKEN);
+        assertEq(address(reducedLoan.source.terminal), address(jbMultiTerminal()));
+    }
+
     function test_Refinance() public {
         // get a reference to our project token for assertions later
         IJBToken REV_TOKEN = jbTokens().tokenOf(REVNET_ID);
