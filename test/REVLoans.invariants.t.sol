@@ -69,7 +69,7 @@ contract REVLoansPayHandler is JBTest {
     function payBorrow(uint256 amount, uint256 daysToWarp) public virtual {
         daysToWarp = bound(daysToWarp, 10, 100);
         uint256 payAmount = bound(amount, 1 ether, 10 ether);
-        uint256 prepaidFee = bound(amount, 0, 25);
+        uint256 prepaidFee = bound(amount, 0, 200);
 
         vm.deal(USER, payAmount);
 
@@ -133,12 +133,12 @@ contract REVLoansPayHandler is JBTest {
         // empty allowance data
         JBSingleAllowance memory allowance;
 
-        // calculate the source fee
-        uint256 sourceFee2 = LOANS.determineSourceFeeAmount(latestLoan, amountPaidDown);
-
         // call to pay-down the loan
         vm.prank(USER);
         LOANS.payOff{value: amountPaidDown}(id, amountPaidDown, collateralReturned, payable(USER), allowance);
+
+        // calculate the source fee
+        uint256 sourceFee2 = LOANS.determineSourceFeeAmount(latestLoan, amountPaidDown);
 
         COLLATERAL_RETURNED += collateralReturned;
         COLLATERAL_SUM -= collateralReturned;
@@ -459,9 +459,6 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
     function invariant_A() public {
         uint256 totalCollateralByHandler = PAY_HANDLER.COLLATERAL_SUM();
         uint256 totalBorrowed = LOANS_CONTRACT.totalBorrowedFrom(REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
-        uint256 maxBorrowable = LOANS_CONTRACT.borrowableAmountFrom(
-            REVNET_ID, totalCollateralByHandler, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
-        );
 
         // token details
         IJBToken token = jbTokens().tokenOf(REVNET_ID);
