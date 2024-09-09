@@ -42,8 +42,9 @@ struct FeeProjectConfig {
 
 contract REVLoansPayHandler is JBTest {
     uint256 public COLLATERAL_SUM;
+    uint256 public COLLATERAL_RETURNED;
     uint256 public BORROWED_SUM;
-    uint256 RUNS;
+    uint256 public RUNS;
     uint256 REVNET_ID;
     address USER;
 
@@ -65,7 +66,7 @@ contract REVLoansPayHandler is JBTest {
         USER = beneficiary;
     }
 
-    function payBorrow(uint256 amount, uint256 borrowAmount, uint256 daysToWarp) public virtual {
+    function payBorrow(uint256 amount, uint256 daysToWarp) public virtual {
         daysToWarp = bound(daysToWarp, 10, 100);
         uint256 payAmount = bound(amount, 1 ether, 10 ether);
         uint256 prepaidFee = bound(amount, 0, 25);
@@ -91,34 +92,58 @@ contract REVLoansPayHandler is JBTest {
         (uint256 loanId, REVLoan memory lastLoan) =
             LOANS.borrowFrom(REVNET_ID, sauce, borrowable, receivedTokens, payable(USER), prepaidFee);
 
-        uint256 sourceFeeAmount = JBFees.feeAmountFrom({amount: borrowable, feePercent: prepaidFee});
-
         COLLATERAL_SUM += receivedTokens;
         BORROWED_SUM += lastLoan.amount;
         ++RUNS;
         vm.stopPrank();
     }
 
-    /* function payOff(uint256 percentToPayDown) public virtual {
+    function payOff(uint256 percentToPayDown) public virtual {
         // Skip this if there are no loans to pay down
         if (RUNS == 0) return;
-        bound(percentToPayDown, 100, 10_000);
-        
+        uint256 denominator = 10_000;
+
+        bound(percentToPayDown, 100, denominator);
+
         // get the loan ID
         uint256 id = _generateLoanId(REVNET_ID, RUNS);
         REVLoan memory latestLoan = LOANS.loanOf(id);
 
         // TODO: collateralToReturn calculation
 
+        // calc percentage to pay down, and add the source fee to that amount.
+        uint256 amountPaidDown = mulDiv(latestLoan.amount, percentToPayDown, denominator);
+        uint256 sourceFee = LOANS.determineSourceFeeAmount(latestLoan, amountPaidDown);
+        amountPaidDown += sourceFee;
+
+        // prob incorrect
+        uint256 collateralReturned = mulDiv(latestLoan.collateral, percentToPayDown, denominator);
+        uint256 newLoanAmount = latestLoan.amount - amountPaidDown;
+
+        // see how much we can borrow from the new collateral amount
+        uint256 newCollateral = latestLoan.collateral - collateralReturned;
+        uint256 borrowableFromNewCollateral =
+            LOANS.borrowableAmountFrom(REVNET_ID, newCollateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+
+        if (newLoanAmount > borrowableFromNewCollateral) return;
+
+        // ensure we have the balance
+        vm.deal(USER, amountPaidDown);
+
         // empty allowance data
         JBSingleAllowance memory allowance;
 
-        // call to pay-down the loan some
-        LOANS.payOff(id, amountToPayDown, newCollateralAmount, payable(USER), allowance);
+        // calculate the source fee
+        uint256 sourceFee2 = LOANS.determineSourceFeeAmount(latestLoan, amountPaidDown);
 
-        COLLATERAL_SUM -= amountOfCollateralReduced;
-        BORROWED_SUM -= amountToPayDown;
-    } */
+        // call to pay-down the loan
+        vm.prank(USER);
+        LOANS.payOff{value: amountPaidDown}(id, amountPaidDown, collateralReturned, payable(USER), allowance);
+
+        COLLATERAL_RETURNED += collateralReturned;
+        COLLATERAL_SUM -= collateralReturned;
+        BORROWED_SUM -= (amountPaidDown - sourceFee2);
+    }
 
     // Same id generation used in REVLoans
     function _generateLoanId(uint256 revnetId, uint256 loanNumber) internal pure returns (uint256) {
@@ -421,10 +446,9 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         PAY_HANDLER = new REVLoansPayHandler(jbMultiTerminal(), LOANS_CONTRACT, jbPermissions(), REVNET_ID, USER);
 
         // Calls to perform via the handler
-        bytes4[] memory selectors = new bytes4[](1);
+        bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = REVLoansPayHandler.payBorrow.selector;
-        // TODO: re-enable after collateralToReturn calc is determined
-        // selectors[1] = REVLoansPayHandler.payOff.selector;
+        selectors[1] = REVLoansPayHandler.payOff.selector;
 
         targetContract(address(PAY_HANDLER));
         targetSelector(FuzzSelector({addr: address(PAY_HANDLER), selectors: selectors}));
@@ -436,8 +460,14 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         uint256 totalCollateralByHandler = PAY_HANDLER.COLLATERAL_SUM();
         uint256 totalBorrowed = LOANS_CONTRACT.totalBorrowedFrom(REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
         uint256 maxBorrowable = LOANS_CONTRACT.borrowableAmountFrom(
-            REVNET_ID, type(uint256).max, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+            REVNET_ID, totalCollateralByHandler, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
+
+        // token details
+        IJBToken token = jbTokens().tokenOf(REVNET_ID);
+        uint256 userTokenBalance = token.balanceOf(USER);
+
+        if (PAY_HANDLER.RUNS() > 0) assertGe(userTokenBalance, PAY_HANDLER.COLLATERAL_RETURNED());
 
         // Sum of all loans (tracked in handler) eq total borrowed in REVLoans.
         assertEq(totalBorrowed, PAY_HANDLER.BORROWED_SUM());
