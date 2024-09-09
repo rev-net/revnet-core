@@ -411,7 +411,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         returns (uint256, REVLoan memory)
     {
         // Keep a reference to the fee that'll be taken.
-        // TODO: This is getting source fee for the amount paid down, not the new loan amount, is that correct?
         uint256 sourceFeeAmount = _determineSourceFeeAmount(loan, amount);
 
         // If the amount being paid is greater than the loan's amount, return extra to the payer.
