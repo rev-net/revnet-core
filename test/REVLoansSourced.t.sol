@@ -519,17 +519,16 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // loanable amount is higher with the lower tax rate per second stage configuration
         assertGt(loanableSecondStage, loanable);
 
-        // prevent off by one
-        loanableSecondStage -= 1;
-
-        // get the new amount to borrow
-        uint256 newAmount = loanableSecondStage - loanable;
-
         // we should not have to add collateral
         uint256 collateralToAdd = 0;
 
         // this should be a 0.5% gain to be refinanced
         uint256 collateralToTransfer = mulDiv(loan.collateral, 50, 10_000);
+
+        // get the new amount to borrow
+        uint256 newAmount = LOANS_CONTRACT.borrowableAmountFrom(
+            REVNET_ID, collateralToTransfer, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+        );
 
         vm.prank(USER);
         LOANS_CONTRACT.refinanceLoan(
