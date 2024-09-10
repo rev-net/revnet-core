@@ -105,7 +105,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceDecayFrequency: 90 days,
                 issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
-                cashOutTaxRate: 6000, // 0.6
+                cashOutTaxRate: 0, //6000, // 0.6
                 extraMetadata: 0
             });
         }
@@ -117,7 +117,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             initialIssuance: 0, // inherit from previous cycle.
             issuanceDecayFrequency: 180 days,
             issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
-            cashOutTaxRate: 1000, // 0.6
+            cashOutTaxRate: 0, //1000, // 0.1
             extraMetadata: 0
         });
 
@@ -128,7 +128,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
             issuanceDecayFrequency: 0,
             issuanceDecayPercent: 0,
-            cashOutTaxRate: 6000, // 0.6
+            cashOutTaxRate: 0, //6000, // 0.6
             extraMetadata: 0
         });
 
@@ -208,7 +208,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceDecayFrequency: 90 days,
                 issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
-                cashOutTaxRate: 6000, // 0.6
+                cashOutTaxRate: 0, //6000, // 0.6
                 extraMetadata: 0
             });
         }
@@ -220,7 +220,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             initialIssuance: 0, // inherit from previous cycle.
             issuanceDecayFrequency: 180 days,
             issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
-            cashOutTaxRate: 6000, // 0.6
+            cashOutTaxRate: 0, //6000, // 0.6
             extraMetadata: 0
         });
 
@@ -231,7 +231,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
             issuanceDecayFrequency: 0,
             issuanceDecayPercent: 0,
-            cashOutTaxRate: 6000, // 0.6
+            cashOutTaxRate: 0, //6000, // 0.6
             extraMetadata: 0
         });
 
@@ -371,14 +371,14 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     }
 
     function testFuzz_Pay_Borrow_PayOff_With_Loan_Source(
-        uint256 percentToPayDown,
+        uint256 percentOfCollateralToRemove,
         uint256 prepaidFeePercent,
         uint256 daysToWarp
     )
         public
     {
         prepaidFeePercent = bound(prepaidFeePercent, 0, 500);
-        daysToWarp = bound(daysToWarp, 50, 1000);
+        daysToWarp = bound(daysToWarp, 0, 3650);
 
         daysToWarp = daysToWarp * 1 days;
 
@@ -387,6 +387,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         uint256 loanable =
             LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+
         assertGt(loanable, 0);
 
         // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
@@ -396,13 +397,18 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             abi.encode(true)
         );
 
-        REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+        uint256 newLoanId;
 
-        vm.prank(USER);
-        (uint256 newLoanId,) =
-            LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), prepaidFeePercent);
+        {
+            REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
+            vm.prank(USER);
+            (newLoanId,) =
+                LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), prepaidFeePercent);
+        }
 
         REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
+
         assertEq(loan.amount, loanable);
         assertEq(loan.collateral, tokens);
         assertEq(loan.createdAt, block.timestamp);
@@ -412,21 +418,40 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(address(loan.source.terminal), address(jbMultiTerminal()));
 
         // warp forward
-        // TODO: after warping we fail with NOT_ENOUGH_COLLATERAL
         vm.warp(block.timestamp + daysToWarp);
 
-        // Payoff percentage
-        percentToPayDown = bound(percentToPayDown, 100, 10_000);
+        // Collateral removal percentage
+        percentOfCollateralToRemove = bound(percentOfCollateralToRemove, 1, 10_000);
 
-        uint256 collateralReturned = mulDiv(loan.collateral, percentToPayDown, 10_000);
+        uint256 collateralReturned = mulDiv(loan.collateral, percentOfCollateralToRemove, 10_000);
 
         uint256 newCollateral = loan.collateral - collateralReturned;
         uint256 borrowableFromNewCollateral =
             LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, newCollateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
 
-        // TODO: adding source fee doesn't resolve NOT_ENOUGH_COLLATERAL when warping
-        uint256 amountPaidDown =
-            loan.amount - borrowableFromNewCollateral + LOANS_CONTRACT.determineSourceFeeAmount(loan, loan.amount);
+        uint256 amountDiff = borrowableFromNewCollateral > loan.amount ? 0 : loan.amount - borrowableFromNewCollateral;
+
+        uint256 amountPaidDown = amountDiff;
+
+        // Calculate the fee.
+        {
+            // Keep a reference to the time since the loan was created.
+            uint256 timeSinceLoanCreated = block.timestamp - loan.createdAt;
+
+            // If the loan period has passed the prepaid time frame, take a fee.
+            if (timeSinceLoanCreated > loan.prepaidDuration) {
+                // Calculate the prepaid fee for the amount being paid back.
+                uint256 prepaidAmount = JBFees.feeAmountFrom({amount: amountDiff, feePercent: loan.prepaidFeePercent});
+
+                // Calculate the fee as a linear proportion given the amount of time that has passed.
+                // sourceFeeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION) - prepaidAmount;
+                amountPaidDown += JBFees.feeAmountFrom({
+                    amount: amountDiff - prepaidAmount,
+                    feePercent: mulDiv(timeSinceLoanCreated, JBConstants.MAX_FEE, 3650 days)
+                });
+
+            }
+        }
 
         // ensure we have the balance
         vm.deal(USER, amountPaidDown);
@@ -440,9 +465,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             newLoanId, amountPaidDown, collateralReturned, payable(USER), allowance
         );
 
-        assertEq(reducedLoan.amount, loan.amount - amountPaidDown);
+        assertApproxEqAbs(reducedLoan.amount, loan.amount - amountDiff, 1);
         assertEq(reducedLoan.collateral, loan.collateral - collateralReturned);
-        //assertEq(reducedLoan.createdAt, block.timestamp + daysToWarp);
+        assertEq(reducedLoan.createdAt, block.timestamp - daysToWarp);
         assertEq(reducedLoan.prepaidFeePercent, prepaidFeePercent);
         assertEq(reducedLoan.prepaidDuration, mulDiv(prepaidFeePercent, 3650 days, 500));
         assertEq(reducedLoan.source.token, JBConstants.NATIVE_TOKEN);

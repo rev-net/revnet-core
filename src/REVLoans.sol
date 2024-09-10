@@ -66,7 +66,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     error NO_MSG_VALUE_ALLOWED();
     error LOAN_EXPIRED();
     error OVERPAYMENT();
-    error ZERO_AMOUNT();
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -395,8 +394,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Accept the funds that'll be used to pay off loans.
         amount = _acceptFundsFor({token: loan.source.token, amount: amount, allowance: allowance});
 
-        if (amount == 0) revert ZERO_AMOUNT();
-
         return _payOff(loanId, loan, amount, collateralToReturn, beneficiary);
     }
 
@@ -424,7 +421,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             });
 
             // Set the amount as the amount that can be paid off.
-            amount -= (sourceFeeAmount + loan.amount);
+            amount = sourceFeeAmount + loan.amount;
         }
 
         // Burn the original loan.
@@ -562,7 +559,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     //*********************************************************************//
     // ---------------------- internal transactions ---------------------- //
     //*********************************************************************//
-
+    
     /// @notice Allows the owner of a loan to pay it back, add more, or receive returned collateral no longer necessary
     /// to support the loan.
     /// @param loan The loan being adjusted.
@@ -620,6 +617,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                         tokens: controller.TOKENS()
                     }) < newAmount
             ) revert NOT_ENOUGH_COLLATERAL();
+            
         }
 
         // Add to the loan if needed...
@@ -638,7 +636,12 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             });
             // ... or pay off the loan if needed.
         } else if (loan.amount > newAmount) {
-            _payOff({loan: loan, revnetId: revnetId, amount: loan.amount - newAmount, sourceFeeAmount: sourceFeeAmount});
+            _removeFrom({
+                loan: loan,
+                revnetId: revnetId,
+                amount: loan.amount - newAmount,
+                sourceFeeAmount: sourceFeeAmount
+            });
         }
 
         // Add collateral if needed...
@@ -684,15 +687,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @param loan The loan having its source fee amount determined.
     /// @param amount The amount being paid off.
     /// @return sourceFeeAmount The source fee amount for the loan.
-    function determineSourceFeeAmount(
-        REVLoan memory loan,
-        uint256 amount
-    )
-        public
-        view
-        returns (uint256 sourceFeeAmount)
-    {
-        sourceFeeAmount = _determineSourceFeeAmount(loan, amount);
+    function determineSourceFeeAmount(REVLoan memory loan, uint256 amount) public view returns (uint256) {
+        return _determineSourceFeeAmount(loan, amount);
     }
 
     /// @notice Determines the source fee amount for a loan being paid off a certain amount.
@@ -715,11 +711,16 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             // If the loan period has passed the liqidation time frame, do not allow loan management.
             if (timeSinceLoanCreated > LOAN_LIQUIDATION_DURATION) revert LOAN_EXPIRED();
 
-            // Calculate the prepaid fee for the amount being paid back.
-            uint256 prepaidAmount = JBFees.feeAmountFrom({amount: amount, feePercent: loan.prepaidFeePercent});
+            // Get a reference to the amount prepaid for the full loan.
+            uint256 prepaid = JBFees.feeAmountFrom({amount: loan.amount, feePercent: loan.prepaidFeePercent});
 
-            // Calculate the fee as a linear proportion given the amount of time that has passed.
-            sourceFeeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION) - prepaidAmount;
+            uint256 fullSourceFeeAmount = JBFees.feeAmountFrom({amount: loan.amount - prepaid, feePercent: mulDiv(timeSinceLoanCreated, JBConstants.MAX_FEE, LOAN_LIQUIDATION_DURATION)});
+
+            // Get a reference to the amount that would have to be paid down to make the loan fully paid.
+            uint256 amountInFull = loan.amount + fullSourceFeeAmount;
+
+            // Calculate the source fee amount for the amount being paid off.
+            sourceFeeAmount = mulDiv(fullSourceFeeAmount, amount, amountInFull);
         }
     }
 
@@ -822,7 +823,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @param revnetId The ID of the revnet the loan is being paid off in.
     /// @param amount The amount being paid off.
     /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
-    function _payOff(REVLoan memory loan, uint256 revnetId, uint256 amount, uint256 sourceFeeAmount) internal {
+    function _removeFrom(REVLoan memory loan, uint256 revnetId, uint256 amount, uint256 sourceFeeAmount) internal {
         // Decrement the total amount of a token being loaned out by the revnet from its terminal.
         totalBorrowedFrom[revnetId][loan.source.terminal][loan.source.token] -= amount;
 
