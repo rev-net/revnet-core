@@ -449,7 +449,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
                     amount: amountDiff - prepaidAmount,
                     feePercent: mulDiv(timeSinceLoanCreated, JBConstants.MAX_FEE, 3650 days)
                 });
-
             }
         }
 

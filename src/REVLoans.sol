@@ -559,7 +559,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     //*********************************************************************//
     // ---------------------- internal transactions ---------------------- //
     //*********************************************************************//
-    
+
     /// @notice Allows the owner of a loan to pay it back, add more, or receive returned collateral no longer necessary
     /// to support the loan.
     /// @param loan The loan being adjusted.
@@ -617,7 +617,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                         tokens: controller.TOKENS()
                     }) < newAmount
             ) revert NOT_ENOUGH_COLLATERAL();
-            
         }
 
         // Add to the loan if needed...
@@ -714,7 +713,10 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             // Get a reference to the amount prepaid for the full loan.
             uint256 prepaid = JBFees.feeAmountFrom({amount: loan.amount, feePercent: loan.prepaidFeePercent});
 
-            uint256 fullSourceFeeAmount = JBFees.feeAmountFrom({amount: loan.amount - prepaid, feePercent: mulDiv(timeSinceLoanCreated, JBConstants.MAX_FEE, LOAN_LIQUIDATION_DURATION)});
+            uint256 fullSourceFeeAmount = JBFees.feeAmountFrom({
+                amount: loan.amount - prepaid,
+                feePercent: mulDiv(timeSinceLoanCreated, JBConstants.MAX_FEE, LOAN_LIQUIDATION_DURATION)
+            });
 
             // Get a reference to the amount that would have to be paid down to make the loan fully paid.
             uint256 amountInFull = loan.amount + fullSourceFeeAmount;
