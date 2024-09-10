@@ -524,8 +524,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                 break;
             }
 
+            // Keep a reference to the loan's owner.
+            address owner = ownerOf(loanId);
+
             // If the loan is already burned, continue.
-            if (ownerOf(loanId) == address(0)) {
+            if (owner == address(0)) {
                 newLastLoanIdLiquidated = loanId;
                 continue;
             }
@@ -533,6 +536,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             // If the loan has not yet passed its liquidation timeframe, no subsequent loans have either.
             if (block.timestamp <= loan.createdAt + LOAN_LIQUIDATION_DURATION) {
                 break;
+            }
+            
+            // If the loan has been paid back and there is still leftover collateral, return it to the owner.
+            if (loan.amount == 0 && loan.collateral > 0) {
+                // Keep a reference to the revnet's controller.
+                IJBController controller = revnetOwner.CONTROLLER();
+
+                _returnCollateralFrom({ revnetId: revnetId, amount: loan.collateral, beneficiary: payable(owner), controller: controller });
             }
 
             // Decrement the amount loaned.
