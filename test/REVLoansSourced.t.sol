@@ -533,7 +533,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         vm.prank(USER);
         LOANS_CONTRACT.refinanceLoan(
-            newLoanId, loan.collateral - collateralToTransfer, sauce, newAmount, collateralToAdd, payable(USER), 0
+            newLoanId, collateralToTransfer, sauce, newAmount, collateralToAdd, payable(USER), 0
         );
     }
 }
