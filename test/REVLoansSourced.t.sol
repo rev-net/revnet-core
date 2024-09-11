@@ -473,7 +473,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(address(reducedLoan.source.terminal), address(jbMultiTerminal()));
     }
 
-    function test_Refinance() public {
+    function test_Refinance_Excess_Collateral() public {
         // get a reference to our project token for assertions later
         IJBToken REV_TOKEN = jbTokens().tokenOf(REVNET_ID);
 
@@ -493,8 +493,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
         vm.prank(USER);
-        (uint256 newLoanId, REVLoan memory newLoan) =
-            LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
+        (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
 
         // Ensure loanOf view returns the correct properties
         REVLoanSource memory expectedSource =
@@ -508,7 +507,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Ensure we actually received ETH from the borrow
         assertGt(USER.balance, 100e18 - 1e18);
 
-        // try a different way - warp to after redemption rate is higher in the second ruleset
+        // warp to after redemption rate is higher in the second ruleset
         vm.warp(block.timestamp + 721 days);
 
         // get the updated loanableFrom the same amount as earlier
@@ -530,9 +529,38 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVNET_ID, collateralToTransfer, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
+        uint256 userBalanceBefore = USER.balance;
+
         vm.prank(USER);
-        LOANS_CONTRACT.refinanceLoan(
+        (,, REVLoan memory adjustedLoan, REVLoan memory newLoan) = LOANS_CONTRACT.refinanceLoan(
             newLoanId, collateralToTransfer, sauce, newAmount, collateralToAdd, payable(USER), 0
         );
+
+        uint256 sourceFeeAmount = LOANS_CONTRACT.determineSourceFeeAmount(adjustedLoan, newAmount);
+
+        uint256 userBalanceAfter = USER.balance;
+
+        // check we received funds period
+        assertGt(userBalanceAfter, userBalanceBefore);
+        // check we received ~newAmount with a 0.1% buffer
+        assertApproxEqRel(userBalanceBefore + newLoan.amount, userBalanceAfter, 1e15);
+
+        // Check the old loan has been adjusted
+        assertEq(adjustedLoan.amount, loan.amount); // Should match the old loan
+        assertEq(adjustedLoan.collateral, loan.collateral - collateralToTransfer); // should be reduced
+        assertEq(adjustedLoan.createdAt, loan.createdAt); // Should match the old loan
+        assertEq(adjustedLoan.prepaidFeePercent, loan.prepaidFeePercent); // Should match the old loan
+        assertEq(adjustedLoan.prepaidDuration, mulDiv(loan.prepaidFeePercent, 3650 days, 500));
+        assertEq(adjustedLoan.source.token, JBConstants.NATIVE_TOKEN);
+        assertEq(address(adjustedLoan.source.terminal), address(jbMultiTerminal()));
+
+        // Check the new loan with the excess from refinancing
+        assertEq(newLoan.amount, newAmount); // Excess from refinance
+        assertEq(newLoan.collateral, collateralToTransfer); // Matches the amount transferred
+        assertEq(newLoan.createdAt, block.timestamp);
+        assertEq(newLoan.prepaidFeePercent, 0); // Configured as zero in refinance call
+        assertEq(newLoan.prepaidDuration, mulDiv(0, 3650 days, 500)); // Configured as zero in refinance call
+        assertEq(newLoan.source.token, JBConstants.NATIVE_TOKEN);
+        assertEq(address(newLoan.source.terminal), address(jbMultiTerminal()));
     }
 }
