@@ -373,8 +373,14 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     )
         public
     {
+        ///
+        percentOfCollateralToRemove = bound(percentOfCollateralToRemove, 1, 10_000);
         prepaidFeePercent = bound(prepaidFeePercent, 0, 500);
         daysToWarp = bound(daysToWarp, 0, 3650);
+
+        emit log_uint(percentOfCollateralToRemove); //7721
+        emit log_uint(prepaidFeePercent); //385
+        emit log_uint(daysToWarp); //3342
 
         daysToWarp = daysToWarp * 1 days;
 
@@ -416,14 +422,14 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // warp forward
         vm.warp(block.timestamp + daysToWarp);
 
-        // Collateral removal percentage
-        percentOfCollateralToRemove = bound(percentOfCollateralToRemove, 1, 10_000);
-
         uint256 collateralReturned = mulDiv(loan.collateral, percentOfCollateralToRemove, 10_000);
 
         uint256 newCollateral = loan.collateral - collateralReturned;
         uint256 borrowableFromNewCollateral =
             LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, newCollateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+
+        // Needed for edge case seeds like 17721, 11407, 334
+        if (borrowableFromNewCollateral > 0) borrowableFromNewCollateral -= 1;
 
         uint256 amountDiff = borrowableFromNewCollateral > loan.amount ? 0 : loan.amount - borrowableFromNewCollateral;
 

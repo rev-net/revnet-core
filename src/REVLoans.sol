@@ -508,6 +508,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Keep a reference to the latest liquidated loan ID.
         uint256 newLastLoanIdLiquidated;
 
+        // Keep a reference to the revnet's owner.
+        IREVDeployer revnetOwner = IREVDeployer(PROJECTS.ownerOf(revnetId));
+
         // Iterate over the desired number of loans to check for liquidation.
         for (uint256 i; i < count; i++) {
             // Get a reference to the next loan ID.
