@@ -536,8 +536,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             newLoanId, collateralToTransfer, sauce, newAmount, collateralToAdd, payable(USER), 0
         );
 
-        uint256 sourceFeeAmount = LOANS_CONTRACT.determineSourceFeeAmount(adjustedLoan, newAmount);
-
         uint256 userBalanceAfter = USER.balance;
 
         // check we received funds period
