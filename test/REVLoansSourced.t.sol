@@ -350,10 +350,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         (uint256 newLoanId, REVLoan memory newLoan) =
             LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
 
-        // Ensure loanOf view returns the correct properties
-        REVLoanSource memory expectedSource =
-            REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
-
         REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
         assertEq(loan.amount, loanable);
         assertEq(loan.collateral, tokens);
@@ -479,6 +475,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+        emit log_uint(tokens);
 
         uint256 loanable =
             LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
@@ -494,10 +491,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         vm.prank(USER);
         (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
-
-        // Ensure loanOf view returns the correct properties
-        REVLoanSource memory expectedSource =
-            REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
         REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
 
@@ -560,5 +553,76 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(newLoan.prepaidDuration, mulDiv(0, 3650 days, 500)); // Configured as zero in refinance call
         assertEq(newLoan.source.token, JBConstants.NATIVE_TOKEN);
         assertEq(address(newLoan.source.terminal), address(jbMultiTerminal()));
+    }
+
+    function testFuzz_Refinance(
+        uint256 payAmount,
+        uint256 collateralPercentToTransfer,
+        uint256 secondPayAmount,
+        uint256 prepaidFeePercent,
+        uint256 daysToWarp
+    )
+        public
+    {
+        payAmount = bound(payAmount, 1e18, 100e18);
+        prepaidFeePercent = bound(prepaidFeePercent, 0, 500);
+        daysToWarp = bound(daysToWarp, 0, 3650);
+        daysToWarp = daysToWarp * 1 days;
+        collateralPercentToTransfer = bound(collateralPercentToTransfer, 1, 1000);
+
+        uint256 totalTokens;
+
+        // get a reference to our project token for assertions later
+        IJBToken REV_TOKEN = jbTokens().tokenOf(REVNET_ID);
+
+        vm.prank(USER);
+        uint256 tokens =
+            jbMultiTerminal().pay{value: payAmount}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+        totalTokens += tokens;
+
+        uint256 loanable =
+            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        assertGt(loanable, 0);
+
+        // mock call spoofing permissions of REVLoans otherwise called by user before borrow.
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
+        REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
+        vm.prank(USER);
+        (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
+
+        REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
+
+        // warp to after redemption rate is higher in the second ruleset
+        vm.warp(block.timestamp + daysToWarp);
+
+        secondPayAmount = bound(secondPayAmount, 1e18, 10e18);
+        uint256 tokens2 =
+            jbMultiTerminal().pay{value: secondPayAmount}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+        totalTokens += tokens2;
+
+        // bound up to 1% refinanced
+        uint256 collateralToTransfer = mulDiv(loan.collateral, collateralPercentToTransfer, 10_000);
+
+        // get the new amount to borrow
+        uint256 newAmount = LOANS_CONTRACT.borrowableAmountFrom(
+            REVNET_ID, collateralToTransfer + tokens2, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+        );
+
+        uint256 userBalanceBefore = USER.balance;
+
+        vm.prank(USER);
+        (,, REVLoan memory adjustedLoan, REVLoan memory newLoan) =
+            LOANS_CONTRACT.refinanceLoan(newLoanId, collateralToTransfer, sauce, newAmount, tokens2, payable(USER), 0);
+
+        uint256 userBalanceAfter = USER.balance;
+
+        // check we received funds period
+        assertGt(userBalanceAfter, userBalanceBefore);
     }
 }
