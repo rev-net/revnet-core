@@ -374,13 +374,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         public
     {
         ///
-        percentOfCollateralToRemove = bound(percentOfCollateralToRemove, 1, 10_000);
+        percentOfCollateralToRemove = bound(percentOfCollateralToRemove, 0, 10_000);
         prepaidFeePercent = bound(prepaidFeePercent, 0, 500);
         daysToWarp = bound(daysToWarp, 0, 3650);
-
-        emit log_uint(percentOfCollateralToRemove); //7721
-        emit log_uint(prepaidFeePercent); //385
-        emit log_uint(daysToWarp); //3342
 
         daysToWarp = daysToWarp * 1 days;
 
