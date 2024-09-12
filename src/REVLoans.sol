@@ -540,13 +540,18 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             if (block.timestamp <= loan.createdAt + LOAN_LIQUIDATION_DURATION) {
                 break;
             }
-            
+
             // If the loan has been paid back and there is still leftover collateral, return it to the owner.
             if (loan.amount == 0 && loan.collateral > 0) {
                 // Keep a reference to the revnet's controller.
                 IJBController controller = revnetOwner.CONTROLLER();
 
-                _returnCollateralFrom({ revnetId: revnetId, amount: loan.collateral, beneficiary: payable(owner), controller: controller });
+                _returnCollateralFrom({
+                    revnetId: revnetId,
+                    amount: loan.collateral,
+                    beneficiary: payable(owner),
+                    controller: controller
+                });
             }
 
             // Decrement the amount loaned.

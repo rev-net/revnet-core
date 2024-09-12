@@ -477,7 +477,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
-        emit log_uint(tokens);
 
         uint256 loanable =
             LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
@@ -567,6 +566,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         public
     {
         payAmount = bound(payAmount, 1e18, 100e18);
+        secondPayAmount = bound(secondPayAmount, 1e18, 10e18);
         prepaidFeePercent = bound(prepaidFeePercent, 0, 500);
         daysToWarp = bound(daysToWarp, 0, 3650);
         daysToWarp = daysToWarp * 1 days;
@@ -603,7 +603,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // warp to after redemption rate is higher in the second ruleset
         vm.warp(block.timestamp + daysToWarp);
 
-        secondPayAmount = bound(secondPayAmount, 1e18, 10e18);
         uint256 tokens2 =
             jbMultiTerminal().pay{value: secondPayAmount}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
         totalTokens += tokens2;
