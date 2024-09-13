@@ -458,7 +458,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // call to pay-down the loan
         vm.prank(USER);
-        (, REVLoan memory reducedLoan) = LOANS_CONTRACT.payOff{value: amountPaidDown}(
+        (, REVLoan memory reducedLoan) = LOANS_CONTRACT.payDown{value: amountPaidDown}(
             newLoanId, amountPaidDown, collateralReturned, payable(USER), allowance
         );
 
