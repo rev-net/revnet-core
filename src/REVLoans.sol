@@ -549,9 +549,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Make sure there is an amount being borrowed.
         if (amount == 0) revert REVLoans_AmountNotSpecified();
 
-        // Get a reference to the loan that'll replace the existing loan.
-        REVLoan storage reallocatedLoan;
-
         // Refinance the loan.
         (reallocatedLoanId, reallocatedLoan) = _reallocateCollateralFromLoan({
             loanId: loanId,
@@ -568,8 +565,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             beneficiary: beneficiary,
             prepaidFeePercent: prepaidFeePercent
         });
-
-        return (reallocatedLoanId, newLoanId, reallocatedLoan, newLoan);
     }
 
     /// @notice Allows the owner of a loan to pay it back or receive returned collateral no longer necessary to support
