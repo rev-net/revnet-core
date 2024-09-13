@@ -448,6 +448,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Keep a reference to the revnet's owner.
         IREVDeployer revnetOwner = IREVDeployer(PROJECTS.ownerOf(revnetId));
 
+        // Keep a reference to the revnet's controller.
+        IJBController controller = revnetOwner.CONTROLLER();
+
         // Iterate over the desired number of loans to check for liquidation.
         for (uint256 i; i < count; i++) {
             // Get a reference to the next loan ID.
@@ -460,6 +463,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             loan = _loanOf[loanId];
 
             // If the loan doesn't exist, there's nothing left to liquidate.
+            // slither-disable-next-line incorrect-equality
             if (loan.createdAt == 0) {
                 break;
             }
@@ -479,10 +483,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             }
 
             // If the loan has been paid back and there is still leftover collateral, return it to the owner.
+            // slither-disable-next-line incorrect-equality
             if (loan.amount == 0 && loan.collateral > 0) {
-                // Keep a reference to the revnet's controller.
-                IJBController controller = revnetOwner.CONTROLLER();
-
                 // Return the collateral to the owner.
                 _returnCollateralFrom({
                     revnetId: revnetId,
@@ -914,6 +916,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         uint256 revnetId = revnetIdOfLoanWith(loanId);
 
         // If the loan will carry no more amount or collateral, store its changes directly.
+        // slither-disable-next-line incorrect-equality
         if (amount - sourceFeeAmount == loan.amount && collateralToReturn == loan.collateral) {
             // Borrow in.
             _adjust({
@@ -1072,7 +1075,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         totalCollateralOf[revnetId] -= amount;
 
         // Mint the collateral tokens back to the loan payer.
-        // slither-disable-next-line unused-return
+        // slither-disable-next-line unused-return,calls-loop
         controller.mintTokensOf({
             projectId: revnetId,
             tokenCount: amount,
