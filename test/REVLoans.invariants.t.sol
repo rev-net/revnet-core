@@ -513,8 +513,8 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         assertGe(totalCollateralValue, totalBorrowed);
     }
 
-    /* function invariant_B() public {
-    uint256 totalBorrowed = LOANS_CONTRACT.totalBorrowedFrom(REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
+    function invariant_B_Collateral_And_Borrows() public {
+        uint256 totalBorrowed = LOANS_CONTRACT.totalBorrowedFrom(REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
 
         // Sum of all loans (tracked in handler) equals (with 0.5% variance for fees) total borrowed in REVLoans.
         assertApproxEqRel(totalBorrowed, PAY_HANDLER.BORROWED_SUM(), 5e15);
@@ -525,6 +525,6 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         if (PAY_HANDLER.RUNS() > 0) assertGe(userTokenBalance, PAY_HANDLER.COLLATERAL_RETURNED());
 
         // Ensure REVLoans and our handler/user have the same provided collateral amounts.
-        assertEq(PAY_HANDLER.COLLATERAL_SUM(), LOANS_CONTRACT.totalCollateralOf(REVNET_ID)); 
-    } */
+        assertEq(PAY_HANDLER.COLLATERAL_SUM(), LOANS_CONTRACT.totalCollateralOf(REVNET_ID));
+    }
 }
