@@ -134,41 +134,47 @@ contract DeployScript is Script, Sphinx {
             REVAutoMint[] memory mintConfs = new REVAutoMint[](1);
             mintConfs[0] = REVAutoMint({
                 chainId: uint32(block.chainid),
-                count: uint104(70_000 * decimalMultiplier),
+                count: uint104(75_000 * decimalMultiplier),
                 beneficiary: OPERATOR
             });
 
             stageConfigurations[0] = REVStageConfig({
                 startsAtOrAfter: uint40(block.timestamp),
                 autoMints: mintConfs,
-                splitPercent: 2000, // 20%
+                splitPercent: 4000, // 40%
                 initialIssuance: uint112(1000 * decimalMultiplier),
-                issuanceDecayFrequency: 90 days,
-                issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
-                cashOutTaxRate: 6000, // 0.6
+                issuanceDecayFrequency: 720 days,
+                issuanceDecayPercent: 300_000_000, // 30%
+                cashOutTaxRate: 3000, // 0.3
+                extraMetadata: 0
+            });
+
+            mintConfs[0] = REVAutoMint({
+                chainId: uint32(block.chainid),
+                count: uint104(135_000 * decimalMultiplier),
+                beneficiary: OPERATOR
+            });
+
+            stageConfigurations[1] = REVStageConfig({
+                startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 720 days),
+                autoMints: mintConfs,
+                splitPercent: 4000, // 40%
+                initialIssuance: 0, // inherit from previous cycle.
+                issuanceDecayFrequency: 1 * 365 days, // 10 years
+                issuanceDecayPercent: 300_000_000, // 30%
+                cashOutTaxRate: 3000, // 0.3
                 extraMetadata: 0
             });
         }
 
-        stageConfigurations[1] = REVStageConfig({
-            startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 720 days),
-            autoMints: new REVAutoMint[](0),
-            splitPercent: 2000, // 20%
-            initialIssuance: 0, // inherit from previous cycle.
-            issuanceDecayFrequency: 180 days,
-            issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
-            cashOutTaxRate: 6000, // 0.6
-            extraMetadata: 0
-        });
-
         stageConfigurations[2] = REVStageConfig({
-            startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (20 * 365 days)),
+            startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (7200 days)),
             autoMints: new REVAutoMint[](0),
-            splitPercent: 0,
+            splitPercent: 1000, // 10%
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
             issuanceDecayFrequency: 0,
             issuanceDecayPercent: 0,
-            cashOutTaxRate: 6000, // 0.6
+            cashOutTaxRate: 1000, // 0.1
             extraMetadata: 0
         });
 
@@ -239,9 +245,6 @@ contract DeployScript is Script, Sphinx {
                 suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration
             });
         }
-
-        // TODO get a reference to the $REV revnet specifications that will be set.
-        // core.projects.transferOwnership(FEE_PROJECT_ID);
     }
 
     function _isDeployed(
