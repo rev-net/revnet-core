@@ -458,7 +458,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // call to pay-down the loan
         vm.prank(USER);
-        (, REVLoan memory reducedLoan) = LOANS_CONTRACT.payOff{value: amountPaidDown}(
+        (, REVLoan memory reducedLoan) = LOANS_CONTRACT.repayLoan{value: amountPaidDown}(
             newLoanId, amountPaidDown, collateralReturned, payable(USER), allowance
         );
 
@@ -515,7 +515,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // we should not have to add collateral
         uint256 collateralToAdd = 0;
 
-        // this should be a 0.5% gain to be refinanced
+        // this should be a 0.5% gain to be reallocated
         uint256 collateralToTransfer = mulDiv(loan.collateral, 50, 10_000);
 
         // get the new amount to borrow
@@ -526,7 +526,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 userBalanceBefore = USER.balance;
 
         vm.prank(USER);
-        (,, REVLoan memory adjustedLoan, REVLoan memory newLoan) = LOANS_CONTRACT.refinanceLoan(
+        (,, REVLoan memory adjustedLoan, REVLoan memory newLoan) = LOANS_CONTRACT.reallocateCollateralFromLoan(
             newLoanId, collateralToTransfer, sauce, newAmount, collateralToAdd, payable(USER), 0
         );
 
@@ -547,11 +547,11 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(address(adjustedLoan.source.terminal), address(jbMultiTerminal()));
 
         // Check the new loan with the excess from refinancing
-        assertEq(newLoan.amount, newAmount); // Excess from refinance
+        assertEq(newLoan.amount, newAmount); // Excess from reallocateCollateral
         assertEq(newLoan.collateral, collateralToTransfer); // Matches the amount transferred
         assertEq(newLoan.createdAt, block.timestamp);
-        assertEq(newLoan.prepaidFeePercent, 0); // Configured as zero in refinance call
-        assertEq(newLoan.prepaidDuration, mulDiv(0, 3650 days, 500)); // Configured as zero in refinance call
+        assertEq(newLoan.prepaidFeePercent, 0); // Configured as zero in reallocateCollateral call
+        assertEq(newLoan.prepaidDuration, mulDiv(0, 3650 days, 500)); // Configured as zero in reallocateCollateral call
         assertEq(newLoan.source.token, JBConstants.NATIVE_TOKEN);
         assertEq(address(newLoan.source.terminal), address(jbMultiTerminal()));
     }
@@ -607,7 +607,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             jbMultiTerminal().pay{value: secondPayAmount}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
         totalTokens += tokens2;
 
-        // bound up to 1% refinanced
+        // bound up to 1% reallocated
         uint256 collateralToTransfer = mulDiv(loan.collateral, collateralPercentToTransfer, 10_000);
 
         // get the new amount to borrow
@@ -618,8 +618,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 userBalanceBefore = USER.balance;
 
         vm.prank(USER);
-        (,, REVLoan memory adjustedLoan, REVLoan memory newLoan) =
-            LOANS_CONTRACT.refinanceLoan(newLoanId, collateralToTransfer, sauce, newAmount, tokens2, payable(USER), 0);
+        (,, REVLoan memory adjustedLoan, REVLoan memory newLoan) = LOANS_CONTRACT.reallocateCollateralFromLoan(
+            newLoanId, collateralToTransfer, sauce, newAmount, tokens2, payable(USER), 0
+        );
 
         uint256 userBalanceAfter = USER.balance;
 
