@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {REVStageConfig} from "./REVStageConfig.sol";
 import {REVDescription} from "./REVDescription.sol";
+import {REVLoanSource} from "./REVLoanSource.sol";
+import {REVStageConfig} from "./REVStageConfig.sol";
+import {IREVLoans} from "../interfaces/IREVLoans.sol";
 
 /// @custom:member description The description of the revnet.
 /// @custom:member baseCurrency The currency that the issuance is based on.
@@ -14,9 +16,17 @@ import {REVDescription} from "./REVDescription.sol";
 /// is
 /// allowed to change who the operator is. Only the operator can replace itself after deployment.
 /// @custom:member stageConfigurations The periods of changing constraints.
+/// @custom:member loanSources The sources for loans.
+/// @custom:member loans The loans contract, which can mint the revnet's tokens and use the revnet's balance.
+/// @custom:member allowCrosschainSuckerExtension A flag indicating if the revnet should later be able be extended to
+/// new chains
+/// after deployment.
 struct REVConfig {
     REVDescription description;
     uint32 baseCurrency;
     address splitOperator;
     REVStageConfig[] stageConfigurations;
+    REVLoanSource[] loanSources;
+    address loans;
+    bool allowCrosschainSuckerExtension;
 }

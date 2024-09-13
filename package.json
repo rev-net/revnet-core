@@ -16,10 +16,10 @@
     "dependencies": {
         "@bananapus/721-hook": "^0.0.22",
         "@bananapus/buyback-hook": "^0.0.18",
-        "@bananapus/core": "^0.0.25",
+        "@bananapus/core": "^0.0.30",
         "@bananapus/ownable": "^0.0.6",
         "@bananapus/permission-ids": "^0.0.11",
-        "@bananapus/suckers": "^0.0.20",
+        "@bananapus/suckers": "^0.0.21",
         "@bananapus/swap-terminal": "^0.0.18",
         "@croptop/core": "^0.0.15",
         "@openzeppelin/contracts": "^5.0.2"

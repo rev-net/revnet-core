@@ -1,20 +1,30 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
+import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
+import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
+import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
 import {IJBRulesetDataHook} from "@bananapus/core/src/interfaces/IJBRulesetDataHook.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
 import {JBRulesetConfig} from "@bananapus/core/src/structs/JBRulesetConfig.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
+import {CTPublisher} from "@croptop/core/src/CTPublisher.sol";
+import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
+import {REVDeploy721TiersHookConfig} from "../structs/REVDeploy721TiersHookConfig.sol";
+import {REVCroptopAllowedPost} from "../structs/REVCroptopAllowedPost.sol";
+import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
 
 import {REVBuybackHookConfig} from "../structs/REVBuybackHookConfig.sol";
 import {REVConfig} from "../structs/REVConfig.sol";
 import {REVSuckerDeploymentConfig} from "../structs/REVSuckerDeploymentConfig.sol";
 
-interface IREVBasic {
+interface IREVDeployer {
     event ReplaceSplitOperator(uint256 indexed revnetId, address indexed newSplitOperator, address caller);
     event DeploySuckers(
         uint256 indexed revnetId,
+        address indexed operator,
         bytes32 indexed salt,
         bytes encodedConfiguration,
         REVSuckerDeploymentConfig suckerDeploymentConfiguration,
@@ -23,7 +33,6 @@ interface IREVBasic {
 
     event DeployRevnet(
         uint256 indexed revnetId,
-        bytes32 indexed suckerSalt,
         REVConfig configuration,
         JBTerminalConfig[] terminalConfigurations,
         REVBuybackHookConfig buybackHookConfiguration,
@@ -39,7 +48,7 @@ interface IREVBasic {
         uint256 indexed revnetId, uint256 indexed stageId, address indexed beneficiary, uint256 count, address caller
     );
 
-    event StoreMintPotential(
+    event StoreAutoMintAmount(
         uint256 indexed revnetId, uint256 indexed stageId, address indexed beneficiary, uint256 count, address caller
     );
 
@@ -47,30 +56,53 @@ interface IREVBasic {
 
     function CASH_OUT_DELAY() external view returns (uint256);
     function CONTROLLER() external view returns (IJBController);
+    function DIRECTORY() external view returns (IJBDirectory);
+    function PROJECTS() external view returns (IJBProjects);
+    function PERMISSIONS() external view returns (IJBPermissions);
     function FEE() external view returns (uint256);
     function SUCKER_REGISTRY() external view returns (IJBSuckerRegistry);
     function FEE_REVNET_ID() external view returns (uint256);
+    function PUBLISHER() external view returns (CTPublisher);
+    function HOOK_DEPLOYER() external view returns (IJB721TiersHookDeployer);
 
     function buybackHookOf(uint256 revnetId) external view returns (IJBRulesetDataHook);
+    function tiered721HookOf(uint256 revnetId) external view returns (IJB721TiersHook);
     function cashOutDelayOf(uint256 revnetId) external view returns (uint256);
-    function payHookSpecificationsOf(uint256 revnetId) external view returns (JBPayHookSpecification[] memory);
+    function unrealizedAutoMintAmountOf(uint256 revnetId) external view returns (uint256);
+    function loansOf(uint256 revnetId) external view returns (address);
     function isSplitOperatorOf(uint256 revnetId, address addr) external view returns (bool);
 
-    function replaceSplitOperatorOf(uint256 revnetId, address newSplitOperator) external;
-    function mintFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
-    function allowedMintCountOf(
+    function deployFor(
         uint256 revnetId,
-        uint256 stageId,
-        address beneficiary
-    )
-        external
-        view
-        returns (uint256);
-
-    function deploySuckersFor(
-        uint256 projectId,
-        bytes memory encodedConfiguration,
+        REVConfig memory configuration,
+        JBTerminalConfig[] memory terminalConfigurations,
+        REVBuybackHookConfig memory buybackHookConfiguration,
         REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
     )
-        external;
+        external
+        returns (uint256);
+
+    function deployWith721sFor(
+        uint256 revnetId,
+        REVConfig calldata configuration,
+        JBTerminalConfig[] memory terminalConfigurations,
+        REVBuybackHookConfig memory buybackHookConfiguration,
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration,
+        REVDeploy721TiersHookConfig memory tiered721HookConfiguration,
+        REVCroptopAllowedPost[] memory allowedPosts
+    )
+        external
+        returns (uint256, IJB721TiersHook hook);
+
+    function setSplitOperatorOf(uint256 revnetId, address newSplitOperator) external;
+    function autoMintFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
+    function deploySuckersFor(
+        uint256 revnetId,
+        bytes calldata encodedConfiguration,
+        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
+    )
+        external
+        returns (address[] memory suckers);
+
+    function amountToAutoMint(uint256 revnetId, uint256 stageId, address beneficiary) external view returns (uint256);
 }
