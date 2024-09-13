@@ -26,7 +26,7 @@ interface IREVLoans {
         address caller
     );
     event Liquidate(uint256 indexed loanId, uint256 indexed revnetId, REVLoan loan, address caller);
-    event PayDown(
+    event RepayLoan(
         uint256 indexed loanId,
         uint256 indexed revnetId,
         uint256 indexed paidOffLoanId,
@@ -38,11 +38,11 @@ interface IREVLoans {
         address payable beneficiary,
         address caller
     );
-    event Refinance(
+    event ReallocateCollateral(
         uint256 indexed loanId,
-        uint256 indexed refinancedLoanId,
+        uint256 indexed reallocatedLoanId,
         uint256 indexed revnetId,
-        REVLoan refinancedLoan,
+        REVLoan reallocatedLoan,
         uint256 removedCollateral,
         address caller
     );
@@ -97,7 +97,7 @@ interface IREVLoans {
         external
         returns (uint256 loanId, REVLoan memory loan);
     function liquidateExpiredLoansFrom(uint256 revnetId, uint256 count) external;
-    function payDown(
+    function repayLoan(
         uint256 loanId,
         uint256 newAmount,
         uint256 newCollateral,
@@ -107,7 +107,7 @@ interface IREVLoans {
         external
         payable
         returns (uint256 paidOffLoanId, REVLoan memory loan);
-    function refinanceLoan(
+    function reallocateCollateralFromLoan(
         uint256 loanId,
         uint256 collateralToTransfer,
         REVLoanSource calldata source,
@@ -118,5 +118,5 @@ interface IREVLoans {
     )
         external
         payable
-        returns (uint256 refinancedLoanId, uint256 newLoanId, REVLoan memory refinancedLoan, REVLoan memory newLoan);
+        returns (uint256 reallocatedLoanId, uint256 newLoanId, REVLoan memory reallocatedLoan, REVLoan memory newLoan);
 }

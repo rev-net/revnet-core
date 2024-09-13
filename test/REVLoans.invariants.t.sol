@@ -100,7 +100,7 @@ contract REVLoansPayHandler is JBTest {
         ++RUNS;
     }
 
-    function payDown(uint256 percentToPayDown, uint256 daysToWarp) public virtual useActor {
+    function repayLoan(uint256 percentToPayDown, uint256 daysToWarp) public virtual useActor {
         // Skip this if there are no loans to pay down
         if (RUNS == 0) {
             return;
@@ -160,7 +160,7 @@ contract REVLoansPayHandler is JBTest {
         JBSingleAllowance memory allowance;
 
         vm.deal(USER, type(uint256).max);
-        LOANS.payDown{value: amountPaidDown}(id, amountPaidDown, collateralReturned, payable(USER), allowance);
+        LOANS.repayLoan{value: amountPaidDown}(id, amountPaidDown, collateralReturned, payable(USER), allowance);
 
         wasLoanPaidOff[id] = true;
 
@@ -467,7 +467,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         // Calls to perform via the handler
         bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = REVLoansPayHandler.payBorrow.selector;
-        selectors[1] = REVLoansPayHandler.payDown.selector;
+        selectors[1] = REVLoansPayHandler.repayLoan.selector;
 
         targetContract(address(PAY_HANDLER));
         targetSelector(FuzzSelector({addr: address(PAY_HANDLER), selectors: selectors}));

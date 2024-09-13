@@ -482,8 +482,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             if (loan.amount == 0 && loan.collateral > 0) {
                 // Keep a reference to the revnet's controller.
                 IJBController controller = revnetOwner.CONTROLLER();
-                
-                // Return the collateral to the owner.      
+
+                // Return the collateral to the owner.
                 _returnCollateralFrom({
                     revnetId: revnetId,
                     amount: loan.collateral,
@@ -516,18 +516,18 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @notice Refinances a loan by transferring extra collateral from an existing loan to a new loan.
     /// @dev Useful if a loan's collateral has gone up in value since the loan was created.
     /// @dev Refinancing a loan will burn the original and create two new loans.
-    /// @param loanId The ID of the loan being refinanced.
+    /// @param loanId The ID of the loan to reallocate collateral from.
     /// @param collateralToTransfer The amount of collateral to transfer from the original loan.
-    /// @param source The source of the loan being refinanced.
+    /// @param source The source of the loan to create.
     /// @param amount The amount being borrowed.
     /// @param collateralToAdd The amount of collateral to add to the loan.
     /// @param beneficiary The address that'll receive the borrowed funds and the tokens resulting from fee payments.
     /// @param prepaidFeePercent The fee percent that will be charged upfront from the revnet being borrowed from.
-    /// @return refinancedLoanId The ID of the loan being refinanced.
+    /// @return reallocatedLoanId The ID of the loan being reallocated.
     /// @return newLoanId The ID of the new loan.
-    /// @return refinancedLoan The loan being refinanced.
-    /// @return newLoan The new loan created from refinancing.
-    function refinanceLoan(
+    /// @return reallocatedLoan The loan being reallocated.
+    /// @return newLoan The new loan created from reallocating collateral.
+    function reallocateCollateralFromLoan(
         uint256 loanId,
         uint256 collateralToTransfer,
         REVLoanSource calldata source,
@@ -539,7 +539,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         external
         payable
         override
-        returns (uint256 refinancedLoanId, uint256 newLoanId, REVLoan memory, REVLoan memory newLoan)
+        returns (uint256 reallocatedLoanId, uint256 newLoanId, REVLoan memory reallocatedLoan, REVLoan memory newLoan)
     {
         // Make sure only the loan's owner can manage it.
         if (_ownerOf(loanId) != _msgSender()) revert REVLoans_Unauthorized();
@@ -548,18 +548,18 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         if (amount == 0) revert REVLoans_AmountNotSpecified();
 
         // Get a reference to the loan that'll replace the existing loan.
-        REVLoan storage refinancedLoan;
+        REVLoan storage reallocatedLoan;
 
         // Refinance the loan.
-        (refinancedLoanId, refinancedLoan) = _refinanceLoan({
+        (reallocatedLoanId, reallocatedLoan) = _reallocateCollateralFromLoan({
             loanId: loanId,
             revnetId: revnetIdOfLoanWith(loanId),
             collateralToRemove: collateralToTransfer
         });
 
-        // Make a new loan with the leftover collateral from refinancing.
+        // Make a new loan with the leftover collateral from reallocating.
         (newLoanId, newLoan) = borrowFrom({
-            revnetId: revnetIdOfLoanWith(refinancedLoanId),
+            revnetId: revnetIdOfLoanWith(reallocatedLoanId),
             source: source,
             amount: amount,
             collateral: collateralToTransfer + collateralToAdd,
@@ -567,7 +567,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             prepaidFeePercent: prepaidFeePercent
         });
 
-        return (refinancedLoanId, newLoanId, refinancedLoan, newLoan);
+        return (reallocatedLoanId, newLoanId, reallocatedLoan, newLoan);
     }
 
     /// @notice Allows the owner of a loan to pay it back or receive returned collateral no longer necessary to support
@@ -579,7 +579,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @param allowance An allowance to faciliate permit2 interactions.
     /// @return paidOffLoanId The ID of the loan after it's been paid off.
     /// @return paidOffloan The loan after it's been paid off.
-    function payDown(
+    function repayLoan(
         uint256 loanId,
         uint256 amount,
         uint256 collateralToReturn,
@@ -603,7 +603,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Accept the funds that'll be used to pay off loans.
         amount = _acceptFundsFor({token: loan.source.token, amount: amount, allowance: allowance});
 
-        return _payDown(loanId, loan, amount, collateralToReturn, beneficiary);
+        return _repayLoan(loanId, loan, amount, collateralToReturn, beneficiary);
     }
 
     //*********************************************************************//
@@ -880,7 +880,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @param amount The amount being paid down from the loan.
     /// @param collateralToReturn The amount of collateral being returned that the loan no longer requires.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
-    function _payDown(
+    function _repayLoan(
         uint256 loanId,
         REVLoan storage loan,
         uint256 amount,
@@ -925,7 +925,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                 beneficiary: beneficiary
             });
 
-            emit PayDown(
+            emit RepayLoan(
                 loanId,
                 revnetId,
                 loanId,
@@ -963,7 +963,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                 beneficiary: beneficiary
             });
 
-            emit PayDown(
+            emit RepayLoan(
                 loanId,
                 revnetId,
                 paidOffLoanId,
@@ -980,19 +980,19 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         }
     }
 
-    /// @notice Refinances a loan by making a new loan based on the original, with reduced collateral.
-    /// @param loanId The ID of the loan being refinanced.
-    /// @param revnetId The ID of the revnet the loan is being refinanced in.
+    /// @notice Reallocates collateral from a loan by making a new loan based on the original, with reduced collateral.
+    /// @param loanId The ID of the loan to reallocate collateral from.
+    /// @param revnetId The ID of the revnet the loan is from.
     /// @param collateralToRemove The amount of collateral to remove from the loan.
-    /// @return refinancedLoanId The ID of the refinanced loan.
-    /// @return refinancedLoan The refinanced loan.
-    function _refinanceLoan(
+    /// @return reallocatedLoanId The ID of the loan.
+    /// @return reallocatedLoan The reallocated loan.
+    function _reallocateCollateralFromLoan(
         uint256 loanId,
         uint256 revnetId,
         uint256 collateralToRemove
     )
         internal
-        returns (uint256 refinancedLoanId, REVLoan storage refinancedLoan)
+        returns (uint256 reallocatedLoanId, REVLoan storage reallocatedLoan)
     {
         // Burn the original loan.
         _burn(loanId);
@@ -1004,30 +1004,32 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         if (collateralToRemove > loan.collateral) revert REVLoans_NotEnoughCollateral();
 
         // Get a reference to the replacement loan ID.
-        refinancedLoanId = _generateLoanId(revnetId, ++numberOfLoansFor[revnetId]);
+        reallocatedLoanId = _generateLoanId(revnetId, ++numberOfLoansFor[revnetId]);
 
         // Mint the replacement loan.
-        _mint({to: _msgSender(), tokenId: refinancedLoanId});
+        _mint({to: _msgSender(), tokenId: reallocatedLoanId});
 
         // Get a reference to the loan being created.
-        refinancedLoan = _loanOf[refinancedLoanId];
+        reallocatedLoan = _loanOf[reallocatedLoanId];
 
-        // Set the refinanced loan's values the same as the original loan.
-        refinancedLoan = loan;
+        // Set the reallocated loan's values the same as the original loan.
+        reallocatedLoan = loan;
 
         // Reduce the collateral of the replacement loan.
         _adjust({
-            loan: refinancedLoan,
+            loan: reallocatedLoan,
             revnetId: revnetId,
-            newAmount: refinancedLoan.amount,
-            newCollateral: refinancedLoan.collateral - collateralToRemove,
+            newAmount: reallocatedLoan.amount,
+            newCollateral: reallocatedLoan.collateral - collateralToRemove,
             sourceFeeAmount: 0,
             beneficiary: payable(_msgSender()) // use the msgSender as the beneficiary, who will have the returned
                 // collateral tokens debited from
                 // their balance for the new loan.
         });
 
-        emit Refinance(loanId, revnetId, refinancedLoanId, refinancedLoan, collateralToRemove, _msgSender());
+        emit ReallocateCollateral(
+            loanId, revnetId, reallocatedLoanId, reallocatedLoan, collateralToRemove, _msgSender()
+        );
     }
 
     /// @notice Pays off a loan.

@@ -53,7 +53,6 @@ import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol
 /// @notice `REVDeployer` deploys, manages, and operates Revnets.
 /// @dev Revnets are unowned Juicebox projects which operate autonomously after deployment.
 contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721Receiver {
-
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
@@ -103,7 +102,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
     /// @notice Mints ERC-721s that represent Juicebox project (and revnet) ownership and transfers.
     IJBProjects public immutable override PROJECTS;
-
 
     /// @notice Manages the publishing of ERC-721 posts to revnet's tiered ERC-721 hooks.
     CTPublisher public immutable override PUBLISHER;
@@ -528,7 +526,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         }
     }
 
-     
     /// @notice Returns the permissions that the split operator should be granted for a revnet.
     /// @param revnetId The ID of the revnet to get split operator permissions for.
     /// @return allOperatorPermissions The permissions that the split operator should be granted for the revnet,
@@ -1168,7 +1165,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             });
         }
     }
-
 
     /// @notice Stores the auto-mint amounts for each of a revnet's stages.
     /// @param revnetId The ID of the revnet to store the auto-mint amounts for.
