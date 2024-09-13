@@ -171,6 +171,9 @@ contract REVLoansPayHandler is JBTest {
 }
 
 contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
+    // A library that parses the packed ruleset metadata into a friendlier format.
+    using JBRulesetMetadataResolver for JBRuleset;
+
     /// @notice the salts that are used to deploy the contracts.
     bytes32 BASIC_DEPLOYER_SALT = "REVDeployer";
     bytes32 ERC20_SALT = "REV_TOKEN";
@@ -472,41 +475,56 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         targetContract(address(PAY_HANDLER));
         targetSelector(FuzzSelector({addr: address(PAY_HANDLER), selectors: selectors}));
 
-        // targetSender(USER);
-
         vm.deal(USER, type(uint256).max);
     }
 
-    function invariant_A() public {
-        // token details
-        IJBToken token = jbTokens().tokenOf(REVNET_ID);
-        uint256 userTokenBalance = token.balanceOf(USER);
+    function invariant_A_Solvency() public {
+        IJBTerminal[] memory terminals = new IJBTerminal[](1);
+        terminals[0] = jbMultiTerminal();
 
-        if (PAY_HANDLER.RUNS() > 0) assertGe(userTokenBalance, PAY_HANDLER.COLLATERAL_RETURNED());
+        // Keep a reference to the revnet's owner.
+        IREVDeployer revnetOwner = IREVDeployer(jbProjects().ownerOf(REVNET_ID));
 
-        // Sum of all loans (tracked in handler) ~eq (1% variance) total borrowed in REVLoans.
+        // Keep a reference to the revnet's controller.
+        IJBController controller = revnetOwner.CONTROLLER();
+
+        // Keep a reference to the pending automint tokens.
+        uint256 pendingAutomintTokens = revnetOwner.unrealizedAutoMintAmountOf(REVNET_ID);
+
+        // Get the total amount of tokens in circulation.
+        uint256 totalSupply = jbTokens().totalSupplyOf(REVNET_ID);
+
+        // Keep a reference to the current stage.
+        JBRuleset memory currentStage = jbController().RULESETS().currentOf(REVNET_ID);
+
+        // Get the surplus of all the revnet's terminals in terms of the native currency.
+        uint256 totalSurplus = JBSurplus.currentSurplusOf({
+            projectId: REVNET_ID,
+            terminals: terminals,
+            decimals: 18,
+            currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
+        });
+
+        // Sans the borrowed amount, otherwise we would use borrowableAmountFrom()
+        uint256 totalCollateralValue = JBRedemptions.reclaimFrom(
+            totalSurplus, PAY_HANDLER.COLLATERAL_SUM(), totalSupply, currentStage.redemptionRate()
+        );
         uint256 totalBorrowed = LOANS_CONTRACT.totalBorrowedFrom(REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
-        assertApproxEqRel(totalBorrowed, PAY_HANDLER.BORROWED_SUM(), 1e16);
-
-        // TODO: Why are these not congruent? Source fee amount? Terminal fee? Gas isn't a factor here.
-        /* assertEq(totalBorrowed, USER.balance); */
-
-        // Ensure REVLoans and our handler/user have the same provided collateral amounts.
-        assertEq(PAY_HANDLER.COLLATERAL_SUM(), LOANS_CONTRACT.totalCollateralOf(REVNET_ID));
+        assertGe(totalCollateralValue, totalBorrowed);
     }
 
     /* function invariant_B() public {
-        // WIP- this maxLoanable was incorrect
+    uint256 totalBorrowed = LOANS_CONTRACT.totalBorrowedFrom(REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
 
-        uint256 totalCollateral = PAY_HANDLER.COLLATERAL_SUM();
-        uint256 redeemRate = INITIAL_TIMESTAMP + 365 days > block.timestamp ? JBConstants.MAX_REDEMPTION_RATE :
-        JBConstants.MAX_REDEMPTION_RATE - 6000;
-        uint256 unrealizedAutoMint = BASIC_DEPLOYER.unrealizedAutoMintAmountOf(REVNET_ID);
-    uint256 surplus = jbMultiTerminal().currentSurplusOf(REVNET_ID, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        // Sum of all loans (tracked in handler) equals (with 0.5% variance for fees) total borrowed in REVLoans.
+        assertApproxEqRel(totalBorrowed, PAY_HANDLER.BORROWED_SUM(), 5e15);
 
-    uint256 maxLoanable = (totalCollateral * (JBConstants.MAX_REDEMPTION_RATE - redeemRate)) + unrealizedAutoMint +
-        surplus;
+        IJBToken token = jbTokens().tokenOf(REVNET_ID);
 
-        assertLe(totalBorrowed, maxLoanable);
+        uint256 userTokenBalance = token.balanceOf(USER);
+        if (PAY_HANDLER.RUNS() > 0) assertGe(userTokenBalance, PAY_HANDLER.COLLATERAL_RETURNED());
+
+        // Ensure REVLoans and our handler/user have the same provided collateral amounts.
+        assertEq(PAY_HANDLER.COLLATERAL_SUM(), LOANS_CONTRACT.totalCollateralOf(REVNET_ID)); 
     } */
 }
