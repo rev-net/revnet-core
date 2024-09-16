@@ -46,7 +46,7 @@ contract DeployScript is Script, Sphinx {
     /// @notice the salts that are used to deploy the contracts.
     bytes32 BASIC_DEPLOYER = "REVDeployer";
 
-    address OPERATOR = address(this);
+    address OPERATOR = 0x823b92d6a4b2AED4b15675c7917c9f922ea8ADAD;
     bytes32 ERC20_SALT = "REV_TOKEN";
 
     function configureSphinx() public override {
