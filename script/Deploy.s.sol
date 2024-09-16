@@ -107,6 +107,7 @@ contract DeployScript is Script, Sphinx {
         string memory projectUri = "ipfs://QmNRHT91HcDgMcenebYX7rJigt77cgNcosvuhX21wkF3tx";
         uint8 decimals = 18;
         uint256 decimalMultiplier = 10 ** decimals;
+        uint256 premintChainId = 11_155_111;
 
         // The tokens that the project accepts and stores.
         JBAccountingContext[] memory accountingContextsToAccept = new JBAccountingContext[](1);
@@ -133,7 +134,7 @@ contract DeployScript is Script, Sphinx {
         {
             REVAutoMint[] memory mintConfs = new REVAutoMint[](1);
             mintConfs[0] = REVAutoMint({
-                chainId: uint32(block.chainid),
+                chainId: premintChainId,
                 count: uint104(75_000 * decimalMultiplier),
                 beneficiary: OPERATOR
             });
@@ -141,16 +142,16 @@ contract DeployScript is Script, Sphinx {
             stageConfigurations[0] = REVStageConfig({
                 startsAtOrAfter: uint40(block.timestamp),
                 autoMints: mintConfs,
-                splitPercent: 4000, // 40%
+                splitPercent: 3800, // 38%
                 initialIssuance: uint112(1000 * decimalMultiplier),
-                issuanceDecayFrequency: 720 days,
-                issuanceDecayPercent: 300_000_000, // 30%
+                issuanceDecayFrequency: 90 days,
+                issuanceDecayPercent: 380_000_000, // 38%
                 cashOutTaxRate: 3000, // 0.3
                 extraMetadata: 0
             });
 
             mintConfs[0] = REVAutoMint({
-                chainId: uint32(block.chainid),
+                chainId: premintChainId,
                 count: uint104(135_000 * decimalMultiplier),
                 beneficiary: OPERATOR
             });
@@ -158,10 +159,10 @@ contract DeployScript is Script, Sphinx {
             stageConfigurations[1] = REVStageConfig({
                 startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 720 days),
                 autoMints: mintConfs,
-                splitPercent: 4000, // 40%
+                splitPercent: 3800, // 40%
                 initialIssuance: 0, // inherit from previous cycle.
-                issuanceDecayFrequency: 1 * 365 days, // 10 years
-                issuanceDecayPercent: 300_000_000, // 30%
+                issuanceDecayFrequency: 180 days,
+                issuanceDecayPercent: 380_000_000, // 30%
                 cashOutTaxRate: 3000, // 0.3
                 extraMetadata: 0
             });
