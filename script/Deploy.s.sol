@@ -107,7 +107,7 @@ contract DeployScript is Script, Sphinx {
         string memory projectUri = "ipfs://QmNRHT91HcDgMcenebYX7rJigt77cgNcosvuhX21wkF3tx";
         uint8 decimals = 18;
         uint256 decimalMultiplier = 10 ** decimals;
-        uint256 premintChainId = 11_155_111;
+        uint32 premintChainId = 11_155_111;
 
         // The tokens that the project accepts and stores.
         JBAccountingContext[] memory accountingContextsToAccept = new JBAccountingContext[](1);
