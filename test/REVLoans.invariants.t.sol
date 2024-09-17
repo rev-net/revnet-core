@@ -40,15 +40,13 @@ struct FeeProjectConfig {
     REVSuckerDeploymentConfig suckerDeploymentConfiguration;
 }
 
-contract REVLoansPayHandler is JBTest {
+contract REVLoansCallHandler is JBTest {
     uint256 public COLLATERAL_SUM;
     uint256 public COLLATERAL_RETURNED;
     uint256 public BORROWED_SUM;
     uint256 public RUNS;
     uint256 REVNET_ID;
     address USER;
-
-    mapping(uint256 loanId => bool wasPaidOff) public wasLoanPaidOff;
 
     IJBMultiTerminal TERMINAL;
     IREVLoans LOANS;
@@ -162,12 +160,22 @@ contract REVLoansPayHandler is JBTest {
         vm.deal(USER, type(uint256).max);
         LOANS.payOff{value: amountPaidDown}(id, amountPaidDown, collateralReturned, payable(USER), allowance);
 
-        wasLoanPaidOff[id] = true;
-
         COLLATERAL_RETURNED += collateralReturned;
         COLLATERAL_SUM -= collateralReturned;
         if (BORROWED_SUM >= amountDiff) BORROWED_SUM -= amountDiff;
     }
+
+    function refinance(
+        uint256 payAmount,
+        uint256 collateralPercentToTransfer,
+        uint256 secondPayAmount,
+        uint256 prepaidFeePercent,
+        uint256 daysToWarp
+    )
+        public
+        virtual
+        useActor
+    {}
 }
 
 contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
@@ -175,13 +183,13 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
     using JBRulesetMetadataResolver for JBRuleset;
 
     /// @notice the salts that are used to deploy the contracts.
-    bytes32 BASIC_DEPLOYER_SALT = "REVDeployer";
+    bytes32 REV_DEPLOYER_SALT = "REVDeployer";
     bytes32 ERC20_SALT = "REV_TOKEN";
 
     // Handlers
-    REVLoansPayHandler PAY_HANDLER;
+    REVLoansCallHandler PAY_HANDLER;
 
-    REVDeployer BASIC_DEPLOYER;
+    REVDeployer REV_DEPLOYER;
     JB721TiersHook EXAMPLE_HOOK;
 
     /// @notice Deploys tiered ERC-721 hooks for revnets.
@@ -428,7 +436,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
 
         PUBLISHER = new CTPublisher(jbController(), jbPermissions(), FEE_PROJECT_ID, multisig());
 
-        BASIC_DEPLOYER = new REVDeployer{salt: BASIC_DEPLOYER_SALT}(
+        REV_DEPLOYER = new REVDeployer{salt: REV_DEPLOYER_SALT}(
             jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER
         );
 
@@ -436,13 +444,13 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
 
         // Approve the basic deployer to configure the project.
         vm.prank(address(multisig()));
-        jbProjects().approve(address(BASIC_DEPLOYER), FEE_PROJECT_ID);
+        jbProjects().approve(address(REV_DEPLOYER), FEE_PROJECT_ID);
 
         // Build the config.
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
         // Configure the project.
-        REVNET_ID = BASIC_DEPLOYER.deployFor({
+        REVNET_ID = REV_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
             configuration: feeProjectConfig.configuration,
             terminalConfigurations: feeProjectConfig.terminalConfigurations,
@@ -454,7 +462,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         FeeProjectConfig memory fee2Config = getSecondProjectConfig();
 
         // Configure the second project.
-        REVNET_ID = BASIC_DEPLOYER.deployFor({
+        REVNET_ID = REV_DEPLOYER.deployFor({
             revnetId: 0, // Zero to deploy a new revnet
             configuration: fee2Config.configuration,
             terminalConfigurations: fee2Config.terminalConfigurations,
@@ -465,12 +473,12 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         INITIAL_TIMESTAMP = block.timestamp;
 
         // Deploy handlers and assign them as targets
-        PAY_HANDLER = new REVLoansPayHandler(jbMultiTerminal(), LOANS_CONTRACT, jbPermissions(), REVNET_ID, USER);
+        PAY_HANDLER = new REVLoansCallHandler(jbMultiTerminal(), LOANS_CONTRACT, jbPermissions(), REVNET_ID, USER);
 
         // Calls to perform via the handler
         bytes4[] memory selectors = new bytes4[](2);
-        selectors[0] = REVLoansPayHandler.payBorrow.selector;
-        selectors[1] = REVLoansPayHandler.payOff.selector;
+        selectors[0] = REVLoansCallHandler.payBorrow.selector;
+        selectors[1] = REVLoansCallHandler.payOff.selector;
 
         targetContract(address(PAY_HANDLER));
         targetSelector(FuzzSelector({addr: address(PAY_HANDLER), selectors: selectors}));
