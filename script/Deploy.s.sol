@@ -60,7 +60,7 @@ contract DeployScript is Script, Sphinx {
     bytes32 ERC20_SALT = "_REV_ERC20_SALT_";
     bytes32 SUCKER_SALT = "_REV_SUCKER_SALT_";
     bytes32 DEPLOYER_SALT = "_REV_DEPLOYER_SALT_";
-    bytes32 REVLOANS_SALT = "REVLoans";
+    bytes32 REVLOANS_SALT = "_REV_LOANS_SALT_";
     address OPERATOR = 0x823b92d6a4b2AED4b15675c7917c9f922ea8ADAD;
     uint256 TIME_UNTIL_START = 1 days;
 
