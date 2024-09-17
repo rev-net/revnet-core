@@ -16,6 +16,7 @@ import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingConte
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {JBSuckerDeployerConfig} from "@bananapus/suckers/src/structs/JBSuckerDeployerConfig.sol";
 import {JBTokenMapping} from "@bananapus/suckers/src/structs/JBTokenMapping.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 
 import {REVDeployer} from "./../src/REVDeployer.sol";
 import {REVAutoMint} from "../src/structs/REVAutoMint.sol";
@@ -26,6 +27,7 @@ import {REVLoanSource} from "../src/structs/REVLoanSource.sol";
 import {REVBuybackPoolConfig} from "../src/structs/REVBuybackPoolConfig.sol";
 import {REVStageConfig} from "../src/structs/REVStageConfig.sol";
 import {REVSuckerDeploymentConfig} from "../src/structs/REVSuckerDeploymentConfig.sol";
+import {REVLoans, IREVLoans} from "./../src/REVLoans.sol";
 
 struct FeeProjectConfig {
     REVConfig configuration;
@@ -58,9 +60,11 @@ contract DeployScript is Script, Sphinx {
     bytes32 ERC20_SALT = "_REV_ERC20_SALT_";
     bytes32 SUCKER_SALT = "_REV_SUCKER_SALT_";
     bytes32 DEPLOYER_SALT = "_REV_DEPLOYER_SALT_";
+    bytes32 REVLOANS_SALT = "_REV_LOANS_SALT_";
     address OPERATOR = 0x823b92d6a4b2AED4b15675c7917c9f922ea8ADAD;
-    address TRUSTED_FORWARDER = 0xB2b5841DBeF766d4b521221732F9B618fCf34A87;
     uint256 TIME_UNTIL_START = 1 days;
+    address TRUSTED_FORWARDER;
+    IPermit2 PERMIT2;
 
     function configureSphinx() public override {
         // TODO: Update to contain revnet devs.
@@ -96,6 +100,10 @@ contract DeployScript is Script, Sphinx {
             vm.envOr("NANA_BUYBACK_HOOK_DEPLOYMENT_PATH", string("node_modules/@bananapus/buyback-hook/deployments/"))
         );
 
+        // We use the same trusted forwarder and permit2 as the core deployment.
+        TRUSTED_FORWARDER = core.controller.trustedForwarder();
+        PERMIT2 = core.terminal.PERMIT2();
+
         // Since Juicebox has logic dependent on the timestamp we warp time to create a scenario closer to production.
         // We force simulations to make the assumption that the `START_TIME` has not occured,
         // and is not the current time.
@@ -113,16 +121,13 @@ contract DeployScript is Script, Sphinx {
         deploy();
     }
 
-    function getFeeProjectConfig() internal view returns (FeeProjectConfig memory) {
+    function getFeeProjectConfig(IREVLoans _revloans) internal view returns (FeeProjectConfig memory) {
         // The tokens that the project accepts and stores.
         JBAccountingContext[] memory accountingContextsToAccept = new JBAccountingContext[](1);
 
         // Accept the chain's native currency through the multi terminal.
-        accountingContextsToAccept[0] = JBAccountingContext({
-            token: JBConstants.NATIVE_TOKEN,
-            decimals: DECIMALS,
-            currency: NATIVE_CURRENCY
-        });
+        accountingContextsToAccept[0] =
+            JBAccountingContext({token: JBConstants.NATIVE_TOKEN, decimals: DECIMALS, currency: NATIVE_CURRENCY});
 
         // The terminals that the project will accept funds through.
         JBTerminalConfig[] memory terminalConfigurations = new JBTerminalConfig[](2);
@@ -184,16 +189,23 @@ contract DeployScript is Script, Sphinx {
             extraMetadata: 0
         });
 
-        // The project's revnet configuration
-        REVConfig memory revnetConfiguration = REVConfig({
-            description: REVDescription(NAME, SYMBOL, PROJECT_URI, ERC20_SALT),
-            baseCurrency: NATIVE_CURRENCY,
-            splitOperator: OPERATOR,
-            stageConfigurations: stageConfigurations,
-            loanSources: new REVLoanSource[](0),
-            loans: address(0),
-            allowCrosschainSuckerExtension: true
-        });
+        REVConfig memory revnetConfiguration;
+        {
+            // Thr projects loan configuration.
+            REVLoanSource[] memory _loanSources = new REVLoanSource[](1);
+            _loanSources[0] = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: core.terminal});
+
+            // The project's revnet configuration
+            revnetConfiguration = REVConfig({
+                description: REVDescription(NAME, SYMBOL, PROJECT_URI, ERC20_SALT),
+                baseCurrency: NATIVE_CURRENCY,
+                splitOperator: OPERATOR,
+                stageConfigurations: stageConfigurations,
+                loanSources: _loanSources,
+                loans: address(_revloans),
+                allowCrosschainSuckerExtension: true
+            });
+        }
 
         // The project's buyback hook configuration.
         REVBuybackPoolConfig[] memory buybackPoolConfigurations = new REVBuybackPoolConfig[](1);
@@ -262,14 +274,28 @@ contract DeployScript is Script, Sphinx {
         // TODO figure out how to reference project ID if the contracts are already deployed.
         uint256 FEE_PROJECT_ID = core.projects.createFor(safeAddress());
 
+        // Deploy revloans if its not deployed yet.
+        REVLoans revloans;
+        {
+            (address _revloans, bool _revloansIsDeployed) = _isDeployed(
+                REVLOANS_SALT,
+                type(REVLoans).creationCode,
+                abi.encode(core.projects, FEE_PROJECT_ID, PERMIT2, TRUSTED_FORWARDER)
+            );
+
+            revloans = !_revloansIsDeployed
+                ? new REVLoans{salt: REVLOANS_SALT}(core.projects, FEE_PROJECT_ID, PERMIT2, TRUSTED_FORWARDER)
+                : REVLoans(payable(_revloans));
+        }
+
         // Check if the contracts are already deployed or if there are any changes.
-        if (
-            !_isDeployed(
-                DEPLOYER_SALT,
-                type(REVDeployer).creationCode,
-                abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher)
-            )
-        ) {
+        (, bool _revDeployerIsDeployed) = _isDeployed(
+            DEPLOYER_SALT,
+            type(REVDeployer).creationCode,
+            abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher)
+        );
+
+        if (!_revDeployerIsDeployed) {
             REVDeployer _basicDeployer = new REVDeployer{salt: DEPLOYER_SALT}(
                 core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher
             );
@@ -278,7 +304,7 @@ contract DeployScript is Script, Sphinx {
             core.projects.approve(address(_basicDeployer), FEE_PROJECT_ID);
 
             // Build the config.
-            FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
+            FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig(revloans);
 
             // Configure the project.
             _basicDeployer.deployFor({
@@ -298,7 +324,7 @@ contract DeployScript is Script, Sphinx {
     )
         internal
         view
-        returns (bool)
+        returns (address deployedTo, bool isDeployed)
     {
         address _deployedTo = vm.computeCreate2Address({
             salt: salt,
@@ -308,6 +334,6 @@ contract DeployScript is Script, Sphinx {
         });
 
         // Return if code is already present at this address.
-        return address(_deployedTo).code.length != 0;
+        return (_deployedTo, address(_deployedTo).code.length != 0);
     }
 }
