@@ -233,7 +233,7 @@ contract DeployScript is Script, Sphinx {
         {
             JBSuckerDeployerConfig[] memory suckerDeployerConfigurations;
             if (block.chainid == 1 || block.chainid == 11_155_111) {
-                suckerDeployerConfigurations = new JBSuckerDeployerConfig[](3);
+                suckerDeployerConfigurations = new JBSuckerDeployerConfig[](2);
                 // OP
                 suckerDeployerConfigurations[0] =
                     JBSuckerDeployerConfig({deployer: suckers.optimismDeployer, mappings: tokenMappings});
@@ -241,8 +241,8 @@ contract DeployScript is Script, Sphinx {
                 suckerDeployerConfigurations[1] =
                     JBSuckerDeployerConfig({deployer: suckers.baseDeployer, mappings: tokenMappings});
 
-                suckerDeployerConfigurations[2] =
-                    JBSuckerDeployerConfig({deployer: suckers.arbitrumDeployer, mappings: tokenMappings});
+                // suckerDeployerConfigurations[2] =
+                //     JBSuckerDeployerConfig({deployer: suckers.arbitrumDeployer, mappings: tokenMappings});
             } else {
                 suckerDeployerConfigurations = new JBSuckerDeployerConfig[](1);
                 // L2 -> Mainnet
