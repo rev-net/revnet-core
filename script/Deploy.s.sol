@@ -20,8 +20,10 @@ import {REVLoanSource} from "../src/structs/REVLoanSource.sol";
 import {REVDescription} from "../src/structs/REVDescription.sol";
 import {REVBuybackPoolConfig} from "../src/structs/REVBuybackPoolConfig.sol";
 import {IREVLoans} from "./../src/interfaces/IREVLoans.sol";
+import {REVLoans} from "./../src/REVLoans.sol";
 import {JBSuckerDeployerConfig} from "@bananapus/suckers/src/structs/JBSuckerDeployerConfig.sol";
 import {REVDeployer} from "./../src/REVDeployer.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 
 struct FeeProjectConfig {
     REVConfig configuration;
@@ -45,10 +47,15 @@ contract DeployScript is Script, Sphinx {
     SwapTerminalDeployment swapTerminal;
 
     /// @notice the salts that are used to deploy the contracts.
-    bytes32 BASIC_DEPLOYER = "REVDeployer";
+    bytes32 BASIC_DEPLOYER_SALT = "REVDeployer";
+    bytes32 REVLOANS_SALT = "REVLoans";
+    bytes32 ERC20_SALT = "REV_TOKEN";
+
+    /// @notice The address that is allowed to forward calls to the terminal and controller on a users behalf.
+    address private TRUSTED_FORWARDER;
+    IPermit2 private PERMIT2;
 
     address OPERATOR = 0x823b92d6a4b2AED4b15675c7917c9f922ea8ADAD;
-    bytes32 ERC20_SALT = "REV_TOKEN";
 
     function configureSphinx() public override {
         // TODO: Update to contain revnet devs.
@@ -84,6 +91,10 @@ contract DeployScript is Script, Sphinx {
             vm.envOr("NANA_BUYBACK_HOOK_DEPLOYMENT_PATH", string("node_modules/@bananapus/buyback-hook/deployments/"))
         );
 
+        // We use the same trusted forwarder and permit2 as the core deployment.
+        TRUSTED_FORWARDER = core.controller.trustedForwarder();
+        PERMIT2 = core.terminal.PERMIT2();
+
         // Since Juicebox has logic dependent on the timestamp we warp time to create a scenario closer to production.
         // We force simulations to make the assumption that the `START_TIME` has not occured,
         // and is not the current time.
@@ -101,7 +112,7 @@ contract DeployScript is Script, Sphinx {
         deploy();
     }
 
-    function getFeeProjectConfig() internal view returns (FeeProjectConfig memory) {
+    function getFeeProjectConfig(IREVLoans _revloans) internal view returns (FeeProjectConfig memory) {
         // Define constants
         string memory name = "Revnet";
         string memory symbol = "$REV";
@@ -181,16 +192,23 @@ contract DeployScript is Script, Sphinx {
             extraMetadata: 0
         });
 
-        // The project's revnet configuration
-        REVConfig memory revnetConfiguration = REVConfig({
-            description: REVDescription(name, symbol, projectUri, ERC20_SALT),
-            baseCurrency: uint32(uint160(JBConstants.NATIVE_TOKEN)),
-            splitOperator: OPERATOR,
-            stageConfigurations: stageConfigurations,
-            loanSources: new REVLoanSource[](0),
-            loans: address(0),
-            allowCrosschainSuckerExtension: true
-        });
+        REVConfig memory revnetConfiguration;
+        {
+            // Thr projects loan configuration.
+            REVLoanSource[] memory _loanSources = new REVLoanSource[](1);
+            _loanSources[0] = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: core.terminal});
+
+            // The project's revnet configuration
+            revnetConfiguration = REVConfig({
+                description: REVDescription(name, symbol, projectUri, ERC20_SALT),
+                baseCurrency: uint32(uint160(JBConstants.NATIVE_TOKEN)),
+                splitOperator: OPERATOR,
+                stageConfigurations: stageConfigurations,
+                loanSources: _loanSources,
+                loans: address(_revloans),
+                allowCrosschainSuckerExtension: true
+            });
+        }
 
         // The project's buyback hook configuration.
         REVBuybackPoolConfig[] memory buybackPoolConfigurations = new REVBuybackPoolConfig[](1);
@@ -259,15 +277,29 @@ contract DeployScript is Script, Sphinx {
         // TODO figure out how to reference project ID if the contracts are already deployed.
         uint256 FEE_PROJECT_ID = core.projects.createFor(safeAddress());
 
+        // Deploy revloans if its not deployed yet.
+        REVLoans revloans;
+        {
+            (address _revloans, bool _revloansIsDeployed) = _isDeployed(
+                REVLOANS_SALT,
+                type(REVLoans).creationCode,
+                abi.encode(core.projects, FEE_PROJECT_ID, PERMIT2, TRUSTED_FORWARDER)
+            );
+
+            revloans = !_revloansIsDeployed
+                ? new REVLoans{salt: REVLOANS_SALT}(core.projects, FEE_PROJECT_ID, PERMIT2, TRUSTED_FORWARDER)
+                : REVLoans(payable(_revloans));
+        }
+
         // Check if the contracts are already deployed or if there are any changes.
-        if (
-            !_isDeployed(
-                BASIC_DEPLOYER,
-                type(REVDeployer).creationCode,
-                abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher)
-            )
-        ) {
-            REVDeployer _basicDeployer = new REVDeployer{salt: BASIC_DEPLOYER}(
+        (, bool _revDeployerIsDeployed) = _isDeployed(
+            BASIC_DEPLOYER_SALT,
+            type(REVDeployer).creationCode,
+            abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher)
+        );
+
+        if (!_revDeployerIsDeployed) {
+            REVDeployer _basicDeployer = new REVDeployer{salt: BASIC_DEPLOYER_SALT}(
                 core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher
             );
 
@@ -275,7 +307,7 @@ contract DeployScript is Script, Sphinx {
             core.projects.approve(address(_basicDeployer), FEE_PROJECT_ID);
 
             // Build the config.
-            FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
+            FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig(revloans);
 
             // Configure the project.
             _basicDeployer.deployFor({
@@ -295,7 +327,7 @@ contract DeployScript is Script, Sphinx {
     )
         internal
         view
-        returns (bool)
+        returns (address deployedTo, bool isDeployed)
     {
         address _deployedTo = vm.computeCreate2Address({
             salt: salt,
@@ -305,6 +337,6 @@ contract DeployScript is Script, Sphinx {
         });
 
         // Return if code is already present at this address.
-        return address(_deployedTo).code.length != 0;
+        return (_deployedTo, address(_deployedTo).code.length != 0);
     }
 }
