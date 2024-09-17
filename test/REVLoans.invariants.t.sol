@@ -101,7 +101,7 @@ contract REVLoansCallHandler is JBTest {
         ++RUNS;
     }
 
-    function payOff(uint256 percentToPayDown, uint256 daysToWarp) public virtual useActor {
+    function repayLoan(uint256 percentToPayDown, uint256 daysToWarp) public virtual useActor {
         // Skip this if there are no loans to pay down
         if (RUNS == 0) {
             return;
@@ -162,14 +162,14 @@ contract REVLoansCallHandler is JBTest {
         JBSingleAllowance memory allowance;
 
         vm.deal(USER, type(uint256).max);
-        LOANS.payOff{value: amountPaidDown}(id, amountPaidDown, collateralReturned, payable(USER), allowance);
+        LOANS.repayLoan{value: amountPaidDown}(id, amountPaidDown, collateralReturned, payable(USER), allowance);
 
         COLLATERAL_RETURNED += collateralReturned;
         COLLATERAL_SUM -= collateralReturned;
         if (BORROWED_SUM >= amountDiff) BORROWED_SUM -= amountDiff;
     }
 
-    function refinance(uint256 collateralPercentToTransfer, uint256 amountToPay) public virtual useActor {
+    function reallocateCollateralFromLoan(uint256 collateralPercentToTransfer, uint256 amountToPay) public virtual useActor {
         // used for percentage calculations
         uint256 denominator = 10_000;
 
@@ -202,7 +202,7 @@ contract REVLoansCallHandler is JBTest {
             REVNET_ID, collateralToTransfer + collateralToAdd, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        (,,, REVLoan memory newLoan) = LOANS.refinanceLoan(
+        (,,, REVLoan memory newLoan) = LOANS.reallocateCollateralFromLoan(
             id,
             collateralToTransfer,
             REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: TERMINAL}),
@@ -518,8 +518,8 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         // Calls to perform via the handler
         bytes4[] memory selectors = new bytes4[](3);
         selectors[0] = REVLoansCallHandler.payBorrow.selector;
-        selectors[1] = REVLoansCallHandler.payOff.selector;
-        selectors[2] = REVLoansCallHandler.refinance.selector;
+        selectors[1] = REVLoansCallHandler.repayLoan.selector;
+        selectors[2] = REVLoansCallHandler.reallocateCollateralFromLoan.selector;
 
         targetContract(address(PAY_HANDLER));
         targetSelector(FuzzSelector({addr: address(PAY_HANDLER), selectors: selectors}));

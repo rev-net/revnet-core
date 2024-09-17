@@ -5,10 +5,12 @@ import {stdJson} from "forge-std/Script.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {SphinxConstants, NetworkInfo} from "@sphinx-labs/contracts/SphinxConstants.sol";
 
-import {REVDeployer} from "./../../src/REVDeployer.sol";
+import {IREVDeployer} from "./../../src/interfaces/IREVDeployer.sol";
+import {IREVLoans} from "./../../src/interfaces/IREVLoans.sol";
 
 struct RevnetCoreDeployment {
-    REVDeployer basic_deployer;
+    IREVDeployer basic_deployer;
+    IREVLoans loans;
 }
 
 library RevnetCoreDeploymentLib {
@@ -43,7 +45,9 @@ library RevnetCoreDeploymentLib {
         returns (RevnetCoreDeployment memory deployment)
     {
         deployment.basic_deployer =
-            REVDeployer(_getDeploymentAddress(path, "revnet-core-testnet", network_name, "REVDeployer"));
+            IREVDeployer(_getDeploymentAddress(path, "revnet-core-testnet", network_name, "REVDeployer"));
+
+        deployment.loans = IREVLoans(_getDeploymentAddress(path, "revnet-core-testnet", network_name, "REVLoans"));
     }
 
     /// @notice Get the address of a contract that was deployed by the Deploy script.

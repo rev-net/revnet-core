@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {IREVLoans} from "../interfaces/IREVLoans.sol";
 import {REVDescription} from "./REVDescription.sol";
 import {REVLoanSource} from "./REVLoanSource.sol";
 import {REVStageConfig} from "./REVStageConfig.sol";
-import {IREVLoans} from "../interfaces/IREVLoans.sol";
 
 /// @custom:member description The description of the revnet.
 /// @custom:member baseCurrency The currency that the issuance is based on.
