@@ -14,6 +14,7 @@ import {Script} from "forge-std/Script.sol";
 import "./../src/REVDeployer.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
+import {JBTokenMapping} from "@bananapus/suckers/src/structs/JBTokenMapping.sol";
 import {REVStageConfig, REVAutoMint} from "../src/structs/REVStageConfig.sol";
 import {REVLoanSource} from "../src/structs/REVLoanSource.sol";
 import {REVDescription} from "../src/structs/REVDescription.sol";
@@ -104,6 +105,7 @@ contract DeployScript is Script, Sphinx {
         // Define constants
         string memory name = "Revnet";
         string memory symbol = "$REV";
+        bytes32 SUCKER_SALT = "REV_SUCKER";
         string memory projectUri = "ipfs://QmNRHT91HcDgMcenebYX7rJigt77cgNcosvuhX21wkF3tx";
         uint8 decimals = 18;
         uint256 decimalMultiplier = 10 ** decimals;
@@ -198,17 +200,58 @@ contract DeployScript is Script, Sphinx {
             twapWindow: 2 days,
             twapSlippageTolerance: 9000
         });
+
         REVBuybackHookConfig memory buybackHookConfiguration =
             REVBuybackHookConfig({hook: buybackHook.hook, poolConfigurations: buybackPoolConfigurations});
+
+        // Organize the instructions for how this project will connect to other chains.
+        JBTokenMapping[] memory tokenMappings = new JBTokenMapping[](1);
+        tokenMappings[0] = JBTokenMapping({
+            localToken: JBConstants.NATIVE_TOKEN,
+            remoteToken: JBConstants.NATIVE_TOKEN,
+            minGas: 200_000,
+            minBridgeAmount: 0.01 ether
+        });
+
+        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration;
+
+        {
+            JBSuckerDeployerConfig[] memory suckerDeployerConfigurations;
+            if (block.chainid == 1 || block.chainid == 11_155_111) {
+                suckerDeployerConfigurations = new JBSuckerDeployerConfig[](3);
+                // OP
+                suckerDeployerConfigurations[0] =
+                    JBSuckerDeployerConfig({deployer: suckers.optimismDeployer, mappings: tokenMappings});
+
+                suckerDeployerConfigurations[1] =
+                    JBSuckerDeployerConfig({deployer: suckers.baseDeployer, mappings: tokenMappings});
+
+                suckerDeployerConfigurations[2] =
+                    JBSuckerDeployerConfig({deployer: suckers.arbitrumDeployer, mappings: tokenMappings});
+            } else {
+                suckerDeployerConfigurations = new JBSuckerDeployerConfig[](1);
+                // L2 -> Mainnet
+                suckerDeployerConfigurations[0] = JBSuckerDeployerConfig({
+                    deployer: address(suckers.optimismDeployer) != address(0)
+                        ? suckers.optimismDeployer
+                        : address(suckers.baseDeployer) != address(0) ? suckers.baseDeployer : suckers.arbitrumDeployer,
+                    mappings: tokenMappings
+                });
+
+                if (address(suckerDeployerConfigurations[0].deployer) == address(0)) {
+                    revert("L2 > L1 Sucker is not configured");
+                }
+            }
+            // Specify all sucker deployments.
+            suckerDeploymentConfiguration =
+                REVSuckerDeploymentConfig({deployerConfigurations: suckerDeployerConfigurations, salt: SUCKER_SALT});
+        }
 
         return FeeProjectConfig({
             configuration: revnetConfiguration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
-            suckerDeploymentConfiguration: REVSuckerDeploymentConfig({
-                deployerConfigurations: new JBSuckerDeployerConfig[](0),
-                salt: keccak256(abi.encodePacked("REV"))
-            })
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
     }
 
@@ -233,9 +276,6 @@ contract DeployScript is Script, Sphinx {
 
             // Build the config.
             FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
-
-            // Empty hook config.
-            REVDeploy721TiersHookConfig memory tiered721HookConfiguration;
 
             // Configure the project.
             _basicDeployer.deployFor({
