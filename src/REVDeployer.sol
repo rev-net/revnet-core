@@ -915,6 +915,11 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             _extraOperatorPermissions[revnetId].push(JBPermissionIds.MINT_721);
         }
 
+        // If specified, give the split operator permission to increase the discount of a tier.
+        if (tiered721HookConfiguration.splitOperatorCanIncreaseDiscountPercent) {
+            _extraOperatorPermissions[revnetId].push(JBPermissionIds.SET_721_DISCOUNT_PERCENT);
+        }
+
         // Set up croptop posting criteria as specified.
         if (_configurePostingCriteriaFor({hook: address(hook), allowedPosts: allowedPosts})) {
             // Give the croptop publisher permission to post new ERC-721 tiers on this contract's behalf.

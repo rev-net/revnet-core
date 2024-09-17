@@ -11,9 +11,12 @@ import {JBDeploy721TiersHookConfig} from "@bananapus/721-hook/src/structs/JBDepl
 /// metadata.
 /// @custom:member splitOperatorCanMint A flag indicating if the revnet's split operator can mint 721's from tiers that
 /// allow it.
+/// @custom:member splitOperatorCanIncreaseDiscountPercent A flag indicating if the revnet's split operator can increase the
+/// discount of a tier.
 struct REVDeploy721TiersHookConfig {
     JBDeploy721TiersHookConfig baseline721HookConfiguration;
     bool splitOperatorCanAdjustTiers;
     bool splitOperatorCanUpdateMetadata;
     bool splitOperatorCanMint;
+    bool splitOperatorCanIncreaseDiscountPercent;
 }
