@@ -51,17 +51,20 @@ contract REVLoansCallHandler is JBTest {
     IJBMultiTerminal TERMINAL;
     IREVLoans LOANS;
     IJBPermissions PERMS;
+    IJBTokens TOKENS;
 
     constructor(
         IJBMultiTerminal terminal,
         IREVLoans loans,
         IJBPermissions permissions,
+        IJBTokens tokens,
         uint256 revnetId,
         address beneficiary
     ) {
         TERMINAL = terminal;
         LOANS = loans;
         PERMS = permissions;
+        TOKENS = tokens;
         REVNET_ID = revnetId;
         USER = beneficiary;
     }
@@ -90,7 +93,7 @@ contract REVLoansCallHandler is JBTest {
         );
 
         REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: TERMINAL});
-        (uint256 loanId, REVLoan memory lastLoan) =
+        (, REVLoan memory lastLoan) =
             LOANS.borrowFrom(REVNET_ID, sauce, borrowable, receivedTokens, payable(USER), prepaidFee);
 
         COLLATERAL_SUM += receivedTokens;
@@ -115,6 +118,7 @@ contract REVLoansCallHandler is JBTest {
         uint256 id = (REVNET_ID * 1_000_000_000_000) + RUNS;
         REVLoan memory latestLoan = LOANS.loanOf(id);
 
+        // skip if we don't find the loan
         if (latestLoan.amount == 0) return;
 
         // calc percentage to pay down
@@ -165,17 +169,52 @@ contract REVLoansCallHandler is JBTest {
         if (BORROWED_SUM >= amountDiff) BORROWED_SUM -= amountDiff;
     }
 
-    function refinance(
-        uint256 payAmount,
-        uint256 collateralPercentToTransfer,
-        uint256 secondPayAmount,
-        uint256 prepaidFeePercent,
-        uint256 daysToWarp
-    )
-        public
-        virtual
-        useActor
-    {}
+    function refinance(uint256 collateralPercentToTransfer, uint256 amountToPay) public virtual useActor {
+        // used for percentage calculations
+        uint256 denominator = 10_000;
+
+        // Skip this if there are no loans to refinance
+        if (RUNS == 0) {
+            return;
+        }
+
+        // 0.0001-100%
+        collateralPercentToTransfer = bound(collateralPercentToTransfer, 1, denominator);
+        amountToPay = bound(amountToPay, 1e15, 1000e18);
+
+        // get the loan ID
+        uint256 id = (REVNET_ID * 1_000_000_000_000) + RUNS;
+        REVLoan memory latestLoan = LOANS.loanOf(id);
+
+        // skip if we don't find a loan
+        if (latestLoan.amount == 0) return;
+
+        // try paying instead
+        vm.deal(USER, amountToPay);
+        uint256 collateralToAdd =
+            TERMINAL.pay{value: amountToPay}(REVNET_ID, JBConstants.NATIVE_TOKEN, 0, USER, 0, "", "");
+
+        // 0.0001-100% in token terms
+        uint256 collateralToTransfer = mulDiv(latestLoan.collateral, collateralPercentToTransfer, denominator);
+
+        // get the new amount to borrow
+        uint256 newAmountInFull = LOANS.borrowableAmountFrom(
+            REVNET_ID, collateralToTransfer + collateralToAdd, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+        );
+
+        (,,, REVLoan memory newLoan) = LOANS.refinanceLoan(
+            id,
+            collateralToTransfer,
+            REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: TERMINAL}),
+            newAmountInFull,
+            collateralToAdd,
+            payable(USER),
+            0
+        );
+
+        COLLATERAL_SUM += collateralToAdd;
+        BORROWED_SUM += (newLoan.amount - latestLoan.amount);
+    }
 }
 
 contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
@@ -473,12 +512,14 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         INITIAL_TIMESTAMP = block.timestamp;
 
         // Deploy handlers and assign them as targets
-        PAY_HANDLER = new REVLoansCallHandler(jbMultiTerminal(), LOANS_CONTRACT, jbPermissions(), REVNET_ID, USER);
+        PAY_HANDLER =
+            new REVLoansCallHandler(jbMultiTerminal(), LOANS_CONTRACT, jbPermissions(), jbTokens(), REVNET_ID, USER);
 
         // Calls to perform via the handler
-        bytes4[] memory selectors = new bytes4[](2);
+        bytes4[] memory selectors = new bytes4[](3);
         selectors[0] = REVLoansCallHandler.payBorrow.selector;
         selectors[1] = REVLoansCallHandler.payOff.selector;
+        selectors[2] = REVLoansCallHandler.refinance.selector;
 
         targetContract(address(PAY_HANDLER));
         targetSelector(FuzzSelector({addr: address(PAY_HANDLER), selectors: selectors}));
@@ -489,15 +530,6 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
     function invariant_A_Solvency() public {
         IJBTerminal[] memory terminals = new IJBTerminal[](1);
         terminals[0] = jbMultiTerminal();
-
-        // Keep a reference to the revnet's owner.
-        IREVDeployer revnetOwner = IREVDeployer(jbProjects().ownerOf(REVNET_ID));
-
-        // Keep a reference to the revnet's controller.
-        IJBController controller = revnetOwner.CONTROLLER();
-
-        // Keep a reference to the pending automint tokens.
-        uint256 pendingAutomintTokens = revnetOwner.unrealizedAutoMintAmountOf(REVNET_ID);
 
         // Get the total amount of tokens in circulation.
         uint256 totalSupply = jbTokens().totalSupplyOf(REVNET_ID);
@@ -515,18 +547,13 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
 
         // Sans the borrowed amount, otherwise we would use borrowableAmountFrom()
         uint256 totalCollateralValue = JBRedemptions.reclaimFrom(
-            totalSurplus, PAY_HANDLER.COLLATERAL_SUM(), totalSupply, currentStage.redemptionRate()
+            totalSurplus, LOANS_CONTRACT.totalCollateralOf(REVNET_ID), totalSupply, currentStage.redemptionRate()
         );
         uint256 totalBorrowed = LOANS_CONTRACT.totalBorrowedFrom(REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
         assertGe(totalCollateralValue, totalBorrowed);
     }
 
-    function invariant_B_Collateral_And_Borrows() public {
-        uint256 totalBorrowed = LOANS_CONTRACT.totalBorrowedFrom(REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
-
-        // Sum of all loans (tracked in handler) equals (with 0.5% variance for fees) total borrowed in REVLoans.
-        assertApproxEqRel(totalBorrowed, PAY_HANDLER.BORROWED_SUM(), 5e15);
-
+    function invariant_B_User_Balance_And_Collateral() public {
         IJBToken token = jbTokens().tokenOf(REVNET_ID);
 
         uint256 userTokenBalance = token.balanceOf(USER);

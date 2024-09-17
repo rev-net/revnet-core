@@ -572,15 +572,13 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         daysToWarp = daysToWarp * 1 days;
         collateralPercentToTransfer = bound(collateralPercentToTransfer, 1, 1000);
 
-        uint256 totalTokens;
-
         // get a reference to our project token for assertions later
         IJBToken REV_TOKEN = jbTokens().tokenOf(REVNET_ID);
 
+        // pay once first to receive tokens for the borrow call
         vm.prank(USER);
         uint256 tokens =
             jbMultiTerminal().pay{value: payAmount}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
-        totalTokens += tokens;
 
         uint256 loanable =
             LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
@@ -603,9 +601,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // warp to after redemption rate is higher in the second ruleset
         vm.warp(block.timestamp + daysToWarp);
 
+        // pay again to have balance for the refinance
         uint256 tokens2 =
             jbMultiTerminal().pay{value: secondPayAmount}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
-        totalTokens += tokens2;
 
         // bound up to 1% refinanced
         uint256 collateralToTransfer = mulDiv(loan.collateral, collateralPercentToTransfer, 10_000);
