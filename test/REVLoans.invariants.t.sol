@@ -169,7 +169,7 @@ contract REVLoansCallHandler is JBTest {
         if (BORROWED_SUM >= amountDiff) BORROWED_SUM -= amountDiff;
     }
 
-    function reallocateCollateralFromLoan(uint256 collateralPercentToTransfer, uint256 amountToPay) public virtual useActor {
+    function reallocateCollateralFromLoan(uint16 collateralPercent, uint256 amountToPay) public virtual useActor {
         // used for percentage calculations
         uint256 denominator = 10_000;
 
@@ -179,7 +179,7 @@ contract REVLoansCallHandler is JBTest {
         }
 
         // 0.0001-100%
-        collateralPercentToTransfer = bound(collateralPercentToTransfer, 1, denominator);
+        uint256 collateralPercentToTransfer = bound(uint256(collateralPercent), 1, denominator);
         amountToPay = bound(amountToPay, 1e15, 1000e18);
 
         // get the loan ID
