@@ -463,11 +463,11 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
 
         FEE_PROJECT_ID = jbProjects().createFor(multisig());
 
-        SUCKER_REGISTRY = new JBSuckerRegistry(jbProjects(), jbPermissions(), multisig());
-
-        EXAMPLE_HOOK = new JB721TiersHook(jbDirectory(), jbPermissions(), multisig());
+        SUCKER_REGISTRY = new JBSuckerRegistry(jbDirectory(), jbPermissions(), multisig());
 
         HOOK_STORE = new JB721TiersHookStore();
+
+        EXAMPLE_HOOK = new JB721TiersHook(jbDirectory(), jbPermissions(), jbRulesets(), HOOK_STORE, multisig());
 
         ADDRESS_REGISTRY = new JBAddressRegistry();
 

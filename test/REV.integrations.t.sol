@@ -187,11 +187,11 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
 
         FEE_PROJECT_ID = jbProjects().createFor(multisig());
 
-        SUCKER_REGISTRY = new JBSuckerRegistry(jbProjects(), jbPermissions(), multisig());
-
-        EXAMPLE_HOOK = new JB721TiersHook(jbDirectory(), jbPermissions(), multisig());
+        SUCKER_REGISTRY = new JBSuckerRegistry(jbDirectory(), jbPermissions(), multisig());
 
         HOOK_STORE = new JB721TiersHookStore();
+
+        EXAMPLE_HOOK = new JB721TiersHook(jbDirectory(), jbPermissions(), jbRulesets(), HOOK_STORE, multisig());
 
         ADDRESS_REGISTRY = new JBAddressRegistry();
 
@@ -203,7 +203,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
             jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER
         );
 
-        ARB_SUCKER_DEPLOYER = new JBArbitrumSuckerDeployer(jbDirectory(), jbTokens(), jbPermissions(), multisig());
+        ARB_SUCKER_DEPLOYER = new JBArbitrumSuckerDeployer(jbDirectory(), jbPermissions(), jbTokens(), multisig());
 
         // Approve the basic deployer to configure the project.
         vm.startPrank(address(multisig()));

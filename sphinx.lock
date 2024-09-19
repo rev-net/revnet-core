@@ -110,6 +110,30 @@
         "threshold": "1",
         "saltNonce": "19"
       }
+    },
+    "fee-project": {
+      "projectId": "clyw0pt4n0007zss7cc4sh552",
+      "projectName": "fee-project",
+      "defaultSafe": {
+        "safeName": "fee-project",
+        "owners": [
+          "0xba5ed94ab173e1242638F28d1449b24F1A883292"
+        ],
+        "threshold": "1",
+        "saltNonce": "20"
+      }
+    },
+    "nana-address-registry-testnet": {
+      "projectId": "cm146ovnl0001bss7dlmucv4z",
+      "projectName": "nana-address-registry-testnet",
+      "defaultSafe": {
+        "safeName": "nana-address-registry-testnet",
+        "owners": [
+          "0xba5ed94ab173e1242638F28d1449b24F1A883292"
+        ],
+        "threshold": "1",
+        "saltNonce": "21"
+      }
     }
   }
 }
