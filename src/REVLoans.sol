@@ -392,7 +392,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     )
         public
         override
-        nonReentrant
         returns (uint256 loanId, REVLoan memory)
     {
         // Make sure there is an amount being borrowed.
@@ -439,7 +438,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @dev Since loans are created in incremental order, earlier IDs will always be liquidated before later ones.
     /// @param revnetId The ID of the revnet to liquidate loans from.
     /// @param count The amount of loans iterate over since the last liquidated loan.
-    function liquidateExpiredLoansFrom(uint256 revnetId, uint256 count) external override nonReentrant {
+    function liquidateExpiredLoansFrom(uint256 revnetId, uint256 count) external override {
         // Keep a reference to the loan ID being iterated on.
         uint256 lastLoanIdLiquidated = lastLoanIdLiquidatedFrom[revnetId];
 
@@ -587,7 +586,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         external
         payable
         override
-        nonReentrant
         returns (uint256, REVLoan memory)
     {
         // Make sure only the loan's owner can manage it.
