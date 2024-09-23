@@ -299,9 +299,6 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
         // Build the config.
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
-        // Empty hook config.
-        REVDeploy721TiersHookConfig memory tiered721HookConfiguration;
-
         // Configure the project.
         REVNET_ID = REV_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet

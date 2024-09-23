@@ -301,9 +301,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Build the config.
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
-        // Empty hook config.
-        REVDeploy721TiersHookConfig memory tiered721HookConfiguration;
-
         // Configure the project.
         REVNET_ID = REV_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
@@ -347,8 +344,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
         vm.prank(USER);
-        (uint256 newLoanId, REVLoan memory newLoan) =
-            LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
+        (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
 
         REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
         assertEq(loan.amount, loanable);
@@ -472,9 +468,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     }
 
     function test_Refinance_Excess_Collateral() public {
-        // get a reference to our project token for assertions later
-        IJBToken REV_TOKEN = jbTokens().tokenOf(REVNET_ID);
-
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
 
@@ -572,9 +565,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         daysToWarp = daysToWarp * 1 days;
         collateralPercentToTransfer = bound(collateralPercentToTransfer, 1, 1000);
 
-        // get a reference to our project token for assertions later
-        IJBToken REV_TOKEN = jbTokens().tokenOf(REVNET_ID);
-
         // pay once first to receive tokens for the borrow call
         vm.prank(USER);
         uint256 tokens =
@@ -616,7 +606,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 userBalanceBefore = USER.balance;
 
         vm.prank(USER);
-        (,, REVLoan memory adjustedLoan, REVLoan memory newLoan) = LOANS_CONTRACT.reallocateCollateralFromLoan(
+        LOANS_CONTRACT.reallocateCollateralFromLoan(
             newLoanId, collateralToTransfer, sauce, newAmount, tokens2, payable(USER), 0
         );
 

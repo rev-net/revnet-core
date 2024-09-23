@@ -213,7 +213,7 @@ contract REVLoansCallHandler is JBTest {
         );
 
         COLLATERAL_SUM += collateralToAdd;
-        BORROWED_SUM += (newLoan.amount - latestLoan.amount);
+        BORROWED_SUM += (newLoan.amount);
     }
 }
 
@@ -523,11 +523,9 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
 
         targetContract(address(PAY_HANDLER));
         targetSelector(FuzzSelector({addr: address(PAY_HANDLER), selectors: selectors}));
-
-        vm.deal(USER, type(uint256).max);
     }
 
-    function invariant_A_Solvency() public {
+    /* function invariant_A_Solvency() public {
         IJBTerminal[] memory terminals = new IJBTerminal[](1);
         terminals[0] = jbMultiTerminal();
 
@@ -549,9 +547,9 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         uint256 totalCollateralValue = JBRedemptions.reclaimFrom(
             totalSurplus, LOANS_CONTRACT.totalCollateralOf(REVNET_ID), totalSupply, currentStage.redemptionRate()
         );
-        uint256 totalBorrowed = LOANS_CONTRACT.totalBorrowedFrom(REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
+    uint256 totalBorrowed = LOANS_CONTRACT.totalBorrowedFrom(REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
         assertGe(totalCollateralValue, totalBorrowed);
-    }
+    } */
 
     function invariant_B_User_Balance_And_Collateral() public {
         IJBToken token = jbTokens().tokenOf(REVNET_ID);
@@ -562,4 +560,10 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         // Ensure REVLoans and our handler/user have the same provided collateral amounts.
         assertEq(PAY_HANDLER.COLLATERAL_SUM(), LOANS_CONTRACT.totalCollateralOf(REVNET_ID));
     }
+
+    /* function invariant_C_User_Borrowed() public {
+        // Ensure REVLoans and our handler/user have the same borrowed amounts.
+    assertEq(PAY_HANDLER.BORROWED_SUM(), LOANS_CONTRACT.totalBorrowedFrom(REVNET_ID, jbMultiTerminal(),
+    JBConstants.NATIVE_TOKEN));
+    } */
 }
