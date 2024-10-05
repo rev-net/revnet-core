@@ -75,9 +75,9 @@ contract REVLoansCallHandler is JBTest {
         vm.stopPrank();
     }
 
-    function payBorrow(uint256 amount) public virtual useActor {
+    function payBorrow(uint256 amount, uint8 prepaid) public virtual useActor {
         uint256 payAmount = bound(amount, 1 ether, 10 ether);
-        uint256 prepaidFee = bound(amount, 10, 200);
+        uint256 prepaidFee = bound(uint256(prepaid), 0, 200);
 
         vm.deal(USER, payAmount);
 
@@ -101,15 +101,15 @@ contract REVLoansCallHandler is JBTest {
         ++RUNS;
     }
 
-    function repayLoan(uint256 percentToPayDown, uint256 daysToWarp) public virtual useActor {
+    function repayLoan(uint16 percentToPay, uint8 daysToFastForward) public virtual useActor {
         // Skip this if there are no loans to pay down
         if (RUNS == 0) {
             return;
         }
 
         uint256 denominator = 10_000;
-        percentToPayDown = bound(percentToPayDown, 1000, denominator);
-        daysToWarp = bound(daysToWarp, 10, 100);
+        uint256 percentToPayDown = bound(percentToPay, 1000, denominator - 1);
+        uint256 daysToWarp = bound(daysToFastForward, 10, 100);
         daysToWarp = daysToWarp * 1 days;
 
         vm.warp(block.timestamp + daysToWarp);
