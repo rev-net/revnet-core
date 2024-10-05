@@ -454,13 +454,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Iterate over the desired number of loans to check for liquidation.
         for (uint256 i; i < count; i++) {
             // Get a reference to the next loan ID.
-            uint256 loanId = lastLoanIdLiquidated + i;
+            uint256 loanId =
+                lastLoanIdLiquidated == 0 && i == 0 ? _generateLoanId(revnetId, 1) : newLastLoanIdLiquidated + i;
 
             // Get a reference to the loan being iterated on.
             REVLoan memory loan = _loanOf[loanId];
-
-            // Get a reference to the next loan.
-            loan = _loanOf[loanId];
 
             // If the loan doesn't exist, there's nothing left to liquidate.
             // slither-disable-next-line incorrect-equality
@@ -468,6 +466,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                 break;
             }
 
+            // @TODO: this reverts if a loan has been repaid. ERC721NonexistentToken
             // Keep a reference to the loan's owner.
             address owner = ownerOf(loanId);
 
