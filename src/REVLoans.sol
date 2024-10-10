@@ -465,7 +465,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
             // If the loan doesn't exist, there's nothing left to liquidate.
             // slither-disable-next-line incorrect-equality
-            // REVIEW
             if (loan.createdAt == 0) {
                 newLastLoanIdLiquidated = loanId;
                 continue;
@@ -497,7 +496,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
             // If the loan has been paid back and there is still leftover collateral, return it to the owner.
             // slither-disable-next-line incorrect-equality
-            if (loan.amount == 0 && loan.collateral > 0) {
+            if (loan.amount == 0 && loan.collateral > 0 && owner != address(0)) {
                 // Return the collateral to the owner.
                 _returnCollateralFrom({
                     revnetId: revnetId,
@@ -513,11 +512,10 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             totalBorrowedFrom[revnetId][loan.source.terminal][loan.source.token] -= loan.amount;
 
             // Decrement the total amount of collateral tokens supporting loans from this revnet.
-            // REVIEW: This happens already in _returnCollateralFrom, resulting in underflow revert.
             if (!isCollateralReturned) totalCollateralOf[revnetId] -= loan.collateral;
 
             // Burn the loan.
-            _burn(loanId);
+            if (owner != address(0)) _burn(loanId);
 
             // Increment the number of loans liquidated.
             newLastLoanIdLiquidated = loanId;
@@ -922,14 +920,12 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Get a reference to the revnet ID.
         uint256 revnetId = revnetIdOfLoanWith(loanId);
 
+        // Burn the original loan.
+        _burn(loanId);
+
         // If the loan will carry no more amount or collateral, store its changes directly.
         // slither-disable-next-line incorrect-equality
         if (amount - sourceFeeAmount == loan.amount && collateralToReturn == loan.collateral) {
-            // Burn the original loan.
-            // REVIEW: Burned loans that carry a value are unable to be liquidated to return collateral.
-            // I've moved this burn for the above reason.
-            _burn(loanId);
-
             // Borrow in.
             _adjust({
                 loan: loan,

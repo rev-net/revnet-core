@@ -868,20 +868,24 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // REVIEW: Looks like a new and essentially 'zero' loan is created in this case..?
         // this is newly created 'zero' loan 20..2?
         REVLoan memory paidOffLoan = LOANS_CONTRACT.loanOf(paidOffLoanId);
-        // original loan 20..1
+        REVLoan memory zeroLoan = LOANS_CONTRACT.loanOf(1_000_000_000_000 + 2);
+
+        assertEq(paidOffLoanId, REVNET_ID * 1_000_000_000_000 + 2);
         assertEq(paidOffLoan.createdAt, 0);
         assertEq(paidOffLoan.collateral, 0);
         assertEq(paidOffLoan.amount, 0);
         assertEq(newAdjustedLoan.amount, 0);
         assertGt(newAdjustedLoan.collateral, 0);
-        assertGt(newAdjustedLoan.createdAt, 0);
-        assertGt(paidOffLoanId, loanId);
+        assertEq(newAdjustedLoan.createdAt, block.timestamp);
+        assertGt(paidOffLoanId, loanId); // the "paidOffLoan" is the original loan, which is "burned".
+
+        emit log_uint(zeroLoan.collateral);
 
         // warp forward to where the loan is expired
         vm.warp(block.timestamp + 10_000 days);
 
         vm.expectEmit(false, false, false, false);
         emit IJBController.MintTokens(address(0), 0, 0, 0, "", 0, address(0));
-        LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 3);
+        LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 2);
     }
 }
