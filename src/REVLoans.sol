@@ -455,29 +455,44 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         for (uint256 i; i < count; i++) {
             // Get a reference to the next loan ID.
             uint256 loanId =
-                lastLoanIdLiquidated == 0 && i == 0 ? _generateLoanId(revnetId, 1) : lastLoanIdLiquidated + 1 + i;
+                lastLoanIdLiquidated == 0 && i == 0 ? _generateLoanId(revnetId, 1) : newLastLoanIdLiquidated + 1;
 
             // Get a reference to the loan being iterated on.
             REVLoan memory loan = _loanOf[loanId];
 
+            // Reference to if tokens are returned already by _returnCollateralFrom
+            bool isCollateralReturned;
+
             // If the loan doesn't exist, there's nothing left to liquidate.
             // slither-disable-next-line incorrect-equality
+            // REVIEW
             if (loan.createdAt == 0) {
-                break;
+                newLastLoanIdLiquidated = loanId;
+                continue;
             }
 
             // Keep a reference to the loan's owner.
             address owner = _ownerOf(loanId);
 
             // If the loan is already burned, continue.
-            if (owner == address(0)) {
+            // This may skip the below intended returnCollateralFrom if the loan is already burned.
+            // REVIEW
+            if (owner == address(0) && loan.collateral == 0) {
                 newLastLoanIdLiquidated = loanId;
                 continue;
             }
 
             // If the loan has not yet passed its liquidation timeframe, no subsequent loans have either.
+            // This can also unintentionally break the loop given a loan has been repaid.
+            // REVIEW
             if (block.timestamp <= loan.createdAt + LOAN_LIQUIDATION_DURATION) {
-                break;
+                // Continue to the next loan if the current loan is a placeholder.
+                if (loan.amount == 0 && loan.collateral == 0) {
+                    newLastLoanIdLiquidated = loanId;
+                    continue;
+                } else {
+                    break;
+                }
             }
 
             // If the loan has been paid back and there is still leftover collateral, return it to the owner.
@@ -490,13 +505,16 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                     beneficiary: payable(owner),
                     controller: controller
                 });
+
+                isCollateralReturned = true;
             }
 
             // Decrement the amount loaned.
             totalBorrowedFrom[revnetId][loan.source.terminal][loan.source.token] -= loan.amount;
 
             // Decrement the total amount of collateral tokens supporting loans from this revnet.
-            totalCollateralOf[revnetId] -= loan.collateral;
+            // REVIEW: This happens already in _returnCollateralFrom, resulting in underflow revert.
+            if (!isCollateralReturned) totalCollateralOf[revnetId] -= loan.collateral;
 
             // Burn the loan.
             _burn(loanId);
@@ -901,15 +919,17 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             amount = sourceFeeAmount + loan.amount;
         }
 
-        // Burn the original loan.
-        _burn(loanId);
-
         // Get a reference to the revnet ID.
         uint256 revnetId = revnetIdOfLoanWith(loanId);
 
         // If the loan will carry no more amount or collateral, store its changes directly.
         // slither-disable-next-line incorrect-equality
         if (amount - sourceFeeAmount == loan.amount && collateralToReturn == loan.collateral) {
+            // Burn the original loan.
+            // REVIEW: Burned loans that carry a value are unable to be liquidated to return collateral.
+            // I've moved this burn for the above reason.
+            _burn(loanId);
+
             // Borrow in.
             _adjust({
                 loan: loan,
