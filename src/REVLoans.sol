@@ -57,15 +57,16 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
-    error REVLoans_Unauthorized();
     error REVLoans_AmountNotSpecified();
     error REVLoans_CollateralExceedsLoan();
+    error REVLoans_CollateralRequired();
     error REVLoans_InvalidPrepaidFeePercent();
     error REVLoans_NotEnoughCollateral();
     error REVLoans_PermitAllowanceNotEnough();
     error REVLoans_NoMsgValueAllowed();
     error REVLoans_LoanExpired();
     error REVLoans_Overpayment();
+    error REVLoans_Unauthorized();
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -391,7 +392,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     )
         public
         override
-        nonReentrant
         returns (uint256 loanId, REVLoan memory)
     {
         // Make sure there is an amount being borrowed.
@@ -438,7 +438,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @dev Since loans are created in incremental order, earlier IDs will always be liquidated before later ones.
     /// @param revnetId The ID of the revnet to liquidate loans from.
     /// @param count The amount of loans iterate over since the last liquidated loan.
-    function liquidateExpiredLoansFrom(uint256 revnetId, uint256 count) external override nonReentrant {
+    function liquidateExpiredLoansFrom(uint256 revnetId, uint256 count) external override {
         // Keep a reference to the loan ID being iterated on.
         uint256 lastLoanIdLiquidated = lastLoanIdLiquidatedFrom[revnetId];
 
@@ -454,32 +454,45 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // Iterate over the desired number of loans to check for liquidation.
         for (uint256 i; i < count; i++) {
             // Get a reference to the next loan ID.
-            uint256 loanId = lastLoanIdLiquidated + i;
+            uint256 loanId =
+                lastLoanIdLiquidated == 0 && i == 0 ? _generateLoanId(revnetId, 1) : newLastLoanIdLiquidated + 1;
 
             // Get a reference to the loan being iterated on.
             REVLoan memory loan = _loanOf[loanId];
 
-            // Get a reference to the next loan.
-            loan = _loanOf[loanId];
+            // Reference to if tokens are returned already by _returnCollateralFrom
+            bool isCollateralReturned;
 
             // If the loan doesn't exist, there's nothing left to liquidate.
             // slither-disable-next-line incorrect-equality
+            // REVIEW
             if (loan.createdAt == 0) {
-                break;
+                newLastLoanIdLiquidated = loanId;
+                continue;
             }
 
             // Keep a reference to the loan's owner.
-            address owner = ownerOf(loanId);
+            address owner = _ownerOf(loanId);
 
             // If the loan is already burned, continue.
-            if (owner == address(0)) {
+            // This may skip the below intended returnCollateralFrom if the loan is already burned.
+            // REVIEW
+            if (owner == address(0) && loan.collateral == 0) {
                 newLastLoanIdLiquidated = loanId;
                 continue;
             }
 
             // If the loan has not yet passed its liquidation timeframe, no subsequent loans have either.
+            // This can also unintentionally break the loop given a loan has been repaid.
+            // REVIEW
             if (block.timestamp <= loan.createdAt + LOAN_LIQUIDATION_DURATION) {
-                break;
+                // Continue to the next loan if the current loan is a placeholder.
+                if (loan.amount == 0 && loan.collateral == 0) {
+                    newLastLoanIdLiquidated = loanId;
+                    continue;
+                } else {
+                    break;
+                }
             }
 
             // If the loan has been paid back and there is still leftover collateral, return it to the owner.
@@ -492,13 +505,16 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                     beneficiary: payable(owner),
                     controller: controller
                 });
+
+                isCollateralReturned = true;
             }
 
             // Decrement the amount loaned.
             totalBorrowedFrom[revnetId][loan.source.terminal][loan.source.token] -= loan.amount;
 
             // Decrement the total amount of collateral tokens supporting loans from this revnet.
-            totalCollateralOf[revnetId] -= loan.collateral;
+            // REVIEW: This happens already in _returnCollateralFrom, resulting in underflow revert.
+            if (!isCollateralReturned) totalCollateralOf[revnetId] -= loan.collateral;
 
             // Burn the loan.
             _burn(loanId);
@@ -586,7 +602,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         external
         payable
         override
-        nonReentrant
         returns (uint256, REVLoan memory)
     {
         // Make sure only the loan's owner can manage it.
@@ -904,15 +919,17 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             amount = sourceFeeAmount + loan.amount;
         }
 
-        // Burn the original loan.
-        _burn(loanId);
-
         // Get a reference to the revnet ID.
         uint256 revnetId = revnetIdOfLoanWith(loanId);
 
         // If the loan will carry no more amount or collateral, store its changes directly.
         // slither-disable-next-line incorrect-equality
         if (amount - sourceFeeAmount == loan.amount && collateralToReturn == loan.collateral) {
+            // Burn the original loan.
+            // REVIEW: Burned loans that carry a value are unable to be liquidated to return collateral.
+            // I've moved this burn for the above reason.
+            _burn(loanId);
+
             // Borrow in.
             _adjust({
                 loan: loan,
@@ -1000,6 +1017,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
         // Make sure there is enough collateral to transfer.
         if (collateralToRemove > loan.collateral) revert REVLoans_NotEnoughCollateral();
+
+        // Make sure there is collateral if the loan has debt.
+        if (collateralToRemove == loan.collateral && loan.amount != 0) revert REVLoans_CollateralRequired();
 
         // Get a reference to the replacement loan ID.
         reallocatedLoanId = _generateLoanId(revnetId, ++numberOfLoansFor[revnetId]);

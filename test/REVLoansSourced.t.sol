@@ -41,10 +41,10 @@ struct FeeProjectConfig {
 
 contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     /// @notice the salts that are used to deploy the contracts.
-    bytes32 BASIC_DEPLOYER_SALT = "REVDeployer";
+    bytes32 REV_DEPLOYER_SALT = "REVDeployer";
     bytes32 ERC20_SALT = "REV_TOKEN";
 
-    REVDeployer BASIC_DEPLOYER;
+    REVDeployer REV_DEPLOYER;
     JB721TiersHook EXAMPLE_HOOK;
 
     /// @notice Deploys tiered ERC-721 hooks for revnets.
@@ -288,7 +288,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         PUBLISHER = new CTPublisher(jbController(), jbPermissions(), FEE_PROJECT_ID, multisig());
 
-        BASIC_DEPLOYER = new REVDeployer{salt: BASIC_DEPLOYER_SALT}(
+        REV_DEPLOYER = new REVDeployer{salt: REV_DEPLOYER_SALT}(
             jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER
         );
 
@@ -296,16 +296,13 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // Approve the basic deployer to configure the project.
         vm.prank(address(multisig()));
-        jbProjects().approve(address(BASIC_DEPLOYER), FEE_PROJECT_ID);
+        jbProjects().approve(address(REV_DEPLOYER), FEE_PROJECT_ID);
 
         // Build the config.
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
-        // Empty hook config.
-        REVDeploy721TiersHookConfig memory tiered721HookConfiguration;
-
         // Configure the project.
-        REVNET_ID = BASIC_DEPLOYER.deployFor({
+        REV_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
             configuration: feeProjectConfig.configuration,
             terminalConfigurations: feeProjectConfig.terminalConfigurations,
@@ -317,7 +314,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         FeeProjectConfig memory fee2Config = getSecondProjectConfig();
 
         // Configure the project.
-        REVNET_ID = BASIC_DEPLOYER.deployFor({
+        REVNET_ID = REV_DEPLOYER.deployFor({
             revnetId: 0, // Zero to deploy a new revnet
             configuration: fee2Config.configuration,
             terminalConfigurations: fee2Config.terminalConfigurations,
@@ -347,8 +344,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
         vm.prank(USER);
-        (uint256 newLoanId, REVLoan memory newLoan) =
-            LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
+        (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
 
         REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
         assertEq(loan.amount, loanable);
@@ -472,9 +468,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     }
 
     function test_Refinance_Excess_Collateral() public {
-        // get a reference to our project token for assertions later
-        IJBToken REV_TOKEN = jbTokens().tokenOf(REVNET_ID);
-
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
 
@@ -572,15 +565,10 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         daysToWarp = daysToWarp * 1 days;
         collateralPercentToTransfer = bound(collateralPercentToTransfer, 1, 1000);
 
-        uint256 totalTokens;
-
-        // get a reference to our project token for assertions later
-        IJBToken REV_TOKEN = jbTokens().tokenOf(REVNET_ID);
-
+        // pay once first to receive tokens for the borrow call
         vm.prank(USER);
         uint256 tokens =
             jbMultiTerminal().pay{value: payAmount}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
-        totalTokens += tokens;
 
         uint256 loanable =
             LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
@@ -603,9 +591,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // warp to after redemption rate is higher in the second ruleset
         vm.warp(block.timestamp + daysToWarp);
 
+        // pay again to have balance for the refinance
         uint256 tokens2 =
             jbMultiTerminal().pay{value: secondPayAmount}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
-        totalTokens += tokens2;
 
         // bound up to 1% reallocated
         uint256 collateralToTransfer = mulDiv(loan.collateral, collateralPercentToTransfer, 10_000);
@@ -618,7 +606,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 userBalanceBefore = USER.balance;
 
         vm.prank(USER);
-        (,, REVLoan memory adjustedLoan, REVLoan memory newLoan) = LOANS_CONTRACT.reallocateCollateralFromLoan(
+        LOANS_CONTRACT.reallocateCollateralFromLoan(
             newLoanId, collateralToTransfer, sauce, newAmount, tokens2, payable(USER), 0
         );
 
@@ -626,5 +614,274 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // check we received funds period
         assertGt(userBalanceAfter, userBalanceBefore);
+    }
+
+    function test_loanSourcesOfAndDetermineSourceFeeAmount() external {
+        // it will add the loan source upon first borrow
+        vm.prank(USER);
+        uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+
+        uint256 loanable =
+            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        assertGt(loanable, 0);
+
+        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
+        REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
+        // Before a borrow the source does not exist
+        REVLoanSource[] memory sources = LOANS_CONTRACT.loanSourcesOf(REVNET_ID);
+        assertEq(sources.length, 0);
+
+        vm.prank(USER);
+        (, REVLoan memory loan) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 100);
+
+        // Source should exist after a borrow
+        REVLoanSource[] memory sourcesUpdated = LOANS_CONTRACT.loanSourcesOf(REVNET_ID);
+        assertEq(sourcesUpdated.length, 1);
+        assertEq(sourcesUpdated[0].token, JBConstants.NATIVE_TOKEN);
+        assertEq(address(sourcesUpdated[0].terminal), address(jbMultiTerminal()));
+
+        // Check the fee amount after warping forward past the prepaid duration
+        vm.warp(block.timestamp + loan.prepaidDuration + 1 days);
+        uint256 feeAmount = LOANS_CONTRACT.determineSourceFeeAmount(loan, loan.amount);
+        assertGt(feeAmount, 0);
+
+        // Warp further than the loan liquidation duration to revert.
+        vm.warp(block.timestamp + 3650 days);
+        vm.expectRevert(REVLoans.REVLoans_LoanExpired.selector);
+        LOANS_CONTRACT.determineSourceFeeAmount(loan, loan.amount);
+    }
+
+    function test_borrowFromReverts() external {
+        vm.prank(USER);
+        uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+
+        uint256 loanable =
+            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        assertGt(loanable, 0);
+
+        REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
+        vm.prank(USER);
+        vm.expectRevert(REVLoans.REVLoans_AmountNotSpecified.selector);
+        LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, 0, tokens, payable(USER), 100);
+
+        vm.prank(USER);
+        vm.expectRevert(REVLoans.REVLoans_InvalidPrepaidFeePercent.selector);
+        LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, 1, tokens, payable(USER), 1_000_000);
+    }
+
+    function test_liquidateLoans() external {
+        vm.prank(USER);
+        uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+
+        uint256 loanable =
+            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        assertGt(loanable, 0);
+
+        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
+        REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
+        vm.prank(USER);
+        (uint256 loanId, REVLoan memory loan) =
+            LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 100);
+
+        // Take out another loan
+        vm.prank(USER);
+        uint256 tokens2 = jbMultiTerminal().pay{value: 2e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+
+        uint256 loanable2 =
+            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+
+        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
+        vm.prank(USER);
+        (uint256 loanId2, REVLoan memory loan2) =
+            LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable2, tokens2, payable(USER), 50);
+
+        // Warp further than the loan liquidation duration.
+        vm.warp(block.timestamp + 10_000 days);
+
+        // Check topics one and two
+        vm.expectEmit(true, true, false, false);
+        emit IREVLoans.Liquidate(loanId, REVNET_ID, loan, address(0));
+
+        // Check for the second liquidation
+        // Check topics one and two
+        vm.expectEmit(true, true, false, false);
+        emit IREVLoans.Liquidate(loanId2, REVNET_ID, loan2, address(0));
+        LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 2);
+
+        // Call again to trigger the first break (loan.createdAt = 0)
+        LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 2);
+    }
+
+    function test_liquidationRevertsContinued() external {
+        vm.prank(USER);
+        uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+
+        uint256 loanable =
+            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        assertGt(loanable, 0);
+
+        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
+        REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
+        vm.prank(USER);
+        (uint256 loanId, REVLoan memory loan) =
+            LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 100);
+
+        // Attempt to liquidate before the loan is expired and loop will break
+        LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 1);
+
+        // Repay the loan, adjusting the previous loan.
+        uint256 collateralReturned = mulDiv(loan.collateral, 1000, 10_000);
+
+        uint256 newCollateral = loan.collateral - collateralReturned;
+        uint256 borrowableFromNewCollateral =
+            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, newCollateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+
+        // Needed for edge case seeds like 17721, 11407, 334
+        if (borrowableFromNewCollateral > 0) borrowableFromNewCollateral -= 1;
+
+        uint256 amountDiff = borrowableFromNewCollateral > loan.amount ? 0 : loan.amount - borrowableFromNewCollateral;
+
+        uint256 amountPaidDown = amountDiff;
+
+        // Calculate the fee.
+        {
+            // Keep a reference to the time since the loan was created.
+            uint256 timeSinceLoanCreated = block.timestamp - loan.createdAt;
+
+            // If the loan period has passed the prepaid time frame, take a fee.
+            if (timeSinceLoanCreated > loan.prepaidDuration) {
+                // Calculate the prepaid fee for the amount being paid back.
+                uint256 prepaidAmount = JBFees.feeAmountFrom({amount: amountDiff, feePercent: loan.prepaidFeePercent});
+
+                // Calculate the fee as a linear proportion given the amount of time that has passed.
+                // sourceFeeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION) - prepaidAmount;
+                amountPaidDown += JBFees.feeAmountFrom({
+                    amount: amountDiff - prepaidAmount,
+                    feePercent: mulDiv(timeSinceLoanCreated, JBConstants.MAX_FEE, 3650 days)
+                });
+            }
+        }
+
+        // ensure we have the balance
+        vm.deal(USER, amountPaidDown);
+
+        // empty allowance data
+        JBSingleAllowance memory allowance;
+
+        // call to pay-down the loan
+        vm.prank(USER);
+        LOANS_CONTRACT.repayLoan{value: amountPaidDown}(
+            loanId, amountPaidDown, collateralReturned, payable(USER), allowance
+        );
+
+        LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 1);
+    }
+
+    function test_liquidationReturnCollateral() external {
+        vm.prank(USER);
+        uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+
+        uint256 loanable =
+            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        assertGt(loanable, 0);
+
+        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
+        REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
+        vm.prank(USER);
+        (uint256 loanId, REVLoan memory loan) =
+            LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 100);
+
+        // Repay the loan, adjusting the previous loan.
+        uint256 collateralReturned = 0;
+
+        uint256 amountPaidDown = loan.amount;
+
+        // Calculate the fee.
+        {
+            // Keep a reference to the time since the loan was created.
+            uint256 timeSinceLoanCreated = block.timestamp - loan.createdAt;
+
+            // If the loan period has passed the prepaid time frame, take a fee.
+            if (timeSinceLoanCreated > loan.prepaidDuration) {
+                // Calculate the prepaid fee for the amount being paid back.
+                uint256 prepaidAmount =
+                    JBFees.feeAmountFrom({amount: amountPaidDown, feePercent: loan.prepaidFeePercent});
+
+                // Calculate the fee as a linear proportion given the amount of time that has passed.
+                // sourceFeeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION) - prepaidAmount;
+                amountPaidDown += JBFees.feeAmountFrom({
+                    amount: amountPaidDown - prepaidAmount,
+                    feePercent: mulDiv(timeSinceLoanCreated, JBConstants.MAX_FEE, 3650 days)
+                });
+            }
+        }
+
+        amountPaidDown += 1e18;
+
+        // ensure we have the balance
+        vm.deal(USER, amountPaidDown);
+
+        // empty allowance data
+        JBSingleAllowance memory allowance;
+
+        // call to pay-down the loan
+        vm.prank(USER);
+        (uint256 paidOffLoanId, REVLoan memory newAdjustedLoan) = LOANS_CONTRACT.repayLoan{value: amountPaidDown}(
+            loanId, amountPaidDown, collateralReturned, payable(USER), allowance
+        );
+
+        // REVIEW: Looks like a new and essentially 'zero' loan is created in this case..?
+        // this is newly created 'zero' loan 20..2?
+        REVLoan memory paidOffLoan = LOANS_CONTRACT.loanOf(paidOffLoanId);
+        // original loan 20..1
+        assertEq(paidOffLoan.createdAt, 0);
+        assertEq(paidOffLoan.collateral, 0);
+        assertEq(paidOffLoan.amount, 0);
+        assertEq(newAdjustedLoan.amount, 0);
+        assertGt(newAdjustedLoan.collateral, 0);
+        assertGt(newAdjustedLoan.createdAt, 0);
+        assertGt(paidOffLoanId, loanId);
+
+        // warp forward to where the loan is expired
+        vm.warp(block.timestamp + 10_000 days);
+
+        vm.expectEmit(false, false, false, false);
+        emit IJBController.MintTokens(address(0), 0, 0, 0, "", 0, address(0));
+        LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 3);
     }
 }
