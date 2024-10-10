@@ -457,6 +457,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             uint256 loanId =
                 lastLoanIdLiquidated == 0 && i == 0 ? _generateLoanId(revnetId, 1) : newLastLoanIdLiquidated + 1;
 
+            // Keep a reference to the loan's owner.
+            address owner = _ownerOf(loanId);
+
             // Get a reference to the loan being iterated on.
             REVLoan memory loan = _loanOf[loanId];
 
@@ -470,13 +473,10 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
                 continue;
             }
 
-            // Keep a reference to the loan's owner.
-            address owner = _ownerOf(loanId);
-
             // If the loan is already burned, continue.
             // This may skip the below intended returnCollateralFrom if the loan is already burned.
             // REVIEW
-            if (owner == address(0) && loan.collateral == 0) {
+            if (owner == address(0)) {
                 newLastLoanIdLiquidated = loanId;
                 continue;
             }
@@ -496,7 +496,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
             // If the loan has been paid back and there is still leftover collateral, return it to the owner.
             // slither-disable-next-line incorrect-equality
-            if (loan.amount == 0 && loan.collateral > 0 && owner != address(0)) {
+            if (loan.amount == 0 && loan.collateral > 0) {
                 // Return the collateral to the owner.
                 _returnCollateralFrom({
                     revnetId: revnetId,
@@ -962,9 +962,17 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             REVLoan storage paidOffLoan = _loanOf[paidOffLoanId];
 
             // Set the paid off loan's values the same as the original loan.
-            paidOffLoan = loan;
+            // REVIEW this wasn't a deep copy of the loan (didn't have its attributes).
+            /* paidOffLoan = loan; */
+            paidOffLoan.amount = loan.amount;
+            paidOffLoan.collateral = loan.collateral;
+            paidOffLoan.createdAt = loan.createdAt;
+            paidOffLoan.prepaidFeePercent = loan.prepaidFeePercent;
+            paidOffLoan.prepaidDuration = loan.prepaidDuration;
+            paidOffLoan.source = loan.source;
 
             // Borrow in.
+            // This was essentially modifying the original loan as paidOffLoan = loan
             _adjust({
                 loan: paidOffLoan,
                 revnetId: revnetId,

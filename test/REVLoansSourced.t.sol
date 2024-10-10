@@ -861,31 +861,17 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // call to pay-down the loan
         vm.prank(USER);
-        (uint256 paidOffLoanId, REVLoan memory newAdjustedLoan) = LOANS_CONTRACT.repayLoan{value: amountPaidDown}(
+        LOANS_CONTRACT.repayLoan{value: amountPaidDown}(
             loanId, amountPaidDown, collateralReturned, payable(USER), allowance
         );
-
-        // REVIEW: Looks like a new and essentially 'zero' loan is created in this case..?
-        // this is newly created 'zero' loan 20..2?
-        REVLoan memory paidOffLoan = LOANS_CONTRACT.loanOf(paidOffLoanId);
-        REVLoan memory zeroLoan = LOANS_CONTRACT.loanOf(1_000_000_000_000 + 2);
-
-        assertEq(paidOffLoanId, REVNET_ID * 1_000_000_000_000 + 2);
-        assertEq(paidOffLoan.createdAt, 0);
-        assertEq(paidOffLoan.collateral, 0);
-        assertEq(paidOffLoan.amount, 0);
-        assertEq(newAdjustedLoan.amount, 0);
-        assertGt(newAdjustedLoan.collateral, 0);
-        assertEq(newAdjustedLoan.createdAt, block.timestamp);
-        assertGt(paidOffLoanId, loanId); // the "paidOffLoan" is the original loan, which is "burned".
-
-        emit log_uint(zeroLoan.collateral);
 
         // warp forward to where the loan is expired
         vm.warp(block.timestamp + 10_000 days);
 
-        vm.expectEmit(false, false, false, false);
-        emit IJBController.MintTokens(address(0), 0, 0, 0, "", 0, address(0));
+        vm.expectEmit();
+        emit IJBController.MintTokens(
+            USER, REVNET_ID, 8e20, 8e20, "Removing collateral from loan", 0, address(LOANS_CONTRACT)
+        );
         LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 2);
     }
 }
