@@ -474,24 +474,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             }
 
             // If the loan is already burned, continue.
-            // This may skip the below intended returnCollateralFrom if the loan is already burned.
-            // REVIEW
             if (owner == address(0)) {
                 newLastLoanIdLiquidated = loanId;
                 continue;
             }
 
             // If the loan has not yet passed its liquidation timeframe, no subsequent loans have either.
-            // This can also unintentionally break the loop given a loan has been repaid.
-            // REVIEW
             if (block.timestamp <= loan.createdAt + LOAN_LIQUIDATION_DURATION) {
-                // Continue to the next loan if the current loan is a placeholder.
-                if (loan.amount == 0 && loan.collateral == 0) {
-                    newLastLoanIdLiquidated = loanId;
-                    continue;
-                } else {
-                    break;
-                }
+                break;
             }
 
             // If the loan has been paid back and there is still leftover collateral, return it to the owner.
@@ -962,8 +952,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             REVLoan storage paidOffLoan = _loanOf[paidOffLoanId];
 
             // Set the paid off loan's values the same as the original loan.
-            // REVIEW this wasn't a deep copy of the loan (didn't have its attributes).
-            /* paidOffLoan = loan; */
             paidOffLoan.amount = loan.amount;
             paidOffLoan.collateral = loan.collateral;
             paidOffLoan.createdAt = loan.createdAt;
