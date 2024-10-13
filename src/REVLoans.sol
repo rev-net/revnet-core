@@ -469,14 +469,10 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             // Get a reference to the loan being iterated on.
             REVLoan memory loan = _loanOf[loanId];
 
-            // Reference to if tokens are returned already by _returnCollateralFrom
-            bool isCollateralReturned;
-
             // If the loan doesn't exist, there's nothing left to liquidate.
             // slither-disable-next-line incorrect-equality
             if (loan.createdAt == 0) {
-                newLastLoanIdLiquidated = loanId;
-                continue;
+                break;
             }
 
             // Keep a reference to the loan's owner.
@@ -495,23 +491,25 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
             // If the loan has been paid back and there is still leftover collateral, return it to the owner.
             // slither-disable-next-line incorrect-equality
-            if (loan.amount == 0 && loan.collateral > 0) {
-                // Return the collateral to the owner.
-                _returnCollateralFrom({
-                    revnetId: revnetId,
-                    amount: loan.collateral,
-                    beneficiary: payable(owner),
-                    controller: controller
-                });
-
-                isCollateralReturned = true;
+            if (loan.collateral > 0) {
+                if (loan.amount == 0) {
+                    // Return the collateral to the owner.
+                    _returnCollateralFrom({
+                        revnetId: revnetId,
+                        amount: loan.collateral,
+                        beneficiary: payable(owner),
+                        controller: controller
+                    });
+                } else {
+                    // Decrement the total amount of collateral tokens supporting loans from this revnet.
+                    totalCollateralOf[revnetId] -= loan.collateral;
+                }
             }
 
-            // Decrement the amount loaned.
-            totalBorrowedFrom[revnetId][loan.source.terminal][loan.source.token] -= loan.amount;
-
-            // Decrement the total amount of collateral tokens supporting loans from this revnet.
-            if (!isCollateralReturned) totalCollateralOf[revnetId] -= loan.collateral;
+            if (loan.amount > 0) {
+                // Decrement the amount loaned.
+                totalBorrowedFrom[revnetId][loan.source.terminal][loan.source.token] -= loan.amount;
+            }
 
             // Burn the loan.
             if (owner != address(0)) _burn(loanId);
