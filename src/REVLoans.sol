@@ -62,6 +62,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     error REVLoans_CollateralRequired();
     error REVLoans_InvalidPrepaidFeePercent();
     error REVLoans_NotEnoughCollateral();
+    error REVLoans_NotEnoughCollateralToReallocate();
     error REVLoans_PermitAllowanceNotEnough();
     error REVLoans_NoMsgValueAllowed();
     error REVLoans_LoanExpired();
@@ -218,6 +219,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @return The ID of the revnet.
     function revnetIdOfLoanWith(uint256 loanId) public pure override returns (uint256) {
         return loanId / _ONE_TRILLION;
+    }
+
+    /// @notice Get the owner without chance of reverting when unowned or unminted.
+    /// @param loanId The loan ID of the loan by which to locate the owner.
+    /// @return The Address of the owner.
+    function ownerOfLoan(uint256 loanId) public view override returns (address) {
+        // Owner of the loan, or zero address if unowned.
+        return _ownerOf(loanId);
     }
 
     //*********************************************************************//
@@ -1023,7 +1032,12 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         reallocatedLoan = _loanOf[reallocatedLoanId];
 
         // Set the reallocated loan's values the same as the original loan.
-        reallocatedLoan = loan;
+        reallocatedLoan.amount = loan.amount;
+        reallocatedLoan.collateral = loan.collateral;
+        reallocatedLoan.createdAt = loan.createdAt;
+        reallocatedLoan.prepaidFeePercent = loan.prepaidFeePercent;
+        reallocatedLoan.prepaidDuration = loan.prepaidDuration;
+        reallocatedLoan.source = loan.source;
 
         // Reduce the collateral of the replacement loan.
         _adjust({
