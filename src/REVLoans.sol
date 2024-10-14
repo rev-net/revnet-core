@@ -959,7 +959,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
             paidOffLoan.source = loan.source;
 
             // Borrow in.
-            // This was essentially modifying the original loan as paidOffLoan = loan
             _adjust({
                 loan: paidOffLoan,
                 revnetId: revnetId,
