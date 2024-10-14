@@ -120,7 +120,8 @@ contract REVLoansCallHandler is JBTest {
         REVLoan memory latestLoan = LOANS.loanOf(id);
 
         // skip if we don't find the loan
-        if (LOANS.ownerOfLoan(id) == address(0)) return;
+        try IERC721(address(LOANS)).ownerOf(id) {
+        } catch { return; }
 
         // skip if we don't find a loan
         if (latestLoan.amount == 0) return;
@@ -188,7 +189,9 @@ contract REVLoansCallHandler is JBTest {
 
         // get the loan ID
         uint256 id = (REVNET_ID * 1_000_000_000_000) + RUNS;
-        if (LOANS.ownerOfLoan(id) == address(0)) return;
+
+        try IERC721(address(LOANS)).ownerOf(id) {
+        } catch { return; }
 
         REVLoan memory latestLoan = LOANS.loanOf(id);
 

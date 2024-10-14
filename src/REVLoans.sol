@@ -221,14 +221,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         return loanId / _ONE_TRILLION;
     }
 
-    /// @notice Get the owner without chance of reverting when unowned or unminted.
-    /// @param loanId The loan ID of the loan by which to locate the owner.
-    /// @return The Address of the owner.
-    function ownerOfLoan(uint256 loanId) public view override returns (address) {
-        // Owner of the loan, or zero address if unowned.
-        return _ownerOf(loanId);
-    }
-
     //*********************************************************************//
     // -------------------------- internal views ------------------------- //
     //*********************************************************************//
