@@ -61,6 +61,7 @@ contract DeployScript is Script, Sphinx {
     bytes32 SUCKER_SALT = "_REV_SUCKER_SALT_";
     bytes32 DEPLOYER_SALT = "_REV_DEPLOYER_SALT_";
     bytes32 REVLOANS_SALT = "_REV_LOANS_SALT_";
+    address LOANS_OWNER = 0x823b92d6a4b2AED4b15675c7917c9f922ea8ADAD;
     address OPERATOR = 0x823b92d6a4b2AED4b15675c7917c9f922ea8ADAD;
     uint256 TIME_UNTIL_START = 1 days;
     address TRUSTED_FORWARDER;
@@ -284,7 +285,13 @@ contract DeployScript is Script, Sphinx {
             );
 
             revloans = !_revloansIsDeployed
-                ? new REVLoans{salt: REVLOANS_SALT}(core.projects, FEE_PROJECT_ID, PERMIT2, TRUSTED_FORWARDER)
+                ? new REVLoans{salt: REVLOANS_SALT}({
+                    projects: core.projects,
+                    revId: FEE_PROJECT_ID,
+                    owner: LOANS_OWNER,
+                    permit2: PERMIT2,
+                    trustedForwarder: TRUSTED_FORWARDER
+                })
                 : REVLoans(payable(_revloans));
         }
 

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -19,6 +18,7 @@ import {IJBPrices} from "@bananapus/core/src/interfaces/IJBPrices.sol";
 import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
 import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
 import {IJBTokens} from "@bananapus/core/src/interfaces/IJBTokens.sol";
+import {IJBTokenUriResolver} from "@bananapus/core/src/interfaces/IJBTokenUriResolver.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBFees} from "@bananapus/core/src/libraries/JBFees.sol";
 import {JBRedemptions} from "@bananapus/core/src/libraries/JBRedemptions.sol";
@@ -46,7 +46,7 @@ import {REVLoanSource} from "./structs/REVLoanSource.sol";
 /// cannot be
 /// recouped.
 /// @dev The loaned amounts include the fees taken, meaning the amount paid back is the amount borrowed plus the fees.
-contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
+contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     // A library that parses the packed ruleset metadata into a friendlier format.
     using JBRulesetMetadataResolver for JBRuleset;
 
@@ -58,16 +58,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     //*********************************************************************//
 
     error REVLoans_AmountNotSpecified();
-    error REVLoans_CollateralExceedsLoan();
+    error REVLoans_CollateralExceedsLoan(uint256 collateralToReturn, uint256 loanCollateral);
     error REVLoans_CollateralRequired();
-    error REVLoans_InvalidPrepaidFeePercent();
+    error REVLoans_InvalidPrepaidFeePercent(uint256 prepaidFeePercent, uint256 min, uint256 max);
     error REVLoans_NotEnoughCollateral();
-    error REVLoans_NotEnoughCollateralToReallocate();
-    error REVLoans_PermitAllowanceNotEnough();
+    error REVLoans_PermitAllowanceNotEnough(uint256 allowanceAmount, uint256 requiredAmount);
     error REVLoans_NoMsgValueAllowed();
-    error REVLoans_LoanExpired();
-    error REVLoans_Overpayment();
-    error REVLoans_Unauthorized();
+    error REVLoans_LoanExpired(uint256 timeSinceLoanCreated, uint256 loanLiquidationDuration);
+    error REVLoans_Unauthorized(address caller, address owner);
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -81,10 +79,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     uint256 public constant override LOAN_LIQUIDATION_DURATION = 3650 days;
 
     /// @dev The maximum amount of a loan that can be prepaid at the time of borrowing, in terms of JBConstants.MAX_FEE.
-    uint256 public constant override MAX_PREPAID_PERCENT = 500;
+    uint256 public constant override MAX_PREPAID_FEE_PERCENT = 500;
 
-    /// @dev A fee of 2.5% is charged by the underlying protocol.
-    uint256 public constant override REV_PREPAID_FEE = 5; // 0.5%
+    /// @dev A fee of 0.5% is charged by the $REV revnet.
+    uint256 public constant override REV_PREPAID_FEE_PERCENT = 5; // 0.5%
+
+    /// @dev A fee of 2.5% is charged by the loan's source upfront.
+    uint256 public constant override SOURCE_MIN_PREPAID_FEE_PERCENT = 25; // 2.5%
 
     //*********************************************************************//
     // -------------------- private constant properties ------------------ //
@@ -126,6 +127,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @notice The amount of loans that have been created.
     /// @custom:param revnetId The ID of the revnet to get the number of loans from.
     mapping(uint256 revnetId => uint256) public override numberOfLoansFor;
+
+    /// @notice The contract resolving each project ID to its ERC721 URI.
+    IJBTokenUriResolver public override tokenUriResolver;
 
     /// @notice The total amount loaned out by a revnet from a specified terminal in a specified token.
     /// @custom:param revnetId The ID of the revnet issuing the loan.
@@ -212,6 +216,20 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
     /// @return sourceFeeAmount The source fee amount for the loan.
     function determineSourceFeeAmount(REVLoan memory loan, uint256 amount) public view returns (uint256) {
         return _determineSourceFeeAmount(loan, amount);
+    }
+
+    /// @notice Returns the URI where the ERC-721 standard JSON of a loan is hosted.
+    /// @param loanId The ID of the loan to get a URI of.
+    /// @return The token URI to use for the provided `loanId`.
+    function tokenURI(uint256 loanId) public view override returns (string memory) {
+        // Keep a reference to the resolver.
+        IJBTokenUriResolver resolver = tokenUriResolver;
+
+        // If there's no resolver, there's no URI.
+        if (resolver == IJBTokenUriResolver(address(0))) return "";
+
+        // Return the resolved URI.
+        return resolver.getUri(loanId);
     }
 
     /// @notice The revnet ID for the loan with the provided loan ID.
@@ -309,7 +327,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         // If the loan period has passed the prepaid time frame, take a fee.
         if (timeSinceLoanCreated > loan.prepaidDuration) {
             // If the loan period has passed the liqidation time frame, do not allow loan management.
-            if (timeSinceLoanCreated > LOAN_LIQUIDATION_DURATION) revert REVLoans_LoanExpired();
+            if (timeSinceLoanCreated > LOAN_LIQUIDATION_DURATION) {
+                revert REVLoans_LoanExpired(timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION);
+            }
 
             // Get a reference to the amount prepaid for the full loan.
             uint256 prepaid = JBFees.feeAmountFrom({amount: loan.amount, feePercent: loan.prepaidFeePercent});
@@ -353,16 +373,19 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
     /// @param projects A contract which mints ERC-721s that represent project ownership and transfers.
     /// @param revId The ID of the REV revnet that will receive the fees.
+    /// @param owner The owner of the contract that can set the URI resolver.
     /// @param permit2 A permit2 utility.
     /// @param trustedForwarder A trusted forwarder of transactions to this contract.
     constructor(
         IJBProjects projects,
         uint256 revId,
+        address owner,
         IPermit2 permit2,
         address trustedForwarder
     )
         ERC721("REV Loans", "$REVLOAN")
         ERC2771Context(trustedForwarder)
+        Ownable(owner)
     {
         PROJECTS = projects;
         REV_ID = revId;
@@ -400,7 +423,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
 
         // Make sure the prepaid fee percent is between 0 and 20%. Meaning an 16 year loan can be paid upfront with a
         // payment of 50% of the borrowed assets, the cheapest possible rate.
-        if (prepaidFeePercent > MAX_PREPAID_PERCENT) revert REVLoans_InvalidPrepaidFeePercent();
+        if (prepaidFeePercent < SOURCE_MIN_PREPAID_FEE_PERCENT || prepaidFeePercent > MAX_PREPAID_FEE_PERCENT) {
+            revert REVLoans_InvalidPrepaidFeePercent(
+                prepaidFeePercent, SOURCE_MIN_PREPAID_FEE_PERCENT, MAX_PREPAID_FEE_PERCENT
+            );
+        }
 
         // Get a reference to the loan ID.
         loanId = _generateLoanId(revnetId, ++numberOfLoansFor[revnetId]);
@@ -415,7 +442,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         loan.source = source;
         loan.createdAt = uint40(block.timestamp);
         loan.prepaidFeePercent = uint16(prepaidFeePercent);
-        loan.prepaidDuration = uint32(mulDiv(prepaidFeePercent, LOAN_LIQUIDATION_DURATION, MAX_PREPAID_PERCENT));
+        loan.prepaidDuration = uint32(mulDiv(prepaidFeePercent, LOAN_LIQUIDATION_DURATION, MAX_PREPAID_FEE_PERCENT));
 
         // Get the amount of additional fee to take for the revnet issuing the loan.
         uint256 sourceFeeAmount = JBFees.feeAmountFrom({amount: amount, feePercent: prepaidFeePercent});
@@ -547,7 +574,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         returns (uint256 reallocatedLoanId, uint256 newLoanId, REVLoan memory reallocatedLoan, REVLoan memory newLoan)
     {
         // Make sure only the loan's owner can manage it.
-        if (_ownerOf(loanId) != _msgSender()) revert REVLoans_Unauthorized();
+        if (_ownerOf(loanId) != _msgSender()) revert REVLoans_Unauthorized(_msgSender(), _ownerOf(loanId));
 
         // Make sure there is an amount being borrowed.
         if (amount == 0) revert REVLoans_AmountNotSpecified();
@@ -592,17 +619,28 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         returns (uint256, REVLoan memory)
     {
         // Make sure only the loan's owner can manage it.
-        if (_ownerOf(loanId) != _msgSender()) revert REVLoans_Unauthorized();
+        if (_ownerOf(loanId) != _msgSender()) revert REVLoans_Unauthorized(_msgSender(), _ownerOf(loanId));
 
         // Keep a reference to the fee being iterated on.
         REVLoan storage loan = _loanOf[loanId];
 
-        if (collateralToReturn > loan.collateral) revert REVLoans_CollateralExceedsLoan();
+        if (collateralToReturn > loan.collateral) {
+            revert REVLoans_CollateralExceedsLoan(collateralToReturn, loan.collateral);
+        }
 
         // Accept the funds that'll be used to pay off loans.
         amount = _acceptFundsFor({token: loan.source.token, amount: amount, allowance: allowance});
 
         return _repayLoan(loanId, loan, amount, collateralToReturn, beneficiary);
+    }
+
+    /// @notice Sets the address of the resolver used to retrieve the tokenURI of loans.
+    /// @param resolver The address of the new resolver.
+    function setTokenUriResolver(IJBTokenUriResolver resolver) external override onlyOwner {
+        // Store the new resolver.
+        tokenUriResolver = resolver;
+
+        emit SetTokenUriResolver({resolver: resolver, caller: _msgSender()});
     }
 
     //*********************************************************************//
@@ -672,7 +710,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         }
 
         // Get the amount of additional fee to take for REV.
-        uint256 revFeeAmount = JBFees.feeAmountFrom({amount: amount, feePercent: REV_PREPAID_FEE});
+        uint256 revFeeAmount = JBFees.feeAmountFrom({amount: amount, feePercent: REV_PREPAID_FEE_PERCENT});
 
         // The amount to pay as a fee.
         uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? revFeeAmount : 0;
@@ -843,7 +881,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, ReentrancyGuard {
         if (allowance.amount != 0) {
             // Make sure the permit allowance is enough for this payment. If not we revert early.
             if (allowance.amount < amount) {
-                revert REVLoans_PermitAllowanceNotEnough();
+                revert REVLoans_PermitAllowanceNotEnough(allowance.amount, amount);
             }
 
             // Keep a reference to the permit rules.

@@ -292,7 +292,13 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER
         );
 
-        LOANS_CONTRACT = new REVLoans(jbProjects(), FEE_PROJECT_ID, permit2(), address(this));
+        LOANS_CONTRACT = new REVLoans({
+            projects: jbProjects(),
+            revId: FEE_PROJECT_ID,
+            owner: address(this),
+            permit2: permit2(),
+            trustedForwarder: address(this)
+        });
 
         // Approve the basic deployer to configure the project.
         vm.prank(address(multisig()));
