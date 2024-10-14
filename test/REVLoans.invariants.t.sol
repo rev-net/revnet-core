@@ -82,11 +82,13 @@ contract REVLoansCallHandler is JBTest {
 
         vm.deal(USER, payAmount);
 
-        uint256 receivedTokens = TERMINAL.pay{value: payAmount}(REVNET_ID, JBConstants.NATIVE_TOKEN, 0, USER, 0, "", "");
+        uint256 receivedTokens = TERMINAL.pay{value: payAmount}(REVNET_ID, JBConstants.NATIVE_TOKEN, 0, USER, 0, "",
+"");
         uint256 borrowable =
             LOANS.borrowableAmountFrom(REVNET_ID, receivedTokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
 
-        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
+        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save
+time.
         mockExpect(
             address(PERMS),
             abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS), USER, 2, 10, true, true)),
