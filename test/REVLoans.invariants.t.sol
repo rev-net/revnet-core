@@ -120,8 +120,10 @@ contract REVLoansCallHandler is JBTest {
         REVLoan memory latestLoan = LOANS.loanOf(id);
 
         // skip if we don't find the loan
-        try IERC721(address(LOANS)).ownerOf(id) {
-        } catch { return; }
+        try IERC721(address(LOANS)).ownerOf(id) {}
+        catch {
+            return;
+        }
 
         // skip if we don't find a loan
         if (latestLoan.amount == 0) return;
@@ -167,11 +169,12 @@ contract REVLoansCallHandler is JBTest {
         JBSingleAllowance memory allowance;
 
         vm.deal(USER, type(uint256).max);
-        LOANS.repayLoan{value: amountPaidDown}(id, amountPaidDown, collateralReturned, payable(USER), allowance);
+        (, REVLoan memory adjustedOrNewLoan) =
+            LOANS.repayLoan{value: amountPaidDown}(id, amountPaidDown, collateralReturned, payable(USER), allowance);
 
         COLLATERAL_RETURNED += collateralReturned;
         COLLATERAL_SUM -= collateralReturned;
-        if (BORROWED_SUM >= amountDiff) BORROWED_SUM -= amountDiff;
+        if (BORROWED_SUM >= amountDiff) BORROWED_SUM -= (latestLoan.amount - adjustedOrNewLoan.amount);
     }
 
     function reallocateCollateralFromLoan(uint16 collateralPercent, uint256 amountToPay) public virtual useActor {
@@ -190,8 +193,10 @@ contract REVLoansCallHandler is JBTest {
         // get the loan ID
         uint256 id = (REVNET_ID * 1_000_000_000_000) + RUNS;
 
-        try IERC721(address(LOANS)).ownerOf(id) {
-        } catch { return; }
+        try IERC721(address(LOANS)).ownerOf(id) {}
+        catch {
+            return;
+        }
 
         REVLoan memory latestLoan = LOANS.loanOf(id);
 
@@ -205,9 +210,6 @@ contract REVLoansCallHandler is JBTest {
 
         // 0.0001-100% in token terms
         uint256 collateralToTransfer = mulDiv(latestLoan.collateral, collateralPercentToTransfer, denominator);
-
-        // not worth checking in the first run
-        /* if (collateralToTransfer >= latestLoan.collateral) collateralToTransfer = latestLoan.collateral - 1; */
 
         // get the new amount to borrow
         uint256 newAmountInFull = LOANS.borrowableAmountFrom(
@@ -537,7 +539,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         targetSelector(FuzzSelector({addr: address(PAY_HANDLER), selectors: selectors}));
     }
 
-    function invariant_B_User_Balance_And_Collateral() public {
+    function invariant_A_User_Balance_And_Collateral() public {
         IJBToken token = jbTokens().tokenOf(REVNET_ID);
 
         uint256 userTokenBalance = token.balanceOf(USER);
@@ -545,5 +547,29 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
 
         // Ensure REVLoans and our handler/user have the same provided collateral amounts.
         assertEq(PAY_HANDLER.COLLATERAL_SUM(), LOANS_CONTRACT.totalCollateralOf(REVNET_ID));
+    }
+
+    function invariant_B_TotalBorrowed() public {
+        uint256 expectedTotalBorrowed = PAY_HANDLER.BORROWED_SUM();
+
+        // Get the actual total borrowed amount from the contract
+        uint256 actualTotalBorrowed = _getTotalBorrowedFromContract(REVNET_ID);
+
+        // Assert that the expected and actual total borrowed amounts match
+        assertEq(actualTotalBorrowed, expectedTotalBorrowed, "Total borrowed amount mismatch");
+    }
+
+    function _calculateExpectedTotalBorrowed(uint256 _revnetId) internal view returns (uint256 totalBorrowed) {
+        // Access loan sources from the Loans contract
+        REVLoanSource[] memory sources = LOANS_CONTRACT.loanSourcesOf(_revnetId);
+
+        // Iterate through loan sources to calculate the total borrowed amount
+        for (uint256 i = 0; i < sources.length; i++) {
+            totalBorrowed += LOANS_CONTRACT.totalBorrowedFrom(_revnetId, sources[i].terminal, sources[i].token);
+        }
+    }
+
+    function _getTotalBorrowedFromContract(uint256 _revnetId) internal view returns (uint256) {
+        return LOANS_CONTRACT.totalBorrowedFrom(_revnetId, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
     }
 }
