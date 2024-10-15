@@ -59,6 +59,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
     error REVDeployer_CashOutDelayNotFinished();
     error REVDeployer_CashOutsCantBeTurnedOffCompletely();
+    error REVDeployer_RulesetDoesNotAllowDeployingSuckers();
     error REVDeployer_StageNotStarted();
     error REVDeployer_StagesRequired();
     error REVDeployer_StageTimesMustIncrease();
@@ -305,6 +306,16 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             includeRoot: false,
             includeWildcardProjectId: false
         });
+    }
+
+    /// @notice A flag indicating if the current ruleset allows deploying new suckers.
+    /// @param revnetId The ID of the revnet to check the ruleset of.
+    /// @return flag A flag indicating if the current ruleset allows deploying new suckers.
+    function currentRulesetAllowsDeployingSuckers(uint256 revnetId) public view returns (bool) {
+        // Check if the current ruleset allows deploying new suckers.
+        (, JBRulesetMetadata memory metadata) = CONTROLLER.currentRulesetOf(revnetId);
+        // Check the third bit, it indicates if the ruleset allows new suckers to be deployed.
+        return ((metadata.metadata >> 2) & 1) == 1;
     }
 
     /// @notice Indicates if this contract adheres to the specified interface.
@@ -713,6 +724,9 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         _checkIfIsSplitOperatorOf({revnetId: revnetId, operator: msg.sender});
 
         // Check if the current ruleset allows deploying new suckers.
+        if (!currentRulesetAllowsDeployingSuckers(revnetId)) {
+            revert REVDeployer_RulesetDoesNotAllowDeployingSuckers();
+        }
 
         // Deploy the suckers.
         suckers = _deploySuckersFor({

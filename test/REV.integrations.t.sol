@@ -112,7 +112,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
                 issuanceDecayFrequency: 90 days,
                 issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
                 cashOutTaxRate: 6000, // 0.6
-                extraMetadata: 0
+                extraMetadata: (1 << 5) // Enable adding new suckers.
             });
         }
 
