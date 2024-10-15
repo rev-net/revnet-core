@@ -377,7 +377,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     {
         ///
         percentOfCollateralToRemove = bound(percentOfCollateralToRemove, 0, 10_000);
-        prepaidFeePercent = bound(prepaidFeePercent, 0, 500);
+        prepaidFeePercent = bound(prepaidFeePercent, 25, 500);
         daysToWarp = bound(daysToWarp, 0, 3650);
 
         daysToWarp = daysToWarp * 1 days;
@@ -526,7 +526,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         vm.prank(USER);
         (,, REVLoan memory adjustedLoan, REVLoan memory newLoan) = LOANS_CONTRACT.reallocateCollateralFromLoan(
-            newLoanId, collateralToTransfer, sauce, newAmount, collateralToAdd, payable(USER), 0
+            newLoanId, collateralToTransfer, sauce, newAmount, collateralToAdd, payable(USER), 25
         );
 
         uint256 userBalanceAfter = USER.balance;
@@ -549,8 +549,8 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(newLoan.amount, newAmount); // Excess from reallocateCollateral
         assertEq(newLoan.collateral, collateralToTransfer); // Matches the amount transferred
         assertEq(newLoan.createdAt, block.timestamp);
-        assertEq(newLoan.prepaidFeePercent, 0); // Configured as zero in reallocateCollateral call
-        assertEq(newLoan.prepaidDuration, mulDiv(0, 3650 days, 500)); // Configured as zero in reallocateCollateral call
+        assertEq(newLoan.prepaidFeePercent, 25); // Configured as 25 (min) in reallocateCollateral call
+        assertEq(newLoan.prepaidDuration, mulDiv(25, 3650 days, 500)); // Configured as 25 in reallocateCollateral call
         assertEq(newLoan.source.token, JBConstants.NATIVE_TOKEN);
         assertEq(address(newLoan.source.terminal), address(jbMultiTerminal()));
     }
@@ -667,10 +667,10 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVNET_ID, collateralToTransfer, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        vm.expectRevert(REVLoans.REVLoans_Unauthorized.selector);
+        vm.expectPartialRevert(REVLoans.REVLoans_Unauthorized.selector);
         // notice no prank
         LOANS_CONTRACT.reallocateCollateralFromLoan(
-            newLoanId, collateralToTransfer, sauce, newAmount, collateralToAdd, payable(USER), 0
+            newLoanId, collateralToTransfer, sauce, newAmount, collateralToAdd, payable(USER), 25
         );
     }
 
@@ -810,7 +810,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     {
         payAmount = bound(payAmount, 1e18, 100e18);
         secondPayAmount = bound(secondPayAmount, 1e18, 10e18);
-        prepaidFeePercent = bound(prepaidFeePercent, 0, 500);
+        prepaidFeePercent = bound(prepaidFeePercent, 25, 500);
         daysToWarp = bound(daysToWarp, 0, 3650);
         daysToWarp = daysToWarp * 1 days;
         collateralPercentToTransfer = bound(collateralPercentToTransfer, 1, 1000);
@@ -857,7 +857,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         vm.prank(USER);
         LOANS_CONTRACT.reallocateCollateralFromLoan(
-            newLoanId, collateralToTransfer, sauce, newAmount, tokens2, payable(USER), 0
+            newLoanId, collateralToTransfer, sauce, newAmount, tokens2, payable(USER), 25
         );
 
         uint256 userBalanceAfter = USER.balance;
@@ -904,7 +904,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // Warp further than the loan liquidation duration to revert.
         vm.warp(block.timestamp + 3650 days);
-        vm.expectRevert(REVLoans.REVLoans_LoanExpired.selector);
+        vm.expectPartialRevert(REVLoans.REVLoans_LoanExpired.selector);
         LOANS_CONTRACT.determineSourceFeeAmount(loan, loan.amount);
     }
 
@@ -923,7 +923,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, 0, tokens, payable(USER), 100);
 
         vm.prank(USER);
-        vm.expectRevert(REVLoans.REVLoans_InvalidPrepaidFeePercent.selector);
+        vm.expectPartialRevert(REVLoans.REVLoans_InvalidPrepaidFeePercent.selector);
         LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, 1, tokens, payable(USER), 1_000_000);
     }
 
@@ -1150,7 +1150,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // call to pay-down the loan
         /* vm.prank(USER); */
-        vm.expectRevert(REVLoans.REVLoans_Unauthorized.selector);
+        vm.expectPartialRevert(REVLoans.REVLoans_Unauthorized.selector);
         LOANS_CONTRACT.repayLoan{value: 0}(loanId, 0, 0, payable(USER), allowance);
     }
 
@@ -1180,7 +1180,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // call to pay-down the loan
         vm.prank(USER);
-        vm.expectRevert(REVLoans.REVLoans_CollateralExceedsLoan.selector);
+        vm.expectPartialRevert(REVLoans.REVLoans_CollateralExceedsLoan.selector);
         LOANS_CONTRACT.repayLoan{value: 0}(
             // collateral exceeds with + 1
             loanId,

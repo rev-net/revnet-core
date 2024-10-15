@@ -76,19 +76,17 @@ contract REVLoansCallHandler is JBTest {
         vm.stopPrank();
     }
 
-    function payBorrow(uint256 amount, uint8 prepaid) public virtual useActor {
+    function payBorrow(uint256 amount, uint16 prepaid) public virtual useActor {
         uint256 payAmount = bound(amount, 1 ether, 10 ether);
-        uint256 prepaidFee = bound(uint256(prepaid), 0, 200);
+        uint256 prepaidFee = bound(uint256(prepaid), 25, 500);
 
         vm.deal(USER, payAmount);
 
-        uint256 receivedTokens = TERMINAL.pay{value: payAmount}(REVNET_ID, JBConstants.NATIVE_TOKEN, 0, USER, 0, "",
-"");
+        uint256 receivedTokens = TERMINAL.pay{value: payAmount}(REVNET_ID, JBConstants.NATIVE_TOKEN, 0, USER, 0, "", "");
         uint256 borrowable =
             LOANS.borrowableAmountFrom(REVNET_ID, receivedTokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
 
-        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save
-time.
+        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
         mockExpect(
             address(PERMS),
             abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS), USER, 2, 10, true, true)),
@@ -179,9 +177,17 @@ time.
         if (BORROWED_SUM >= amountDiff) BORROWED_SUM -= (latestLoan.amount - adjustedOrNewLoan.amount);
     }
 
-    function reallocateCollateralFromLoan(uint16 collateralPercent, uint256 amountToPay) public virtual useActor {
-        // used for percentage calculations
-        uint256 denominator = 10_000;
+    function reallocateCollateralFromLoan(
+        uint16 collateralPercent,
+        uint256 amountToPay,
+        uint16 prepaid
+    )
+        public
+        virtual
+        useActor
+    {
+        // used later for the new borrow
+        uint256 prepaidFeePercent = bound(uint256(prepaid), 25, 500);
 
         // Skip this if there are no loans to refinance
         if (RUNS == 0) {
@@ -211,7 +217,7 @@ time.
             TERMINAL.pay{value: amountToPay}(REVNET_ID, JBConstants.NATIVE_TOKEN, 0, USER, 0, "", "");
 
         // 0.0001-100% in token terms
-        uint256 collateralToTransfer = mulDiv(latestLoan.collateral, collateralPercentToTransfer, denominator);
+        uint256 collateralToTransfer = mulDiv(latestLoan.collateral, collateralPercentToTransfer, 10_000);
 
         // get the new amount to borrow
         uint256 newAmountInFull = LOANS.borrowableAmountFrom(
@@ -225,7 +231,7 @@ time.
             newAmountInFull,
             collateralToAdd,
             payable(USER),
-            0
+            prepaidFeePercent
         );
 
         COLLATERAL_SUM += collateralToAdd;
