@@ -511,6 +511,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             // If the loan has been paid back and there is still leftover collateral, return it to the owner.
             // slither-disable-next-line incorrect-equality
             if (loan.collateral > 0) {
+                // slither-disable-next-line incorrect-equality
                 if (loan.amount == 0) {
                     // Return the collateral to the owner.
                     _returnCollateralFrom({
