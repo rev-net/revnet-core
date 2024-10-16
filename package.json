@@ -14,14 +14,14 @@
         "artifacts": "source ./.env && npx sphinx artifacts --org-id 'my-org-id' --project-name 'revnet-core-testnet'"
     },
     "dependencies": {
-        "@bananapus/721-hook": "^0.0.23",
+        "@bananapus/721-hook": "^0.0.24",
         "@bananapus/buyback-hook": "^0.0.20",
-        "@bananapus/core": "^0.0.32",
+        "@bananapus/core": "^0.0.35",
         "@bananapus/ownable": "^0.0.7",
-        "@bananapus/permission-ids": "^0.0.12",
+        "@bananapus/permission-ids": "^0.0.15",
         "@bananapus/suckers": "^0.0.23",
-        "@bananapus/swap-terminal": "^0.0.20",
-        "@croptop/core": "^0.0.16",
+        "@bananapus/swap-terminal": "^0.0.21",
+        "@croptop/core": "^0.0.18",
         "@openzeppelin/contracts": "^5.0.2"
     },
     "devDependencies": {

@@ -17,6 +17,7 @@ import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol
 import {JBSuckerDeployerConfig} from "@bananapus/suckers/src/structs/JBSuckerDeployerConfig.sol";
 import {JBTokenMapping} from "@bananapus/suckers/src/structs/JBTokenMapping.sol";
 import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
+import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
 
 import {REVDeployer} from "./../src/REVDeployer.sol";
 import {REVAutoMint} from "../src/structs/REVAutoMint.sol";
@@ -134,7 +135,7 @@ contract DeployScript is Script, Sphinx {
         terminalConfigurations[0] =
             JBTerminalConfig({terminal: core.terminal, accountingContextsToAccept: accountingContextsToAccept});
         terminalConfigurations[1] = JBTerminalConfig({
-            terminal: swapTerminal.swap_terminal,
+            terminal: IJBTerminal(address(swapTerminal.swap_terminal)),
             accountingContextsToAccept: new JBAccountingContext[](0)
         });
 
@@ -157,7 +158,7 @@ contract DeployScript is Script, Sphinx {
                 issuanceDecayFrequency: 90 days,
                 issuanceDecayPercent: 380_000_000, // 38%
                 cashOutTaxRate: 3000, // 0.3
-                extraMetadata: 0
+                extraMetadata: 4 // Allow adding suckers.
             });
 
             mintConfs[0] = REVAutoMint({
@@ -174,7 +175,7 @@ contract DeployScript is Script, Sphinx {
                 issuanceDecayFrequency: 180 days,
                 issuanceDecayPercent: 380_000_000, // 30%
                 cashOutTaxRate: 3000, // 0.3
-                extraMetadata: 0
+                extraMetadata: 4 // Allow adding suckers.
             });
         }
 
@@ -186,7 +187,7 @@ contract DeployScript is Script, Sphinx {
             issuanceDecayFrequency: 0,
             issuanceDecayPercent: 0,
             cashOutTaxRate: 1000, // 0.1
-            extraMetadata: 0
+            extraMetadata: 4 // Allow adding suckers.
         });
 
         REVConfig memory revnetConfiguration;
@@ -202,8 +203,7 @@ contract DeployScript is Script, Sphinx {
                 splitOperator: OPERATOR,
                 stageConfigurations: stageConfigurations,
                 loanSources: _loanSources,
-                loans: address(_revloans),
-                allowCrosschainSuckerExtension: true
+                loans: address(_revloans)
             });
         }
 

@@ -474,7 +474,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         encodedConfiguration = abi.encode(
             configuration.baseCurrency,
             configuration.loans,
-            configuration.allowCrosschainSuckerExtension,
             configuration.description.name,
             configuration.description.ticker,
             configuration.description.salt
@@ -511,7 +510,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             metadata.baseCurrency = configuration.baseCurrency;
             metadata.allowOwnerMinting = true; // Allow this contract to auto-mint tokens as the revnet's owner.
             metadata.useDataHookForPay = true; // Call this contract's `beforePayRecordedWith(…)` callback on payments.
-            metadata.allowCrosschainSuckerExtension = configuration.allowCrosschainSuckerExtension;
             metadata.dataHook = address(this); // This contract is the data hook.
             metadata.metadata = stageConfiguration.extraMetadata;
 
