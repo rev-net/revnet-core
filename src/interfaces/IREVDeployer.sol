@@ -66,12 +66,12 @@ interface IREVDeployer {
     function HOOK_DEPLOYER() external view returns (IJB721TiersHookDeployer);
 
     function buybackHookOf(uint256 revnetId) external view returns (IJBRulesetDataHook);
-    function tiered721HookOf(uint256 revnetId) external view returns (IJB721TiersHook);
     function cashOutDelayOf(uint256 revnetId) external view returns (uint256);
-    function unrealizedAutoMintAmountOf(uint256 revnetId) external view returns (uint256);
-    function loansOf(uint256 revnetId) external view returns (address);
-    function isSplitOperatorOf(uint256 revnetId, address addr) external view returns (bool);
     function currentRulesetAllowsDeployingSuckers(uint256 revnetId) external view returns (bool);
+    function isSplitOperatorOf(uint256 revnetId, address addr) external view returns (bool);
+    function loansOf(uint256 revnetId) external view returns (address);
+    function tiered721HookOf(uint256 revnetId) external view returns (IJB721TiersHook);
+    function unrealizedAutoMintAmountOf(uint256 revnetId) external view returns (uint256);
 
     function deployFor(
         uint256 revnetId,
