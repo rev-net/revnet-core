@@ -8,6 +8,7 @@ import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
 import {IJBPayoutTerminal} from "@bananapus/core/src/interfaces/IJBPayoutTerminal.sol";
 import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
+import {IJBTokenUriResolver} from "@bananapus/core/src/interfaces/IJBTokenUriResolver.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
 import {JBSingleAllowance} from "@bananapus/core/src/structs/JBSingleAllowance.sol";
 
@@ -46,13 +47,15 @@ interface IREVLoans {
         uint256 removedCollateral,
         address caller
     );
+    event SetTokenUriResolver(IJBTokenUriResolver indexed resolver, address caller);
 
     function LOAN_LIQUIDATION_DURATION() external view returns (uint256);
-    function MAX_PREPAID_PERCENT() external view returns (uint256);
+    function MAX_PREPAID_FEE_PERCENT() external view returns (uint256);
     function PERMIT2() external view returns (IPermit2);
     function PROJECTS() external view returns (IJBProjects);
     function REV_ID() external view returns (uint256);
-    function REV_PREPAID_FEE() external view returns (uint256);
+    function REV_PREPAID_FEE_PERCENT() external view returns (uint256);
+    function SOURCE_MIN_PREPAID_FEE_PERCENT() external view returns (uint256);
 
     function borrowableAmountFrom(
         uint256 revnetId,
@@ -76,6 +79,7 @@ interface IREVLoans {
     function loanSourcesOf(uint256 revnetId) external view returns (REVLoanSource[] memory);
     function numberOfLoansFor(uint256 revnetId) external view returns (uint256);
     function revnetIdOfLoanWith(uint256 loanId) external view returns (uint256);
+    function tokenUriResolver() external view returns (IJBTokenUriResolver);
     function totalBorrowedFrom(
         uint256 revnetId,
         IJBPayoutTerminal terminal,
@@ -119,4 +123,5 @@ interface IREVLoans {
         external
         payable
         returns (uint256 reallocatedLoanId, uint256 newLoanId, REVLoan memory reallocatedLoan, REVLoan memory newLoan);
+    function setTokenUriResolver(IJBTokenUriResolver resolver) external;
 }

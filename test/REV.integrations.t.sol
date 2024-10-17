@@ -41,10 +41,10 @@ struct FeeProjectConfig {
 
 contract REVnet_Integrations is TestBaseWorkflow, JBTest {
     /// @notice the salts that are used to deploy the contracts.
-    bytes32 BASIC_DEPLOYER_SALT = "REVDeployer";
+    bytes32 REV_DEPLOYER_SALT = "REVDeployer";
     bytes32 ERC20_SALT = "REV_TOKEN";
 
-    REVDeployer BASIC_DEPLOYER;
+    REVDeployer REV_DEPLOYER;
     JB721TiersHook EXAMPLE_HOOK;
 
     /// @notice Deploys tiered ERC-721 hooks for revnets.
@@ -197,7 +197,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
 
         PUBLISHER = new CTPublisher(jbController(), jbPermissions(), FEE_PROJECT_ID, multisig());
 
-        BASIC_DEPLOYER = new REVDeployer{salt: BASIC_DEPLOYER_SALT}(
+        REV_DEPLOYER = new REVDeployer{salt: REV_DEPLOYER_SALT}(
             jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER
         );
 
@@ -205,7 +205,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
 
         // Approve the basic deployer to configure the project.
         vm.startPrank(address(multisig()));
-        jbProjects().approve(address(BASIC_DEPLOYER), FEE_PROJECT_ID);
+        jbProjects().approve(address(REV_DEPLOYER), FEE_PROJECT_ID);
         SUCKER_REGISTRY.allowSuckerDeployer(address(ARB_SUCKER_DEPLOYER));
 
         vm.stopPrank();
@@ -213,11 +213,8 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         // Build the config.
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
-        // Empty hook config.
-        REVDeploy721TiersHookConfig memory tiered721HookConfiguration;
-
         // Configure the project.
-        REVNET_ID = BASIC_DEPLOYER.deployFor({
+        REVNET_ID = REV_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
             configuration: feeProjectConfig.configuration,
             terminalConfigurations: feeProjectConfig.terminalConfigurations,
@@ -244,20 +241,20 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
 
         vm.warp(firstStageId + 720 days);
 
-        assertEq(perStageMintAmount, BASIC_DEPLOYER.unrealizedAutoMintAmountOf(REVNET_ID));
+        assertEq(perStageMintAmount, REV_DEPLOYER.unrealizedAutoMintAmountOf(REVNET_ID));
 
         vm.expectEmit();
         emit IREVDeployer.Mint(REVNET_ID, firstStageId + 1, multisig(), perStageMintAmount, address(this));
-        BASIC_DEPLOYER.autoMintFor(REVNET_ID, firstStageId + 1, multisig());
+        REV_DEPLOYER.autoMintFor(REVNET_ID, firstStageId + 1, multisig());
 
         assertEq(perStageMintAmount * 2, IJBToken(jbTokens().tokenOf(REVNET_ID)).balanceOf(multisig()));
     }
 
     function test_change_split_operator() public {
         vm.prank(multisig());
-        BASIC_DEPLOYER.setSplitOperatorOf(REVNET_ID, address(this));
+        REV_DEPLOYER.setSplitOperatorOf(REVNET_ID, address(this));
 
-        bool isNewOperator = BASIC_DEPLOYER.isSplitOperatorOf(REVNET_ID, address(this));
+        bool isNewOperator = REV_DEPLOYER.isSplitOperatorOf(REVNET_ID, address(this));
 
         assertEq(isNewOperator, true);
     }
@@ -283,7 +280,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         vm.chainId(42_161);
         vm.prank(multisig());
 
-        address[] memory suckers = BASIC_DEPLOYER.deploySuckersFor(REVNET_ID, ENCODED_CONFIG, revConfig);
+        address[] memory suckers = REV_DEPLOYER.deploySuckersFor(REVNET_ID, ENCODED_CONFIG, revConfig);
 
         // Ensure it's registered
         bool isSucker = SUCKER_REGISTRY.isSuckerOf(REVNET_ID, suckers[0]);

@@ -694,7 +694,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         returns (uint256)
     {
         // Deploy the revnet.
-        return _launchRevnetFor({
+        return _deployRevnetFor({
             revnetId: revnetId,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
@@ -762,7 +762,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         returns (uint256, IJB721TiersHook hook)
     {
         // Deploy the revnet with the specified tiered ERC-721 hook and croptop posting criteria.
-        (revnetId, hook) = _launch721RevnetFor({
+        (revnetId, hook) = _deploy721RevnetFor({
             revnetId: revnetId,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
@@ -846,37 +846,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         return true;
     }
 
-    /// @notice Deploy suckers for a revnet.
-    /// @param revnetId The ID of the revnet to deploy suckers for.
-    /// @param operator The address of the operator that can add new suckers in the future.
-    /// @param encodedConfiguration A byte-encoded representation of the revnet's configuration.
-    /// See `_makeRulesetConfigurations(…)` for encoding details. Clients can read the encoded configuration
-    /// from the `DeployRevnet` event emitted by this contract.
-    /// @param suckerDeploymentConfiguration The suckers to set up for the revnet.
-    function _deploySuckersFor(
-        uint256 revnetId,
-        address operator,
-        bytes memory encodedConfiguration,
-        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
-    )
-        internal
-        returns (address[] memory suckers)
-    {
-        // Compose the salt.
-        bytes32 salt = keccak256(abi.encode(operator, encodedConfiguration, suckerDeploymentConfiguration.salt));
-
-        emit DeploySuckers(revnetId, operator, salt, encodedConfiguration, suckerDeploymentConfiguration, msg.sender);
-
-        // Deploy the suckers.
-        // slither-disable-next-line unused-return
-        suckers = SUCKER_REGISTRY.deploySuckersFor({
-            projectId: revnetId,
-            salt: salt,
-            configurations: suckerDeploymentConfiguration.deployerConfigurations
-        });
-    }
-
-    /// @notice Launch a revnet which sells tiered ERC-721s and (optionally) allows croptop posts to its ERC-721 tiers.
+    /// @notice Deploy a revnet which sells tiered ERC-721s and (optionally) allows croptop posts to its ERC-721 tiers.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration Core revnet configuration. See `REVConfig`.
     /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and redemptions.
@@ -888,7 +858,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @param allowedPosts Restrictions on which croptop posts are allowed on the revnet's ERC-721 tiers.
     /// @return revnetId The ID of the newly created revnet.
     /// @return hook The address of the tiered ERC-721 hook that was deployed for the revnet.
-    function _launch721RevnetFor(
+    function _deploy721RevnetFor(
         uint256 revnetId,
         REVConfig calldata configuration,
         JBTerminalConfig[] calldata terminalConfigurations,
@@ -949,7 +919,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             });
         }
 
-        _launchRevnetFor({
+        _deployRevnetFor({
             revnetId: originalRevnetId,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
@@ -960,7 +930,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         return (revnetId, hook);
     }
 
-    /// @notice Launch a revnet, or convert an existing Juicebox project into a revnet.
+    /// @notice Deploy a revnet, or convert an existing Juicebox project into a revnet.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration Core revnet configuration. See `REVConfig`.
     /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and redemptions.
@@ -969,7 +939,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @param suckerDeploymentConfiguration The suckers to set up for the revnet. Suckers facilitate cross-chain
     /// token transfers between peer revnets on different networks.
     /// @return revnetId The ID of the newly created revnet.
-    function _launchRevnetFor(
+    function _deployRevnetFor(
         uint256 revnetId,
         REVConfig calldata configuration,
         JBTerminalConfig[] calldata terminalConfigurations,
@@ -1074,6 +1044,36 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         );
 
         return revnetId;
+    }
+
+    /// @notice Deploy suckers for a revnet.
+    /// @param revnetId The ID of the revnet to deploy suckers for.
+    /// @param operator The address of the operator that can add new suckers in the future.
+    /// @param encodedConfiguration A byte-encoded representation of the revnet's configuration.
+    /// See `_makeRulesetConfigurations(…)` for encoding details. Clients can read the encoded configuration
+    /// from the `DeployRevnet` event emitted by this contract.
+    /// @param suckerDeploymentConfiguration The suckers to set up for the revnet.
+    function _deploySuckersFor(
+        uint256 revnetId,
+        address operator,
+        bytes memory encodedConfiguration,
+        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
+    )
+        internal
+        returns (address[] memory suckers)
+    {
+        // Compose the salt.
+        bytes32 salt = keccak256(abi.encode(operator, encodedConfiguration, suckerDeploymentConfiguration.salt));
+
+        emit DeploySuckers(revnetId, operator, salt, encodedConfiguration, suckerDeploymentConfiguration, msg.sender);
+
+        // Deploy the suckers.
+        // slither-disable-next-line unused-return
+        suckers = SUCKER_REGISTRY.deploySuckersFor({
+            projectId: revnetId,
+            salt: salt,
+            configurations: suckerDeploymentConfiguration.deployerConfigurations
+        });
     }
 
     /// @notice Mints a revnet's tokens.

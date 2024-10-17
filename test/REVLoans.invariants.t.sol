@@ -40,30 +40,32 @@ struct FeeProjectConfig {
     REVSuckerDeploymentConfig suckerDeploymentConfiguration;
 }
 
-contract REVLoansPayHandler is JBTest {
+contract REVLoansCallHandler is JBTest {
     uint256 public COLLATERAL_SUM;
     uint256 public COLLATERAL_RETURNED;
     uint256 public BORROWED_SUM;
     uint256 public RUNS;
     uint256 REVNET_ID;
+    uint256 LAST_LOAN_MODIFIED;
     address USER;
-
-    mapping(uint256 loanId => bool wasPaidOff) public wasLoanPaidOff;
 
     IJBMultiTerminal TERMINAL;
     IREVLoans LOANS;
     IJBPermissions PERMS;
+    IJBTokens TOKENS;
 
     constructor(
         IJBMultiTerminal terminal,
         IREVLoans loans,
         IJBPermissions permissions,
+        IJBTokens tokens,
         uint256 revnetId,
         address beneficiary
     ) {
         TERMINAL = terminal;
         LOANS = loans;
         PERMS = permissions;
+        TOKENS = tokens;
         REVNET_ID = revnetId;
         USER = beneficiary;
     }
@@ -74,9 +76,9 @@ contract REVLoansPayHandler is JBTest {
         vm.stopPrank();
     }
 
-    function payBorrow(uint256 amount) public virtual useActor {
+    function payBorrow(uint256 amount, uint16 prepaid) public virtual useActor {
         uint256 payAmount = bound(amount, 1 ether, 10 ether);
-        uint256 prepaidFee = bound(amount, 10, 200);
+        uint256 prepaidFee = bound(uint256(prepaid), 25, 500);
 
         vm.deal(USER, payAmount);
 
@@ -92,7 +94,7 @@ contract REVLoansPayHandler is JBTest {
         );
 
         REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: TERMINAL});
-        (uint256 loanId, REVLoan memory lastLoan) =
+        (, REVLoan memory lastLoan) =
             LOANS.borrowFrom(REVNET_ID, sauce, borrowable, receivedTokens, payable(USER), prepaidFee);
 
         COLLATERAL_SUM += receivedTokens;
@@ -100,15 +102,15 @@ contract REVLoansPayHandler is JBTest {
         ++RUNS;
     }
 
-    function repayLoan(uint256 percentToPayDown, uint256 daysToWarp) public virtual useActor {
+    function repayLoan(uint16 percentToPay, uint8 daysToFastForward) public virtual useActor {
         // Skip this if there are no loans to pay down
         if (RUNS == 0) {
             return;
         }
 
         uint256 denominator = 10_000;
-        percentToPayDown = bound(percentToPayDown, 1000, denominator);
-        daysToWarp = bound(daysToWarp, 10, 100);
+        uint256 percentToPayDown = bound(percentToPay, 1000, denominator - 1);
+        uint256 daysToWarp = bound(daysToFastForward, 10, 100);
         daysToWarp = daysToWarp * 1 days;
 
         vm.warp(block.timestamp + daysToWarp);
@@ -117,6 +119,13 @@ contract REVLoansPayHandler is JBTest {
         uint256 id = (REVNET_ID * 1_000_000_000_000) + RUNS;
         REVLoan memory latestLoan = LOANS.loanOf(id);
 
+        // skip if we don't find the loan
+        try IERC721(address(LOANS)).ownerOf(id) {}
+        catch {
+            return;
+        }
+
+        // skip if we don't find a loan
         if (latestLoan.amount == 0) return;
 
         // calc percentage to pay down
@@ -160,25 +169,88 @@ contract REVLoansPayHandler is JBTest {
         JBSingleAllowance memory allowance;
 
         vm.deal(USER, type(uint256).max);
-        LOANS.repayLoan{value: amountPaidDown}(id, amountPaidDown, collateralReturned, payable(USER), allowance);
-
-        wasLoanPaidOff[id] = true;
+        (, REVLoan memory adjustedOrNewLoan) =
+            LOANS.repayLoan{value: amountPaidDown}(id, amountPaidDown, collateralReturned, payable(USER), allowance);
 
         COLLATERAL_RETURNED += collateralReturned;
         COLLATERAL_SUM -= collateralReturned;
-        if (BORROWED_SUM >= amountDiff) BORROWED_SUM -= amountDiff;
+        if (BORROWED_SUM >= amountDiff) BORROWED_SUM -= (latestLoan.amount - adjustedOrNewLoan.amount);
+    }
+
+    function reallocateCollateralFromLoan(
+        uint16 collateralPercent,
+        uint256 amountToPay,
+        uint16 prepaid
+    )
+        public
+        virtual
+        useActor
+    {
+        // used later for the new borrow
+        uint256 prepaidFeePercent = bound(uint256(prepaid), 25, 500);
+
+        // Skip this if there are no loans to refinance
+        if (RUNS == 0) {
+            return;
+        }
+
+        // 0.0001-99%
+        uint256 collateralPercentToTransfer = bound(uint256(collateralPercent), 1, 9999);
+        amountToPay = bound(amountToPay, 10 ether, 1000e18);
+
+        // get the loan ID
+        uint256 id = (REVNET_ID * 1_000_000_000_000) + RUNS;
+
+        try IERC721(address(LOANS)).ownerOf(id) {}
+        catch {
+            return;
+        }
+
+        REVLoan memory latestLoan = LOANS.loanOf(id);
+
+        // skip if we don't find a loan
+        if (latestLoan.amount == 0) return;
+
+        // pay in
+        vm.deal(USER, amountToPay);
+        uint256 collateralToAdd =
+            TERMINAL.pay{value: amountToPay}(REVNET_ID, JBConstants.NATIVE_TOKEN, 0, USER, 0, "", "");
+
+        // 0.0001-100% in token terms
+        uint256 collateralToTransfer = mulDiv(latestLoan.collateral, collateralPercentToTransfer, 10_000);
+
+        // get the new amount to borrow
+        uint256 newAmountInFull = LOANS.borrowableAmountFrom(
+            REVNET_ID, collateralToTransfer + collateralToAdd, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+        );
+
+        (,,, REVLoan memory newLoan) = LOANS.reallocateCollateralFromLoan(
+            id,
+            collateralToTransfer,
+            REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: TERMINAL}),
+            newAmountInFull,
+            collateralToAdd,
+            payable(USER),
+            prepaidFeePercent
+        );
+
+        COLLATERAL_SUM += collateralToAdd;
+        BORROWED_SUM += (newLoan.amount);
     }
 }
 
 contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
+    // A library that parses the packed ruleset metadata into a friendlier format.
+    using JBRulesetMetadataResolver for JBRuleset;
+
     /// @notice the salts that are used to deploy the contracts.
-    bytes32 BASIC_DEPLOYER_SALT = "REVDeployer";
+    bytes32 REV_DEPLOYER_SALT = "REVDeployer";
     bytes32 ERC20_SALT = "REV_TOKEN";
 
     // Handlers
-    REVLoansPayHandler PAY_HANDLER;
+    REVLoansCallHandler PAY_HANDLER;
 
-    REVDeployer BASIC_DEPLOYER;
+    REVDeployer REV_DEPLOYER;
     JB721TiersHook EXAMPLE_HOOK;
 
     /// @notice Deploys tiered ERC-721 hooks for revnets.
@@ -423,21 +495,27 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
 
         PUBLISHER = new CTPublisher(jbController(), jbPermissions(), FEE_PROJECT_ID, multisig());
 
-        BASIC_DEPLOYER = new REVDeployer{salt: BASIC_DEPLOYER_SALT}(
+        REV_DEPLOYER = new REVDeployer{salt: REV_DEPLOYER_SALT}(
             jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER
         );
 
-        LOANS_CONTRACT = new REVLoans(jbProjects(), FEE_PROJECT_ID, permit2(), address(this));
+        LOANS_CONTRACT = new REVLoans({
+            projects: jbProjects(),
+            revId: FEE_PROJECT_ID,
+            owner: address(this),
+            permit2: permit2(),
+            trustedForwarder: address(this)
+        });
 
         // Approve the basic deployer to configure the project.
         vm.prank(address(multisig()));
-        jbProjects().approve(address(BASIC_DEPLOYER), FEE_PROJECT_ID);
+        jbProjects().approve(address(REV_DEPLOYER), FEE_PROJECT_ID);
 
         // Build the config.
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
         // Configure the project.
-        REVNET_ID = BASIC_DEPLOYER.deployFor({
+        REVNET_ID = REV_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
             configuration: feeProjectConfig.configuration,
             terminalConfigurations: feeProjectConfig.terminalConfigurations,
@@ -449,7 +527,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         FeeProjectConfig memory fee2Config = getSecondProjectConfig();
 
         // Configure the second project.
-        REVNET_ID = BASIC_DEPLOYER.deployFor({
+        REVNET_ID = REV_DEPLOYER.deployFor({
             revnetId: 0, // Zero to deploy a new revnet
             configuration: fee2Config.configuration,
             terminalConfigurations: fee2Config.terminalConfigurations,
@@ -460,51 +538,50 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         INITIAL_TIMESTAMP = block.timestamp;
 
         // Deploy handlers and assign them as targets
-        PAY_HANDLER = new REVLoansPayHandler(jbMultiTerminal(), LOANS_CONTRACT, jbPermissions(), REVNET_ID, USER);
+        PAY_HANDLER =
+            new REVLoansCallHandler(jbMultiTerminal(), LOANS_CONTRACT, jbPermissions(), jbTokens(), REVNET_ID, USER);
 
         // Calls to perform via the handler
-        bytes4[] memory selectors = new bytes4[](2);
-        selectors[0] = REVLoansPayHandler.payBorrow.selector;
-        selectors[1] = REVLoansPayHandler.repayLoan.selector;
+        bytes4[] memory selectors = new bytes4[](3);
+        selectors[0] = REVLoansCallHandler.payBorrow.selector;
+        selectors[1] = REVLoansCallHandler.repayLoan.selector;
+        selectors[2] = REVLoansCallHandler.reallocateCollateralFromLoan.selector;
 
         targetContract(address(PAY_HANDLER));
         targetSelector(FuzzSelector({addr: address(PAY_HANDLER), selectors: selectors}));
-
-        // targetSender(USER);
-
-        vm.deal(USER, type(uint256).max);
     }
 
-    function invariant_A() public {
-        // token details
+    function invariant_A_User_Balance_And_Collateral() public {
         IJBToken token = jbTokens().tokenOf(REVNET_ID);
+
         uint256 userTokenBalance = token.balanceOf(USER);
-
         if (PAY_HANDLER.RUNS() > 0) assertGe(userTokenBalance, PAY_HANDLER.COLLATERAL_RETURNED());
-
-        // Sum of all loans (tracked in handler) ~eq (1% variance) total borrowed in REVLoans.
-        uint256 totalBorrowed = LOANS_CONTRACT.totalBorrowedFrom(REVNET_ID, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
-        assertApproxEqRel(totalBorrowed, PAY_HANDLER.BORROWED_SUM(), 1e16);
-
-        // TODO: Why are these not congruent? Source fee amount? Terminal fee? Gas isn't a factor here.
-        /* assertEq(totalBorrowed, USER.balance); */
 
         // Ensure REVLoans and our handler/user have the same provided collateral amounts.
         assertEq(PAY_HANDLER.COLLATERAL_SUM(), LOANS_CONTRACT.totalCollateralOf(REVNET_ID));
     }
 
-    /* function invariant_B() public {
-        // WIP- this maxLoanable was incorrect
+    function invariant_B_TotalBorrowed() public {
+        uint256 expectedTotalBorrowed = PAY_HANDLER.BORROWED_SUM();
 
-        uint256 totalCollateral = PAY_HANDLER.COLLATERAL_SUM();
-        uint256 redeemRate = INITIAL_TIMESTAMP + 365 days > block.timestamp ? JBConstants.MAX_REDEMPTION_RATE :
-        JBConstants.MAX_REDEMPTION_RATE - 6000;
-        uint256 unrealizedAutoMint = BASIC_DEPLOYER.unrealizedAutoMintAmountOf(REVNET_ID);
-    uint256 surplus = jbMultiTerminal().currentSurplusOf(REVNET_ID, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        // Get the actual total borrowed amount from the contract
+        uint256 actualTotalBorrowed = _getTotalBorrowedFromContract(REVNET_ID);
 
-    uint256 maxLoanable = (totalCollateral * (JBConstants.MAX_REDEMPTION_RATE - redeemRate)) + unrealizedAutoMint +
-        surplus;
+        // Assert that the expected and actual total borrowed amounts match
+        assertEq(actualTotalBorrowed, expectedTotalBorrowed, "Total borrowed amount mismatch");
+    }
 
-        assertLe(totalBorrowed, maxLoanable);
-    } */
+    function _calculateExpectedTotalBorrowed(uint256 _revnetId) internal view returns (uint256 totalBorrowed) {
+        // Access loan sources from the Loans contract
+        REVLoanSource[] memory sources = LOANS_CONTRACT.loanSourcesOf(_revnetId);
+
+        // Iterate through loan sources to calculate the total borrowed amount
+        for (uint256 i = 0; i < sources.length; i++) {
+            totalBorrowed += LOANS_CONTRACT.totalBorrowedFrom(_revnetId, sources[i].terminal, sources[i].token);
+        }
+    }
+
+    function _getTotalBorrowedFromContract(uint256 _revnetId) internal view returns (uint256) {
+        return LOANS_CONTRACT.totalBorrowedFrom(_revnetId, jbMultiTerminal(), JBConstants.NATIVE_TOKEN);
+    }
 }

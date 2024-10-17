@@ -39,10 +39,10 @@ struct FeeProjectConfig {
 
 contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
     /// @notice the salts that are used to deploy the contracts.
-    bytes32 BASIC_DEPLOYER_SALT = "REVDeployer";
+    bytes32 REV_DEPLOYER_SALT = "REVDeployer";
     bytes32 ERC20_SALT = "REV_TOKEN";
 
-    REVDeployer BASIC_DEPLOYER;
+    REVDeployer REV_DEPLOYER;
     JB721TiersHook EXAMPLE_HOOK;
 
     /// @notice Deploys tiered ERC-721 hooks for revnets.
@@ -284,24 +284,27 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
 
         PUBLISHER = new CTPublisher(jbController(), jbPermissions(), FEE_PROJECT_ID, multisig());
 
-        BASIC_DEPLOYER = new REVDeployer{salt: BASIC_DEPLOYER_SALT}(
+        REV_DEPLOYER = new REVDeployer{salt: REV_DEPLOYER_SALT}(
             jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER
         );
 
-        LOANS_CONTRACT = new REVLoans(jbProjects(), FEE_PROJECT_ID, permit2(), address(this));
+        LOANS_CONTRACT = new REVLoans({
+            projects: jbProjects(),
+            revId: FEE_PROJECT_ID,
+            owner: address(this),
+            permit2: permit2(),
+            trustedForwarder: address(this)
+        });
 
         // Approve the basic deployer to configure the project.
         vm.prank(address(multisig()));
-        jbProjects().approve(address(BASIC_DEPLOYER), FEE_PROJECT_ID);
+        jbProjects().approve(address(REV_DEPLOYER), FEE_PROJECT_ID);
 
         // Build the config.
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
-        // Empty hook config.
-        REVDeploy721TiersHookConfig memory tiered721HookConfiguration;
-
         // Configure the project.
-        REVNET_ID = BASIC_DEPLOYER.deployFor({
+        REVNET_ID = REV_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
             configuration: feeProjectConfig.configuration,
             terminalConfigurations: feeProjectConfig.terminalConfigurations,
@@ -313,7 +316,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
         FeeProjectConfig memory fee2Config = getSecondProjectConfig();
 
         // Configure the project.
-        REVNET_ID = BASIC_DEPLOYER.deployFor({
+        REVNET_ID = REV_DEPLOYER.deployFor({
             revnetId: 0, // Zero to deploy a new revnet
             configuration: fee2Config.configuration,
             terminalConfigurations: fee2Config.terminalConfigurations,
@@ -333,7 +336,9 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
             LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
         assertGt(loanable, 0);
 
-        vm.expectRevert(JBTerminalStore.JBTerminalStore_InadequateControllerAllowance.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(JBTerminalStore.JBTerminalStore_InadequateControllerAllowance.selector, loanable, 0)
+        );
 
         REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
