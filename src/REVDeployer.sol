@@ -908,7 +908,11 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
         // Deploy the tiered ERC-721 hook contract.
         // slither-disable-next-line reentrancy-benign
-        hook = HOOK_DEPLOYER.deployHookFor(revnetId, tiered721HookConfiguration.baseline721HookConfiguration);
+        hook = HOOK_DEPLOYER.deployHookFor({
+            projectId: revnetId,
+            deployTiersHookConfig: tiered721HookConfiguration.baseline721HookConfiguration,
+            salt: tiered721HookConfiguration.salt
+        });
 
         // Store the tiered ERC-721 hook.
         tiered721HookOf[revnetId] = hook;
