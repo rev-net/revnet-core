@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {JBDeploy721TiersHookConfig} from "@bananapus/721-hook/src/structs/JBDeploy721TiersHookConfig.sol";
 
 /// @custom:member baseline721HookConfiguration The baseline config.
+/// @custom:member salt The salt to base the collection's address on.
 /// @custom:member splitOperatorCanAdjustTiers A flag indicating if the revnet's split operator can add tiers and remove
 /// tiers if
 /// the tier is allowed to be removed
@@ -16,6 +17,7 @@ import {JBDeploy721TiersHookConfig} from "@bananapus/721-hook/src/structs/JBDepl
 /// discount of a tier.
 struct REVDeploy721TiersHookConfig {
     JBDeploy721TiersHookConfig baseline721HookConfiguration;
+    bytes32 salt;
     bool splitOperatorCanAdjustTiers;
     bool splitOperatorCanUpdateMetadata;
     bool splitOperatorCanMint;

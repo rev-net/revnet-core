@@ -59,6 +59,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
     error REVDeployer_CashOutDelayNotFinished();
     error REVDeployer_CashOutsCantBeTurnedOffCompletely();
+    error REVDeployer_RulesetDoesNotAllowDeployingSuckers();
     error REVDeployer_StageNotStarted();
     error REVDeployer_StagesRequired();
     error REVDeployer_StageTimesMustIncrease();
@@ -292,6 +293,17 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     // -------------------------- public views --------------------------- //
     //*********************************************************************//
 
+    /// @notice A flag indicating if the current ruleset allows deploying new suckers.
+    /// @param revnetId The ID of the revnet to check the ruleset of.
+    /// @return flag A flag indicating if the current ruleset allows deploying new suckers.
+    function allowsDeployingSuckersInCurrentRulesetOf(uint256 revnetId) public view returns (bool) {
+        // Check if the current ruleset allows deploying new suckers.
+        // slither-disable-next-line unused-return
+        (, JBRulesetMetadata memory metadata) = CONTROLLER.currentRulesetOf(revnetId);
+        // Check the third bit, it indicates if the ruleset allows new suckers to be deployed.
+        return ((metadata.metadata >> 2) & 1) == 1;
+    }
+
     /// @notice A flag indicating whether an address is a revnet's split operator.
     /// @param revnetId The ID of the revnet.
     /// @param addr The address to check.
@@ -329,7 +341,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @notice Encodes an auto-mint.
     /// @param autoMint The auto-mint to encode.
     /// @return encodedAutoMint The encoded auto-mint.
-    function _encodedAutoMint(REVAutoMint memory autoMint) private pure returns (bytes memory) {
+    function _encodedAutoMint(REVAutoMint calldata autoMint) private pure returns (bytes memory) {
         return abi.encode(autoMint.chainId, autoMint.beneficiary, autoMint.count);
     }
 
@@ -338,7 +350,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @param stageNumber The stage's number/ID.
     /// @return encodedConfiguration The encoded stage.
     function _encodedStageConfig(
-        REVStageConfig memory stageConfiguration,
+        REVStageConfig calldata stageConfiguration,
         uint256 stageNumber
     )
         internal
@@ -381,7 +393,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @dev Returns an unlimited surplus allowance for each token which can be loaned out.
     /// @param configuration The revnet's configuration.
     /// @return fundAccessLimitGroups The fund access limit groups for the loans.
-    function _makeLoanFundAccessLimits(REVConfig memory configuration)
+    function _makeLoanFundAccessLimits(REVConfig calldata configuration)
         internal
         pure
         returns (JBFundAccessLimitGroup[] memory fundAccessLimitGroups)
@@ -391,7 +403,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
         // Keep a reference to the loan source to iterate on.
         // Loans are sourced from a token accepted by one of the revnet's terminals.
-        REVLoanSource memory loanSource;
+        REVLoanSource calldata loanSource;
 
         // Set up an unlimited allowance for the loan contract to use.
         JBCurrencyAmount[] memory loanAllowances = new JBCurrencyAmount[](1);
@@ -445,7 +457,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @return rulesetConfigurations A list of ruleset configurations defined by the stages.
     /// @return encodedConfiguration A byte-encoded representation of the revnet's configuration. Used for sucker
     /// deployment salts.
-    function _makeRulesetConfigurations(REVConfig memory configuration)
+    function _makeRulesetConfigurations(REVConfig calldata configuration)
         internal
         view
         returns (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration)
@@ -463,14 +475,13 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         encodedConfiguration = abi.encode(
             configuration.baseCurrency,
             configuration.loans,
-            configuration.allowCrosschainSuckerExtension,
             configuration.description.name,
             configuration.description.ticker,
             configuration.description.salt
         );
 
         // Keep a reference to the revnet stage being iterated on.
-        REVStageConfig memory stageConfiguration;
+        REVStageConfig calldata stageConfiguration;
 
         // Initialize fund access limit groups for the loan contract to use.
         JBFundAccessLimitGroup[] memory fundAccessLimitGroups = _makeLoanFundAccessLimits(configuration);
@@ -500,7 +511,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             metadata.baseCurrency = configuration.baseCurrency;
             metadata.allowOwnerMinting = true; // Allow this contract to auto-mint tokens as the revnet's owner.
             metadata.useDataHookForPay = true; // Call this contract's `beforePayRecordedWith(…)` callback on payments.
-            metadata.allowCrosschainSuckerExtension = configuration.allowCrosschainSuckerExtension;
             metadata.dataHook = address(this); // This contract is the data hook.
             metadata.metadata = stageConfiguration.extraMetadata;
 
@@ -598,7 +608,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
     /// @notice Processes the cashout fee from a redemption.
     /// @param context Redemption context passed in by the terminal.
-    function afterRedeemRecordedWith(JBAfterRedeemRecordedContext memory context) external payable {
+    function afterRedeemRecordedWith(JBAfterRedeemRecordedContext calldata context) external payable {
         // Only the revnet's payment terminals can access this function.
         if (!DIRECTORY.isTerminalOf(context.projectId, IJBTerminal(msg.sender))) {
             revert REVDeployer_Unauthorized();
@@ -674,10 +684,10 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @return revnetId The ID of the newly created revnet.
     function deployFor(
         uint256 revnetId,
-        REVConfig memory configuration,
-        JBTerminalConfig[] memory terminalConfigurations,
-        REVBuybackHookConfig memory buybackHookConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+        REVConfig calldata configuration,
+        JBTerminalConfig[] calldata terminalConfigurations,
+        REVBuybackHookConfig calldata buybackHookConfiguration,
+        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
     )
         external
         override
@@ -702,8 +712,8 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @param suckerDeploymentConfiguration The suckers to set up for the revnet.
     function deploySuckersFor(
         uint256 revnetId,
-        bytes memory encodedConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+        bytes calldata encodedConfiguration,
+        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
     )
         external
         override
@@ -711,6 +721,11 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     {
         // Make sure the caller is the revnet's split operator.
         _checkIfIsSplitOperatorOf({revnetId: revnetId, operator: msg.sender});
+
+        // Check if the current ruleset allows deploying new suckers.
+        if (!allowsDeployingSuckersInCurrentRulesetOf(revnetId)) {
+            revert REVDeployer_RulesetDoesNotAllowDeployingSuckers();
+        }
 
         // Deploy the suckers.
         suckers = _deploySuckersFor({
@@ -735,12 +750,12 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @return hook The address of the tiered ERC-721 hook that was deployed for the revnet.
     function deployWith721sFor(
         uint256 revnetId,
-        REVConfig memory configuration,
-        JBTerminalConfig[] memory terminalConfigurations,
-        REVBuybackHookConfig memory buybackHookConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration,
-        REVDeploy721TiersHookConfig memory tiered721HookConfiguration,
-        REVCroptopAllowedPost[] memory allowedPosts
+        REVConfig calldata configuration,
+        JBTerminalConfig[] calldata terminalConfigurations,
+        REVBuybackHookConfig calldata buybackHookConfiguration,
+        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration,
+        REVDeploy721TiersHookConfig calldata tiered721HookConfiguration,
+        REVCroptopAllowedPost[] calldata allowedPosts
     )
         external
         override
@@ -792,7 +807,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @return flag A flag indicating if posts were configured. Returns false if there were no posts to set up.
     function _configurePostingCriteriaFor(
         address hook,
-        REVCroptopAllowedPost[] memory allowedPosts
+        REVCroptopAllowedPost[] calldata allowedPosts
     )
         internal
         returns (bool)
@@ -807,7 +822,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         CTAllowedPost[] memory formattedAllowedPosts = new CTAllowedPost[](numberOfAllowedPosts);
 
         // Keep a reference to the post being iterated on.
-        REVCroptopAllowedPost memory post;
+        REVCroptopAllowedPost calldata post;
 
         // Iterate through each post to add it to the formatted list.
         for (uint256 i; i < numberOfAllowedPosts; i++) {
@@ -842,7 +857,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         uint256 revnetId,
         address operator,
         bytes memory encodedConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
     )
         internal
         returns (address[] memory suckers)
@@ -875,12 +890,12 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @return hook The address of the tiered ERC-721 hook that was deployed for the revnet.
     function _launch721RevnetFor(
         uint256 revnetId,
-        REVConfig memory configuration,
-        JBTerminalConfig[] memory terminalConfigurations,
-        REVBuybackHookConfig memory buybackHookConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration,
-        REVDeploy721TiersHookConfig memory tiered721HookConfiguration,
-        REVCroptopAllowedPost[] memory allowedPosts
+        REVConfig calldata configuration,
+        JBTerminalConfig[] calldata terminalConfigurations,
+        REVBuybackHookConfig calldata buybackHookConfiguration,
+        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration,
+        REVDeploy721TiersHookConfig calldata tiered721HookConfiguration,
+        REVCroptopAllowedPost[] calldata allowedPosts
     )
         internal
         returns (uint256, IJB721TiersHook hook)
@@ -894,7 +909,11 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
         // Deploy the tiered ERC-721 hook contract.
         // slither-disable-next-line reentrancy-benign
-        hook = HOOK_DEPLOYER.deployHookFor(revnetId, tiered721HookConfiguration.baseline721HookConfiguration);
+        hook = HOOK_DEPLOYER.deployHookFor({
+            projectId: revnetId,
+            deployTiersHookConfig: tiered721HookConfiguration.baseline721HookConfiguration,
+            salt: tiered721HookConfiguration.salt
+        });
 
         // Store the tiered ERC-721 hook.
         tiered721HookOf[revnetId] = hook;
@@ -952,10 +971,10 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @return revnetId The ID of the newly created revnet.
     function _launchRevnetFor(
         uint256 revnetId,
-        REVConfig memory configuration,
-        JBTerminalConfig[] memory terminalConfigurations,
-        REVBuybackHookConfig memory buybackHookConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+        REVConfig calldata configuration,
+        JBTerminalConfig[] calldata terminalConfigurations,
+        REVBuybackHookConfig calldata buybackHookConfiguration,
+        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
     )
         internal
         returns (uint256)
@@ -1077,7 +1096,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// are deploying to a new chain.
     /// @param revnetId The ID of the revnet to set the cash out delay for.
     /// @param firstStageConfig The revnet's first stage.
-    function _setCashOutDelayIfNeeded(uint256 revnetId, REVStageConfig memory firstStageConfig) internal {
+    function _setCashOutDelayIfNeeded(uint256 revnetId, REVStageConfig calldata firstStageConfig) internal {
         // If this is the first revnet being deployed (with a `startsAtOrAfter` of 0),
         // or if the first stage hasn't started yet, we don't need to set a cashout delay.
         if (firstStageConfig.startsAtOrAfter == 0 || firstStageConfig.startsAtOrAfter >= block.timestamp) return;
@@ -1145,12 +1164,12 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @notice Sets up a buyback hook and pools for a revnet.
     /// @param revnetId The ID of the revnet to set up the buyback hook for.
     /// @param buybackHookConfiguration The address of the hook and a list of pools to use for buybacks.
-    function _setupBuybackHookOf(uint256 revnetId, REVBuybackHookConfig memory buybackHookConfiguration) internal {
+    function _setupBuybackHookOf(uint256 revnetId, REVBuybackHookConfig calldata buybackHookConfiguration) internal {
         // Get a reference to the number of pools being set up.
         uint256 numberOfPoolsToSetup = buybackHookConfiguration.poolConfigurations.length;
 
         // Keep a reference to the pool being iterated on.
-        REVBuybackPoolConfig memory poolConfig;
+        REVBuybackPoolConfig calldata poolConfig;
 
         // Store the buyback hook.
         buybackHookOf[revnetId] = buybackHookConfiguration.hook;
@@ -1174,12 +1193,12 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @notice Stores the auto-mint amounts for each of a revnet's stages.
     /// @param revnetId The ID of the revnet to store the auto-mint amounts for.
     /// @param configuration The revnet's configuration. See `REVConfig`.
-    function _storeAutomintAmounts(uint256 revnetId, REVConfig memory configuration) internal {
+    function _storeAutomintAmounts(uint256 revnetId, REVConfig calldata configuration) internal {
         // Keep a reference to the number of stages the revnet has.
         uint256 numberOfStages = configuration.stageConfigurations.length;
 
         // Keep a reference to the stage configuration being iterated on.
-        REVStageConfig memory stageConfiguration;
+        REVStageConfig calldata stageConfiguration;
 
         // Keep a reference to the total amount of tokens which can be auto-minted.
         uint256 totalUnrealizedAutoMintAmount;
@@ -1193,7 +1212,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             uint256 numberOfMints = stageConfiguration.autoMints.length;
 
             // Keep a reference to the mint config being iterated on.
-            REVAutoMint memory mintConfig;
+            REVAutoMint calldata mintConfig;
 
             // Loop through each mint to store its amount.
             for (uint256 j; j < numberOfMints; j++) {

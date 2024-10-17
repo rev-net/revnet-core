@@ -112,7 +112,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
                 issuanceDecayFrequency: 90 days,
                 issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
                 cashOutTaxRate: 6000, // 0.6
-                extraMetadata: 0
+                extraMetadata: (1 << 2) // Enable adding new suckers.
             });
         }
 
@@ -124,7 +124,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
             issuanceDecayFrequency: 180 days,
             issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
             cashOutTaxRate: 6000, // 0.6
-            extraMetadata: 0
+            extraMetadata: (1 << 2) // Enable adding new suckers.
         });
 
         stageConfigurations[2] = REVStageConfig({
@@ -135,7 +135,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
             issuanceDecayFrequency: 0,
             issuanceDecayPercent: 0,
             cashOutTaxRate: 6000, // 0.6
-            extraMetadata: 0
+            extraMetadata: (1 << 2) // Enable adding new suckers.
         });
 
         REVLoanSource[] memory _loanSources = new REVLoanSource[](0);
@@ -147,14 +147,12 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
             splitOperator: multisig(),
             stageConfigurations: stageConfigurations,
             loanSources: _loanSources,
-            loans: address(0),
-            allowCrosschainSuckerExtension: true
+            loans: address(0)
         });
 
         ENCODED_CONFIG = abi.encode(
             revnetConfiguration.baseCurrency,
             revnetConfiguration.loans,
-            revnetConfiguration.allowCrosschainSuckerExtension,
             revnetConfiguration.description.name,
             revnetConfiguration.description.ticker,
             revnetConfiguration.description.salt
