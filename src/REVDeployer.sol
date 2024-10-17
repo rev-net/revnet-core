@@ -298,6 +298,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @return flag A flag indicating if the current ruleset allows deploying new suckers.
     function allowsDeployingSuckersInCurrentRulesetOf(uint256 revnetId) public view returns (bool) {
         // Check if the current ruleset allows deploying new suckers.
+        // slither-disable-next-line unused-return
         (, JBRulesetMetadata memory metadata) = CONTROLLER.currentRulesetOf(revnetId);
         // Check the third bit, it indicates if the ruleset allows new suckers to be deployed.
         return ((metadata.metadata >> 2) & 1) == 1;
