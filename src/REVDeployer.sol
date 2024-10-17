@@ -59,6 +59,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
     error REVDeployer_CashOutDelayNotFinished();
     error REVDeployer_CashOutsCantBeTurnedOffCompletely();
+    error REVDeployer_RulesetDoesNotAllowDeployingSuckers();
     error REVDeployer_StageNotStarted();
     error REVDeployer_StagesRequired();
     error REVDeployer_StageTimesMustIncrease();
@@ -292,6 +293,16 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     // -------------------------- public views --------------------------- //
     //*********************************************************************//
 
+    /// @notice A flag indicating if the current ruleset allows deploying new suckers.
+    /// @param revnetId The ID of the revnet to check the ruleset of.
+    /// @return flag A flag indicating if the current ruleset allows deploying new suckers.
+    function allowsDeployingSuckersInCurrentRulesetOf(uint256 revnetId) public view returns (bool) {
+        // Check if the current ruleset allows deploying new suckers.
+        (, JBRulesetMetadata memory metadata) = CONTROLLER.currentRulesetOf(revnetId);
+        // Check the third bit, it indicates if the ruleset allows new suckers to be deployed.
+        return ((metadata.metadata >> 2) & 1) == 1;
+    }
+
     /// @notice A flag indicating whether an address is a revnet's split operator.
     /// @param revnetId The ID of the revnet.
     /// @param addr The address to check.
@@ -463,7 +474,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         encodedConfiguration = abi.encode(
             configuration.baseCurrency,
             configuration.loans,
-            configuration.allowCrosschainSuckerExtension,
             configuration.description.name,
             configuration.description.ticker,
             configuration.description.salt
@@ -500,7 +510,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             metadata.baseCurrency = configuration.baseCurrency;
             metadata.allowOwnerMinting = true; // Allow this contract to auto-mint tokens as the revnet's owner.
             metadata.useDataHookForPay = true; // Call this contract's `beforePayRecordedWith(…)` callback on payments.
-            metadata.allowCrosschainSuckerExtension = configuration.allowCrosschainSuckerExtension;
             metadata.dataHook = address(this); // This contract is the data hook.
             metadata.metadata = stageConfiguration.extraMetadata;
 
@@ -713,6 +722,9 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         _checkIfIsSplitOperatorOf({revnetId: revnetId, operator: msg.sender});
 
         // Check if the current ruleset allows deploying new suckers.
+        if (!allowsDeployingSuckersInCurrentRulesetOf(revnetId)) {
+            revert REVDeployer_RulesetDoesNotAllowDeployingSuckers();
+        }
 
         // Deploy the suckers.
         suckers = _deploySuckersFor({
@@ -896,7 +908,11 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
 
         // Deploy the tiered ERC-721 hook contract.
         // slither-disable-next-line reentrancy-benign
-        hook = HOOK_DEPLOYER.deployHookFor(revnetId, tiered721HookConfiguration.baseline721HookConfiguration);
+        hook = HOOK_DEPLOYER.deployHookFor({
+            projectId: revnetId,
+            deployTiersHookConfig: tiered721HookConfiguration.baseline721HookConfiguration,
+            salt: tiered721HookConfiguration.salt
+        });
 
         // Store the tiered ERC-721 hook.
         tiered721HookOf[revnetId] = hook;
