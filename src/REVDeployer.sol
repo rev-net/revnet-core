@@ -846,36 +846,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         return true;
     }
 
-    /// @notice Deploy suckers for a revnet.
-    /// @param revnetId The ID of the revnet to deploy suckers for.
-    /// @param operator The address of the operator that can add new suckers in the future.
-    /// @param encodedConfiguration A byte-encoded representation of the revnet's configuration.
-    /// See `_makeRulesetConfigurations(…)` for encoding details. Clients can read the encoded configuration
-    /// from the `DeployRevnet` event emitted by this contract.
-    /// @param suckerDeploymentConfiguration The suckers to set up for the revnet.
-    function _deploySuckersFor(
-        uint256 revnetId,
-        address operator,
-        bytes memory encodedConfiguration,
-        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
-    )
-        internal
-        returns (address[] memory suckers)
-    {
-        // Compose the salt.
-        bytes32 salt = keccak256(abi.encode(operator, encodedConfiguration, suckerDeploymentConfiguration.salt));
-
-        emit DeploySuckers(revnetId, operator, salt, encodedConfiguration, suckerDeploymentConfiguration, msg.sender);
-
-        // Deploy the suckers.
-        // slither-disable-next-line unused-return
-        suckers = SUCKER_REGISTRY.deploySuckersFor({
-            projectId: revnetId,
-            salt: salt,
-            configurations: suckerDeploymentConfiguration.deployerConfigurations
-        });
-    }
-
     /// @notice Deploy a revnet which sells tiered ERC-721s and (optionally) allows croptop posts to its ERC-721 tiers.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration Core revnet configuration. See `REVConfig`.
@@ -1087,7 +1057,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         uint256 revnetId,
         address operator,
         bytes memory encodedConfiguration,
-        REVSuckerDeploymentConfig memory suckerDeploymentConfiguration
+        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
     )
         internal
         returns (address[] memory suckers)
