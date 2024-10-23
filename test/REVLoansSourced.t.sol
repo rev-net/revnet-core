@@ -903,7 +903,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // Warp further than the loan liquidation duration to revert.
         vm.warp(block.timestamp + 3650 days);
-        vm.expectRevert(abi.encodeWithSelector(REVLoans.REVLoans_LoanExpired.selector, block.timestamp + loan.prepaidDuration + 1 days, 3650 days));
+        vm.expectRevert(abi.encodeWithSelector(REVLoans.REVLoans_LoanExpired.selector, loan.prepaidDuration + 1 days + 3650 days, 3650 days));
 
         LOANS_CONTRACT.determineSourceFeeAmount(loan, loan.amount);
     }
