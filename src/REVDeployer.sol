@@ -1229,6 +1229,14 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                 // If the mint config is for another chain, skip it.
                 if (mintConfig.chainId != block.chainid) continue;
 
+                emit StoreAutoMintAmount({
+                    revnetId: revnetId,
+                    stageId: block.timestamp + i,
+                    beneficiary: mintConfig.beneficiary,
+                    count: mintConfig.count,
+                    caller: msg.sender
+                });
+
                 // If the auto-mint is for the first stage, or a stage which has already started,
                 // mint the tokens right away.
                 if (i == 0 || stageConfiguration.startsAtOrAfter <= block.timestamp) {
@@ -1249,14 +1257,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                 }
                 // Otherwise, store the amount of tokens that can be auto-minted on this chain during this stage.
                 else {
-                    emit StoreAutoMintAmount({
-                        revnetId: revnetId,
-                        stageId: block.timestamp + i,
-                        beneficiary: mintConfig.beneficiary,
-                        count: mintConfig.count,
-                        caller: msg.sender
-                    });
-
                     // The first stage ID is stored at this block's timestamp,
                     // and further stage IDs have incrementally increasing IDs
                     // slither-disable-next-line reentrancy-events
