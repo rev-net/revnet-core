@@ -665,9 +665,10 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVNET_ID, collateralToTransfer, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        vm.expectRevert(abi.encodeWithSelector(REVLoans.REVLoans_Unauthorized.selector, address(this), USER));
+        address unauthorized = address(1);
+        vm.expectRevert(abi.encodeWithSelector(REVLoans.REVLoans_Unauthorized.selector, unauthorized, USER));
 
-        // notice no prank
+        vm.prank(unauthorized);
         LOANS_CONTRACT.reallocateCollateralFromLoan(
             newLoanId, collateralToTransfer, sauce, newAmount, collateralToAdd, payable(USER), 25
         );
