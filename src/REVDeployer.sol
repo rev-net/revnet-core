@@ -667,7 +667,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Decrease the amount of unrealized auto-mint tokens.
         unrealizedAutoMintAmountOf[revnetId] -= count;
 
-        emit Mint(revnetId, stageId, beneficiary, count, msg.sender);
+        emit Mint({revnetId: revnetId, stageId: stageId, beneficiary: beneficiary, count: count, caller: msg.sender});
 
         // Mint the tokens.
         _mintTokensOf({revnetId: revnetId, tokenCount: count, beneficiary: beneficiary});
@@ -783,7 +783,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Enforce permissions.
         _checkIfIsSplitOperatorOf({revnetId: revnetId, operator: msg.sender});
 
-        emit ReplaceSplitOperator(revnetId, newSplitOperator, msg.sender);
+        emit ReplaceSplitOperator({revnetId: revnetId, newSplitOperator: newSplitOperator, caller: msg.sender});
 
         // Remove operator permissions from the old split operator.
         _setPermissionsFor({
@@ -1032,16 +1032,16 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             });
         }
 
-        emit DeployRevnet(
-            revnetId,
-            configuration,
-            terminalConfigurations,
-            buybackHookConfiguration,
-            suckerDeploymentConfiguration,
-            rulesetConfigurations,
-            encodedConfiguration,
-            msg.sender
-        );
+        emit DeployRevnet({
+            revnetId: revnetId,
+            configuration: configuration,
+            terminalConfigurations: terminalConfigurations,
+            buybackHookConfiguration: buybackHookConfiguration,
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration,
+            rulesetConfigurations: rulesetConfigurations,
+            encodedConfiguration: encodedConfiguration,
+            caller: msg.sender
+        });
 
         return revnetId;
     }
@@ -1065,7 +1065,14 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Compose the salt.
         bytes32 salt = keccak256(abi.encode(operator, encodedConfiguration, suckerDeploymentConfiguration.salt));
 
-        emit DeploySuckers(revnetId, operator, salt, encodedConfiguration, suckerDeploymentConfiguration, msg.sender);
+        emit DeploySuckers({
+            revnetId: revnetId,
+            operator: operator,
+            salt: salt,
+            encodedConfiguration: encodedConfiguration,
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration,
+            caller: msg.sender
+        });
 
         // Deploy the suckers.
         // slither-disable-next-line unused-return
@@ -1107,7 +1114,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Store the cashout delay.
         cashOutDelayOf[revnetId] = cashOutDelay;
 
-        emit SetCashOutDelay(revnetId, cashOutDelay, msg.sender);
+        emit SetCashOutDelay({revnetId: revnetId, cashOutDelay: cashOutDelay, caller: msg.sender});
     }
 
     /// @notice Grants a permission to an address (an "operator").
@@ -1225,7 +1232,13 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                 // If the auto-mint is for the first stage, or a stage which has already started,
                 // mint the tokens right away.
                 if (i == 0 || stageConfiguration.startsAtOrAfter <= block.timestamp) {
-                    emit Mint(revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender);
+                    emit Mint({
+                        revnetId: revnetId,
+                        stageId: block.timestamp + i,
+                        beneficiary: mintConfig.beneficiary,
+                        count: mintConfig.count,
+                        caller: msg.sender
+                    });
 
                     // slither-disable-next-line reentrancy-events,reentrancy-no-eth,reentrancy-benign
                     _mintTokensOf({
@@ -1236,9 +1249,13 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                 }
                 // Otherwise, store the amount of tokens that can be auto-minted on this chain during this stage.
                 else {
-                    emit StoreAutoMintAmount(
-                        revnetId, block.timestamp + i, mintConfig.beneficiary, mintConfig.count, msg.sender
-                    );
+                    emit StoreAutoMintAmount({
+                        revnetId: revnetId,
+                        stageId: block.timestamp + i,
+                        beneficiary: mintConfig.beneficiary,
+                        count: mintConfig.count,
+                        caller: msg.sender
+                    });
 
                     // The first stage ID is stored at this block's timestamp,
                     // and further stage IDs have incrementally increasing IDs

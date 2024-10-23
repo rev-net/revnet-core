@@ -665,7 +665,8 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVNET_ID, collateralToTransfer, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        vm.expectPartialRevert(REVLoans.REVLoans_Unauthorized.selector);
+        vm.expectRevert(abi.encodeWithSelector(REVLoans.REVLoans_Unauthorized.selector, address(this), USER));
+
         // notice no prank
         LOANS_CONTRACT.reallocateCollateralFromLoan(
             newLoanId, collateralToTransfer, sauce, newAmount, collateralToAdd, payable(USER), 25
@@ -902,7 +903,8 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // Warp further than the loan liquidation duration to revert.
         vm.warp(block.timestamp + 3650 days);
-        vm.expectPartialRevert(REVLoans.REVLoans_LoanExpired.selector);
+        vm.expectRevert(abi.encodeWithSelector(REVLoans.REVLoans_LoanExpired.selector, block.timestamp + loan.prepaidDuration + 1 days, 3650 days));
+
         LOANS_CONTRACT.determineSourceFeeAmount(loan, loan.amount);
     }
 
@@ -921,7 +923,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, 0, tokens, payable(USER), 100);
 
         vm.prank(USER);
-        vm.expectPartialRevert(REVLoans.REVLoans_InvalidPrepaidFeePercent.selector);
+        vm.expectRevert(abi.encodeWithSelector(REVLoans.REVLoans_InvalidPrepaidFeePercent.selector, 1_000_000, 25, 500));
         LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, 1, tokens, payable(USER), 1_000_000);
     }
 
@@ -1148,7 +1150,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // call to pay-down the loan
         /* vm.prank(USER); */
-        vm.expectPartialRevert(REVLoans.REVLoans_Unauthorized.selector);
+        vm.expectRevert(abi.encodeWithSelector(REVLoans.REVLoans_Unauthorized.selector, address(0), USER));
         LOANS_CONTRACT.repayLoan{value: 0}(loanId, 0, 0, payable(USER), allowance);
     }
 
@@ -1178,7 +1180,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // call to pay-down the loan
         vm.prank(USER);
-        vm.expectPartialRevert(REVLoans.REVLoans_CollateralExceedsLoan.selector);
+        vm.expectRevert(abi.encodeWithSelector(REVLoans.REVLoans_CollateralExceedsLoan.selector, loan.collateral + 1,loan.collateral));
         LOANS_CONTRACT.repayLoan{value: 0}(
             // collateral exceeds with + 1
             loanId,
