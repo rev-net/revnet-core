@@ -457,7 +457,16 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             beneficiary: beneficiary
         });
 
-        emit Borrow(loanId, revnetId, loan, source, amount, collateral, beneficiary, _msgSender());
+        emit Borrow({
+            loanId: loanId,
+            revnetId: revnetId,
+            loan: loan,
+            source: source,
+            amount: amount,
+            collateral: collateral,
+            beneficiary: beneficiary,
+            caller: _msgSender()
+        });
 
         return (loanId, loan);
     }
@@ -537,7 +546,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             // Increment the number of loans liquidated.
             newLastLoanIdLiquidated = loanId;
 
-            emit Liquidate(loanId, revnetId, loan, _msgSender());
+            emit Liquidate({loanId: loanId, revnetId: revnetId, loan: loan, caller: _msgSender()});
         }
 
         // Store the latest liquidated loan.
@@ -964,18 +973,18 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
                 beneficiary: beneficiary
             });
 
-            emit RepayLoan(
-                loanId,
-                revnetId,
-                loanId,
-                loan,
-                loan,
-                amount,
-                sourceFeeAmount,
-                collateralToReturn,
-                beneficiary,
-                _msgSender()
-            );
+            emit RepayLoan({
+                loanId: loanId,
+                revnetId: revnetId,
+                paidOffLoanId: loanId,
+                loan: loan,
+                paidOffLoan: loan,
+                amount: amount,
+                sourceFeeAmount: sourceFeeAmount,
+                collateralToReturn: collateralToReturn,
+                beneficiary: beneficiary,
+                caller: _msgSender()
+            });
 
             return (loanId, loan);
         } else {
@@ -1007,18 +1016,18 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
                 beneficiary: beneficiary
             });
 
-            emit RepayLoan(
-                loanId,
-                revnetId,
-                paidOffLoanId,
-                loan,
-                paidOffLoan,
-                amount,
-                sourceFeeAmount,
-                collateralToReturn,
-                beneficiary,
-                _msgSender()
-            );
+            emit RepayLoan({
+                loanId: loanId,
+                revnetId: revnetId,
+                paidOffLoanId: paidOffLoanId,
+                loan: loan,
+                paidOffLoan: paidOffLoan,
+                amount: amount,
+                sourceFeeAmount: sourceFeeAmount,
+                collateralToReturn: collateralToReturn,
+                beneficiary: beneficiary,
+                caller: _msgSender()
+            });
 
             return (paidOffLoanId, paidOffLoan);
         }
@@ -1079,9 +1088,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
                 // their balance for the new loan.
         });
 
-        emit ReallocateCollateral(
-            loanId, revnetId, reallocatedLoanId, reallocatedLoan, collateralToRemove, _msgSender()
-        );
+        emit ReallocateCollateral({
+            loanId: loanId,
+            revnetId: revnetId,
+            reallocatedLoanId: reallocatedLoanId,
+            reallocatedLoan: reallocatedLoan,
+            removedCollateral: collateralToRemove,
+            caller: _msgSender()
+        });
     }
 
     /// @notice Pays off a loan.

@@ -41,8 +41,8 @@ interface IREVLoans {
     );
     event ReallocateCollateral(
         uint256 indexed loanId,
-        uint256 indexed reallocatedLoanId,
         uint256 indexed revnetId,
+        uint256 indexed reallocatedLoanId,
         REVLoan reallocatedLoan,
         uint256 removedCollateral,
         address caller
