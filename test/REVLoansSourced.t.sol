@@ -904,7 +904,11 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // Warp further than the loan liquidation duration to revert.
         vm.warp(block.timestamp + 3650 days);
-        vm.expectRevert(abi.encodeWithSelector(REVLoans.REVLoans_LoanExpired.selector, loan.prepaidDuration + 1 days + 3650 days, 3650 days));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                REVLoans.REVLoans_LoanExpired.selector, loan.prepaidDuration + 1 days + 3650 days, 3650 days
+            )
+        );
 
         LOANS_CONTRACT.determineSourceFeeAmount(loan, loan.amount);
     }
@@ -1181,7 +1185,11 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // call to pay-down the loan
         vm.prank(USER);
-        vm.expectRevert(abi.encodeWithSelector(REVLoans.REVLoans_CollateralExceedsLoan.selector, loan.collateral + 1,loan.collateral));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                REVLoans.REVLoans_CollateralExceedsLoan.selector, loan.collateral + 1, loan.collateral
+            )
+        );
         LOANS_CONTRACT.repayLoan{value: 0}(
             // collateral exceeds with + 1
             loanId,
