@@ -1090,8 +1090,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
         emit ReallocateCollateral({
             loanId: loanId,
-            reallocatedLoanId: reallocatedLoanId,
             revnetId: revnetId,
+            reallocatedLoanId: reallocatedLoanId,
             reallocatedLoan: reallocatedLoan,
             removedCollateral: collateralToRemove,
             caller: _msgSender()
