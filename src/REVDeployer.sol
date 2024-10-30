@@ -1224,6 +1224,9 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                 // If the mint config is for another chain, skip it.
                 if (mintConfig.chainId != block.chainid) continue;
 
+                // If there's nothing to auto-mint, continue.
+                if (mintConfig.count == 0) continue;
+
                 emit StoreAutoMintAmount({
                     revnetId: revnetId,
                     stageId: block.timestamp + i,
@@ -1231,9 +1234,6 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                     count: mintConfig.count,
                     caller: msg.sender
                 });
-
-                // If there's nothing to auto-mint, return.
-                if (mintConfig.count == 0) continue;
 
                 // If the auto-mint is for the first stage, or a stage which has already started,
                 // mint the tokens right away.
