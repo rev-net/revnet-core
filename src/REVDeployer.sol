@@ -1232,6 +1232,9 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                     caller: msg.sender
                 });
 
+                // If there's nothing to auto-mint, return.
+                if (mintConfig.count == 0) continue;
+
                 // If the auto-mint is for the first stage, or a stage which has already started,
                 // mint the tokens right away.
                 if (i == 0 || stageConfiguration.startsAtOrAfter <= block.timestamp) {
