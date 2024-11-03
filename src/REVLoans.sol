@@ -512,11 +512,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
                 continue;
             }
 
-            // If the loan has not yet passed its liquidation timeframe, no subsequent loans have either.
-            if (block.timestamp <= loan.createdAt + LOAN_LIQUIDATION_DURATION) {
-                break;
-            }
-
             // If the loan has been paid back and there is still leftover collateral, return it to the owner.
             // slither-disable-next-line incorrect-equality
             if (loan.collateral > 0) {
