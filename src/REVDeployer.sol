@@ -881,7 +881,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         hook = HOOK_DEPLOYER.deployHookFor({
             projectId: revnetId,
             deployTiersHookConfig: tiered721HookConfiguration.baseline721HookConfiguration,
-            salt: tiered721HookConfiguration.salt
+            salt: keccak256(abi.encode(tiered721HookConfiguration.salt, msg.sender))
         });
 
         // Store the tiered ERC-721 hook.
@@ -988,7 +988,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             projectId: revnetId,
             name: configuration.description.name,
             symbol: configuration.description.ticker,
-            salt: configuration.description.salt
+            salt: keccak256(abi.encode(configuration.description.salt, msg.sender))
         });
 
         // If specified, set up the buyback hook.
