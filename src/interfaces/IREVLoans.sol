@@ -21,8 +21,8 @@ interface IREVLoans {
         uint256 indexed revnetId,
         REVLoan loan,
         REVLoanSource source,
-        uint256 amount,
-        uint256 collateral,
+        uint256 borrowAmount,
+        uint256 collateralAmount,
         address payable beneficiary,
         address caller
     );
@@ -33,9 +33,9 @@ interface IREVLoans {
         uint256 indexed paidOffLoanId,
         REVLoan loan,
         REVLoan paidOffLoan,
-        uint256 amount,
+        uint256 borrowAmount,
         uint256 sourceFeeAmount,
-        uint256 collateralToReturn,
+        uint256 collateralAmountToReturn,
         address payable beneficiary,
         address caller
     );
@@ -44,7 +44,7 @@ interface IREVLoans {
         uint256 indexed revnetId,
         uint256 indexed reallocatedLoanId,
         REVLoan reallocatedLoan,
-        uint256 removedCollateral,
+        uint256 removedCollateralAmount,
         address caller
     );
     event SetTokenUriResolver(IJBTokenUriResolver indexed resolver, address caller);
