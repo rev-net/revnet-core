@@ -64,6 +64,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
     address USER = makeAddr("user");
 
+    /// @notice The address that is allowed to forward calls.
+    address private constant TRUSTED_FORWARDER = 0xB2b5841DBeF766d4b521221732F9B618fCf34A87;
+
     function getFeeProjectConfig() internal view returns (FeeProjectConfig memory) {
         // Define constants
         string memory name = "Revnet";
@@ -287,7 +290,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         PUBLISHER = new CTPublisher(jbController(), jbPermissions(), FEE_PROJECT_ID, multisig());
 
         REV_DEPLOYER = new REVDeployer{salt: REV_DEPLOYER_SALT}(
-            jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER
+            jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER, TRUSTED_FORWARDER
         );
 
         LOANS_CONTRACT = new REVLoans({
@@ -295,7 +298,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             revId: FEE_PROJECT_ID,
             owner: address(this),
             permit2: permit2(),
-            trustedForwarder: address(this)
+            trustedForwarder: TRUSTED_FORWARDER
         });
 
         // Approve the basic deployer to configure the project.
@@ -1155,7 +1158,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // call to pay-down the loan
         /* vm.prank(USER); */
-        vm.expectRevert(abi.encodeWithSelector(REVLoans.REVLoans_Unauthorized.selector, address(0), USER));
+        vm.expectRevert(abi.encodeWithSelector(REVLoans.REVLoans_Unauthorized.selector, address(this), USER));
         LOANS_CONTRACT.repayLoan{value: 0}(loanId, 0, 0, payable(USER), allowance);
     }
 
