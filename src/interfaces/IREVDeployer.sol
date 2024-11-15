@@ -43,11 +43,11 @@ interface IREVDeployer {
 
     event SetCashOutDelay(uint256 indexed revnetId, uint256 cashOutDelay, address caller);
 
-    event Mint(
+    event AutoIssue(
         uint256 indexed revnetId, uint256 indexed stageId, address indexed beneficiary, uint256 count, address caller
     );
 
-    event StoreAutoMintAmount(
+    event StoreAutoIssuanceAmount(
         uint256 indexed revnetId, uint256 indexed stageId, address indexed beneficiary, uint256 count, address caller
     );
 
@@ -70,7 +70,7 @@ interface IREVDeployer {
     function isSplitOperatorOf(uint256 revnetId, address addr) external view returns (bool);
     function loansOf(uint256 revnetId) external view returns (address);
     function tiered721HookOf(uint256 revnetId) external view returns (IJB721TiersHook);
-    function unrealizedAutoMintAmountOf(uint256 revnetId) external view returns (uint256);
+    function unrealizedAutoIssuanceAmountOf(uint256 revnetId) external view returns (uint256);
 
     function deployFor(
         uint256 revnetId,
@@ -95,7 +95,7 @@ interface IREVDeployer {
         returns (uint256, IJB721TiersHook hook);
 
     function setSplitOperatorOf(uint256 revnetId, address newSplitOperator) external;
-    function autoMintFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
+    function autoIssueFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
     function deploySuckersFor(
         uint256 revnetId,
         bytes calldata encodedConfiguration,
@@ -104,5 +104,5 @@ interface IREVDeployer {
         external
         returns (address[] memory suckers);
 
-    function amountToAutoMint(uint256 revnetId, uint256 stageId, address beneficiary) external view returns (uint256);
+    function amountToAutoIssue(uint256 revnetId, uint256 stageId, address beneficiary) external view returns (uint256);
 }

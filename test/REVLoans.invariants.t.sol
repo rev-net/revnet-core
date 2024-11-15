@@ -20,7 +20,8 @@ import {JBRedemptions} from "@bananapus/core/src/libraries/JBRedemptions.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
 import {REVLoans} from "../src/REVLoans.sol";
-import {REVStageConfig, REVAutoMint} from "../src/structs/REVStageConfig.sol";
+import {REVAutoIssuance} from "../src/structs/REVAutoIssuance.sol";
+import {REVStageConfig} from "../src/structs/REVStageConfig.sol";
 import {REVLoanSource} from "../src/structs/REVLoanSource.sol";
 import {REVDescription} from "../src/structs/REVDescription.sol";
 import {REVBuybackPoolConfig} from "../src/structs/REVBuybackPoolConfig.sol";
@@ -303,8 +304,8 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         REVStageConfig[] memory stageConfigurations = new REVStageConfig[](3);
 
         {
-            REVAutoMint[] memory mintConfs = new REVAutoMint[](1);
-            mintConfs[0] = REVAutoMint({
+            REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](1);
+            issuanceConfs[0] = REVAutoIssuance({
                 chainId: uint32(block.chainid),
                 count: uint104(70_000 * decimalMultiplier),
                 beneficiary: multisig()
@@ -312,7 +313,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
 
             stageConfigurations[0] = REVStageConfig({
                 startsAtOrAfter: uint40(block.timestamp),
-                autoMints: mintConfs,
+                autoIssuance: issuanceConfs,
                 splitPercent: 2000, // 20%
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceDecayFrequency: 90 days,
@@ -324,7 +325,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
 
         stageConfigurations[1] = REVStageConfig({
             startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 720 days),
-            autoMints: new REVAutoMint[](0),
+            autoIssuance: new REVAutoIssuance[](0),
             splitPercent: 2000, // 20%
             initialIssuance: 0, // inherit from previous cycle.
             issuanceDecayFrequency: 180 days,
@@ -335,7 +336,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
 
         stageConfigurations[2] = REVStageConfig({
             startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (20 * 365 days)),
-            autoMints: new REVAutoMint[](0),
+            autoIssuance: new REVAutoIssuance[](0),
             splitPercent: 0,
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
             issuanceDecayFrequency: 0,
@@ -405,8 +406,8 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         REVStageConfig[] memory stageConfigurations = new REVStageConfig[](3);
 
         {
-            REVAutoMint[] memory mintConfs = new REVAutoMint[](1);
-            mintConfs[0] = REVAutoMint({
+            REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](1);
+            issuanceConfs[0] = REVAutoIssuance({
                 chainId: uint32(block.chainid),
                 count: uint104(70_000 * decimalMultiplier),
                 beneficiary: multisig()
@@ -414,7 +415,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
 
             stageConfigurations[0] = REVStageConfig({
                 startsAtOrAfter: uint40(block.timestamp),
-                autoMints: mintConfs,
+                autoIssuance: issuanceConfs,
                 splitPercent: 2000, // 20%
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceDecayFrequency: 90 days,
@@ -426,7 +427,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
 
         stageConfigurations[1] = REVStageConfig({
             startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 365 days),
-            autoMints: new REVAutoMint[](0),
+            autoIssuance: new REVAutoIssuance[](0),
             splitPercent: 9000, // 90%
             initialIssuance: 0, // this is a special number that is as close to max price as we can get.
             issuanceDecayFrequency: 180 days,
@@ -437,7 +438,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
 
         stageConfigurations[2] = REVStageConfig({
             startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (20 * 365 days)),
-            autoMints: new REVAutoMint[](0),
+            autoIssuance: new REVAutoIssuance[](0),
             splitPercent: 0,
             initialIssuance: 0, // this is a special number that is as close to max price as we can get.
             issuanceDecayFrequency: 0,

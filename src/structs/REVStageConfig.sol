@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {REVAutoMint} from "./REVAutoMint.sol";
+import {REVAutoIssuance} from "./REVAutoIssuance.sol";
 
 /// @custom:member startsAtOrAfter The timestamp to start a stage at the given rate at or after.
-/// @custom:member autoMints The configurations of mints during this stage.
+/// @custom:member autoIssuance The configurations of mints during this stage.
 /// @custom:member splitPercent The percentage of newly issued tokens that should be split with the operator, out
 /// of
 /// 10_000 (JBConstants.MAX_RESERVED_PERCENT).
@@ -20,7 +20,7 @@ import {REVAutoMint} from "./REVAutoMint.sol";
 /// @custom:member extraMetadata Extra info to attach set into this stage that may affect hooks.
 struct REVStageConfig {
     uint40 startsAtOrAfter;
-    REVAutoMint[] autoMints;
+    REVAutoIssuance[] autoIssuance;
     uint16 splitPercent;
     uint112 initialIssuance;
     uint32 issuanceDecayFrequency;
