@@ -520,8 +520,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     }
 
     /// @notice Cleans up any liquiditated loans.
-    /// @dev Since some loans may be reallocated or paid off, loans within startingLoanId and startingLoanId + count may be skipped.
-    /// so choose these parameters carefully to avoid extra gas usage. 
+    /// @dev Since some loans may be reallocated or paid off, loans within startingLoanId and startingLoanId + count may
+    /// be skipped, so choose these parameters carefully to avoid extra gas usage.
     /// @param revnetId The ID of the revnet to liquidate loans from.
     /// @param startingLoanId The ID of the loan to start iterating from.
     /// @param count The amount of loans iterate over since the last liquidated loan.
