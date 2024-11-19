@@ -534,7 +534,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // Iterate over the desired number of loans to check for liquidation.
         for (uint256 i; i < count; i++) {
             // Get a reference to the next loan ID.
-            uint256 loanId = startingLoanId + i;
+            uint256 loanId = _generateLoanId({revnetId: revnetId, loanNumber: startingLoanId + i});
 
             // Get a reference to the loan being iterated on.
             REVLoan memory loan = _loanOf[loanId];
