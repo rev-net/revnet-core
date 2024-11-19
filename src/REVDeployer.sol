@@ -3,6 +3,7 @@ pragma solidity 0.8.23;
 
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import {mulDiv} from "@prb/math/src/Common.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
@@ -52,7 +53,7 @@ import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol
 
 /// @notice `REVDeployer` deploys, manages, and operates Revnets.
 /// @dev Revnets are unowned Juicebox projects which operate autonomously after deployment.
-contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721Receiver {
+contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721Receiver {
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
@@ -587,8 +588,11 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         IJBSuckerRegistry suckerRegistry,
         uint256 feeRevnetId,
         IJB721TiersHookDeployer hookDeployer,
-        CTPublisher publisher
-    ) {
+        CTPublisher publisher,
+        address trustedForwarder
+    )
+        ERC2771Context(trustedForwarder)
+    {
         CONTROLLER = controller;
         DIRECTORY = controller.DIRECTORY();
         PROJECTS = controller.PROJECTS();
@@ -667,7 +671,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Decrease the amount of unrealized auto-mint tokens.
         unrealizedAutoMintAmountOf[revnetId] -= count;
 
-        emit Mint({revnetId: revnetId, stageId: stageId, beneficiary: beneficiary, count: count, caller: msg.sender});
+        emit Mint({revnetId: revnetId, stageId: stageId, beneficiary: beneficiary, count: count, caller: _msgSender()});
 
         // Mint the tokens.
         _mintTokensOf({revnetId: revnetId, tokenCount: count, beneficiary: beneficiary});
@@ -720,7 +724,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         returns (address[] memory suckers)
     {
         // Make sure the caller is the revnet's split operator.
-        _checkIfIsSplitOperatorOf({revnetId: revnetId, operator: msg.sender});
+        _checkIfIsSplitOperatorOf({revnetId: revnetId, operator: _msgSender()});
 
         // Check if the current ruleset allows deploying new suckers.
         if (!allowsDeployingSuckersInCurrentRulesetOf(revnetId)) {
@@ -780,14 +784,14 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
     /// @param newSplitOperator The new split operator's address.
     function setSplitOperatorOf(uint256 revnetId, address newSplitOperator) external override {
         // Enforce permissions.
-        _checkIfIsSplitOperatorOf({revnetId: revnetId, operator: msg.sender});
+        _checkIfIsSplitOperatorOf({revnetId: revnetId, operator: _msgSender()});
 
-        emit ReplaceSplitOperator({revnetId: revnetId, newSplitOperator: newSplitOperator, caller: msg.sender});
+        emit ReplaceSplitOperator({revnetId: revnetId, newSplitOperator: newSplitOperator, caller: _msgSender()});
 
         // Remove operator permissions from the old split operator.
         _setPermissionsFor({
             account: address(this),
-            operator: msg.sender,
+            operator: _msgSender(),
             revnetId: uint56(revnetId),
             permissionIds: new uint8[](0)
         });
@@ -881,7 +885,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         hook = HOOK_DEPLOYER.deployHookFor({
             projectId: revnetId,
             deployTiersHookConfig: tiered721HookConfiguration.baseline721HookConfiguration,
-            salt: tiered721HookConfiguration.salt
+            salt: keccak256(abi.encode(tiered721HookConfiguration.salt, _msgSender()))
         });
 
         // Store the tiered ERC-721 hook.
@@ -988,7 +992,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             projectId: revnetId,
             name: configuration.description.name,
             symbol: configuration.description.ticker,
-            salt: configuration.description.salt
+            salt: keccak256(abi.encode(configuration.description.salt, _msgSender()))
         });
 
         // If specified, set up the buyback hook.
@@ -1038,7 +1042,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             suckerDeploymentConfiguration: suckerDeploymentConfiguration,
             rulesetConfigurations: rulesetConfigurations,
             encodedConfiguration: encodedConfiguration,
-            caller: msg.sender
+            caller: _msgSender()
         });
 
         return revnetId;
@@ -1066,7 +1070,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
             salt: salt,
             encodedConfiguration: encodedConfiguration,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration,
-            caller: msg.sender
+            caller: _msgSender()
         });
 
         // Deploy the suckers.
@@ -1109,7 +1113,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         // Store the cashout delay.
         cashOutDelayOf[revnetId] = cashOutDelay;
 
-        emit SetCashOutDelay({revnetId: revnetId, cashOutDelay: cashOutDelay, caller: msg.sender});
+        emit SetCashOutDelay({revnetId: revnetId, cashOutDelay: cashOutDelay, caller: _msgSender()});
     }
 
     /// @notice Grants a permission to an address (an "operator").
@@ -1232,7 +1236,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                     stageId: block.timestamp + i,
                     beneficiary: mintConfig.beneficiary,
                     count: mintConfig.count,
-                    caller: msg.sender
+                    caller: _msgSender()
                 });
 
                 // If the auto-mint is for the first stage, or a stage which has already started,
@@ -1243,7 +1247,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
                         stageId: block.timestamp + i,
                         beneficiary: mintConfig.beneficiary,
                         count: mintConfig.count,
-                        caller: msg.sender
+                        caller: _msgSender()
                     });
 
                     // slither-disable-next-line reentrancy-events,reentrancy-no-eth,reentrancy-benign

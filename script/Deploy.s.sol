@@ -304,7 +304,12 @@ contract DeployScript is Script, Sphinx {
 
         if (!_revDeployerIsDeployed) {
             REVDeployer _basicDeployer = new REVDeployer{salt: DEPLOYER_SALT}(
-                core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher
+                core.controller,
+                suckers.registry,
+                FEE_PROJECT_ID,
+                hook.hook_deployer,
+                croptop.publisher,
+                TRUSTED_FORWARDER
             );
 
             // Approve the basic deployer to configure the project.
