@@ -721,11 +721,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // this should be a 0.5% gain to be reallocated
         uint256 collateralToTransfer = mulDiv(loan.collateral, 50, 10_000);
 
-        // get the new amount to borrow
-        uint256 newAmount = LOANS_CONTRACT.borrowableAmountFrom(
-            REVNET_ID, collateralToTransfer, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
-        );
-
         vm.expectRevert(REVLoans.REVLoans_AmountNotSpecified.selector);
         vm.prank(USER);
         LOANS_CONTRACT.reallocateCollateralFromLoan(
@@ -985,10 +980,10 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Check topics one and two
         vm.expectEmit(true, true, false, false);
         emit IREVLoans.Liquidate(loanId2, REVNET_ID, loan2, address(0));
-        LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 0, 2);
+        LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 1, 2);
 
         // Call again to trigger the first break (loan.createdAt = 0)
-        LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 0, 2);
+        LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 1, 2);
     }
 
     function test_liquidationRevertsContinued() external {
@@ -1130,7 +1125,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         emit IJBController.MintTokens(
             USER, REVNET_ID, 8e20, 8e20, "Removing collateral from loan", 0, address(LOANS_CONTRACT)
         );
-        LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 0, 2);
+        LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 1, 2);
     }
 
     function test_repay_unauthorized() external {
