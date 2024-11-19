@@ -66,6 +66,9 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
     uint256 decimals = 18;
     uint256 decimalMultiplier = 10 ** decimals;
 
+    /// @notice The address that is allowed to forward calls.
+    address private constant TRUSTED_FORWARDER = 0xB2b5841DBeF766d4b521221732F9B618fCf34A87;
+
     uint256 firstStageId;
 
     address USER = makeAddr("user");
@@ -198,7 +201,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         PUBLISHER = new CTPublisher(jbController(), jbPermissions(), FEE_PROJECT_ID, multisig());
 
         REV_DEPLOYER = new REVDeployer{salt: REV_DEPLOYER_SALT}(
-            jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER
+            jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER, TRUSTED_FORWARDER
         );
 
         ARB_SUCKER_DEPLOYER = new JBArbitrumSuckerDeployer(jbDirectory(), jbPermissions(), jbTokens(), multisig());
