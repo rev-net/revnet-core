@@ -62,6 +62,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     error REVLoans_CollateralRequired();
     error REVLoans_InvalidPrepaidFeePercent(uint256 prepaidFeePercent, uint256 min, uint256 max);
     error REVLoans_NotEnoughCollateral();
+    error REVLoans_OverflowAlert(uint256 value, uint256 limit);
     error REVLoans_PermitAllowanceNotEnough(uint256 allowanceAmount, uint256 requiredAmount);
     error REVLoans_NoMsgValueAllowed();
     error REVLoans_LoanExpired(uint256 timeSinceLoanCreated, uint256 loanLiquidationDuration);
@@ -119,10 +120,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @custom:param token The token being loaned.
     mapping(uint256 revnetId => mapping(IJBPayoutTerminal terminal => mapping(address token => bool))) public override
         isLoanSourceOf;
-
-    /// @notice The ID of the last revnet that has been successfully liquiditated after passing the duration.
-    /// @custom:param The ID of the revnet to get the last liquidated loan ID from.
-    mapping(uint256 revnetId => uint256) public override lastLoanIdLiquidatedFrom;
 
     /// @notice The amount of loans that have been created.
     /// @custom:param revnetId The ID of the revnet to get the number of loans from.
@@ -481,7 +478,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         }
 
         // Get a reference to the loan ID.
-        loanId = _generateLoanId(revnetId, ++numberOfLoansFor[revnetId]);
+        loanId = _generateLoanId({revnetId: revnetId, loanNumber: ++numberOfLoansFor[revnetId]});
 
         // Mint the loan.
         _mint({to: _msgSender(), tokenId: loanId});
@@ -523,16 +520,12 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     }
 
     /// @notice Cleans up any liquiditated loans.
-    /// @dev Since loans are created in incremental order, earlier IDs will always be liquidated before later ones.
+    /// @dev Since some loans may be reallocated or paid off, loans within startingLoanId and startingLoanId + count may
+    /// be skipped, so choose these parameters carefully to avoid extra gas usage.
     /// @param revnetId The ID of the revnet to liquidate loans from.
+    /// @param startingLoanId The ID of the loan to start iterating from.
     /// @param count The amount of loans iterate over since the last liquidated loan.
-    function liquidateExpiredLoansFrom(uint256 revnetId, uint256 count) external override {
-        // Keep a reference to the loan ID being iterated on.
-        uint256 lastLoanIdLiquidated = lastLoanIdLiquidatedFrom[revnetId];
-
-        // Keep a reference to the latest liquidated loan ID.
-        uint256 newLastLoanIdLiquidated;
-
+    function liquidateExpiredLoansFrom(uint256 revnetId, uint256 startingLoanId, uint256 count) external override {
         // Keep a reference to the revnet's owner.
         IREVDeployer revnetOwner = IREVDeployer(PROJECTS.ownerOf(revnetId));
 
@@ -542,31 +535,23 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // Iterate over the desired number of loans to check for liquidation.
         for (uint256 i; i < count; i++) {
             // Get a reference to the next loan ID.
-            uint256 loanId =
-                lastLoanIdLiquidated == 0 && i == 0 ? _generateLoanId(revnetId, 1) : newLastLoanIdLiquidated + 1;
+            uint256 loanId = _generateLoanId({revnetId: revnetId, loanNumber: startingLoanId + i});
 
             // Get a reference to the loan being iterated on.
             REVLoan memory loan = _loanOf[loanId];
 
             // If the loan doesn't exist, there's nothing left to liquidate.
             // slither-disable-next-line incorrect-equality
-            if (loan.createdAt == 0) {
-                break;
-            }
+            if (loan.createdAt == 0) break;
 
             // Keep a reference to the loan's owner.
             address owner = _ownerOf(loanId);
 
-            // If the loan is already burned, continue.
-            if (owner == address(0)) {
-                newLastLoanIdLiquidated = loanId;
-                continue;
-            }
+            // If the loan is already burned, or if it hasn't passed its liquidation duration, continue.
+            if (owner == address(0) || (block.timestamp <= loan.createdAt + LOAN_LIQUIDATION_DURATION)) continue;
 
-            // If the loan has not yet passed its liquidation timeframe, no subsequent loans have either.
-            if (block.timestamp <= loan.createdAt + LOAN_LIQUIDATION_DURATION) {
-                break;
-            }
+            // Burn the loan.
+            _burn(loanId);
 
             // If the loan has been paid back and there is still leftover collateral, return it to the owner.
             // slither-disable-next-line incorrect-equality
@@ -591,18 +576,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
                 totalBorrowedFrom[revnetId][loan.source.terminal][loan.source.token] -= loan.amount;
             }
 
-            // Burn the loan.
-            if (owner != address(0)) _burn(loanId);
-
-            // Increment the number of loans liquidated.
-            newLastLoanIdLiquidated = loanId;
-
             emit Liquidate({loanId: loanId, revnetId: revnetId, loan: loan, caller: _msgSender()});
-        }
-
-        // Store the latest liquidated loan.
-        if (lastLoanIdLiquidated != newLastLoanIdLiquidated) {
-            lastLoanIdLiquidatedFrom[revnetId] = newLastLoanIdLiquidated;
         }
     }
 
@@ -692,7 +666,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // Accept the funds that'll be used to pay off loans.
         borrowAmount = _acceptFundsFor({token: loan.source.token, amount: borrowAmount, allowance: allowance});
 
-        return _repayLoan(loanId, loan, borrowAmount, collateralAmountToReturn, beneficiary);
+        return _repayLoan({
+            loanId: loanId,
+            loan: loan,
+            borrowAmount: borrowAmount,
+            collateralAmountToReturn: collateralAmountToReturn,
+            beneficiary: beneficiary
+        });
     }
 
     /// @notice Sets the address of the resolver used to retrieve the tokenURI of loans.
@@ -1044,7 +1024,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         } else {
             // Make a new loan with the remaining amount and collateral.
             // Get a reference to the replacement loan ID.
-            uint256 paidOffLoanId = _generateLoanId(revnetId, ++numberOfLoansFor[revnetId]);
+            uint256 paidOffLoanId = _generateLoanId({revnetId: revnetId, loanNumber: ++numberOfLoansFor[revnetId]});
 
             // Mint the replacement loan.
             _mint({to: _msgSender(), tokenId: paidOffLoanId});
@@ -1218,19 +1198,22 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     function _transferFrom(address from, address payable to, address token, uint256 amount) internal virtual {
         if (from == address(this)) {
             // If the token is native token, assume the `sendValue` standard.
-            if (token == JBConstants.NATIVE_TOKEN) return Address.sendValue(to, amount);
+            if (token == JBConstants.NATIVE_TOKEN) return Address.sendValue({recipient: to, amount: amount});
 
             // If the transfer is from this contract, use `safeTransfer`.
-            return IERC20(token).safeTransfer(to, amount);
+            return IERC20(token).safeTransfer({to: to, value: amount});
         }
 
         // If there's sufficient approval, transfer normally.
         if (IERC20(token).allowance(address(from), address(this)) >= amount) {
-            return IERC20(token).safeTransferFrom(from, to, amount);
+            return IERC20(token).safeTransferFrom({from: from, to: to, value: amount});
         }
 
+        // Make sure the amount being paid is less than the maximum permit2 allowance.
+        if (amount > type(uint160).max) revert REVLoans_OverflowAlert(amount, type(uint160).max);
+
         // Otherwise, attempt to use the `permit2` method.
-        PERMIT2.transferFrom(from, to, uint160(amount), token);
+        PERMIT2.transferFrom({from: from, to: to, amount: uint160(amount), token: token});
     }
 
     fallback() external payable {}

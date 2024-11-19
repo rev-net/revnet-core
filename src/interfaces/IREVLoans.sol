@@ -74,7 +74,6 @@ interface IREVLoans {
         view
         returns (uint256 sourceFeeAmount);
     function isLoanSourceOf(uint256 revnetId, IJBPayoutTerminal terminal, address token) external view returns (bool);
-    function lastLoanIdLiquidatedFrom(uint256 revnetId) external view returns (uint256);
     function loanOf(uint256 loanId) external view returns (REVLoan memory);
     function loanSourcesOf(uint256 revnetId) external view returns (REVLoanSource[] memory);
     function numberOfLoansFor(uint256 revnetId) external view returns (uint256);
@@ -100,7 +99,7 @@ interface IREVLoans {
     )
         external
         returns (uint256 loanId, REVLoan memory loan);
-    function liquidateExpiredLoansFrom(uint256 revnetId, uint256 count) external;
+    function liquidateExpiredLoansFrom(uint256 revnetId, uint256 startingLoanId, uint256 count) external;
     function repayLoan(
         uint256 loanId,
         uint256 newAmount,

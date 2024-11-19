@@ -969,7 +969,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
         } else {
             // If we're converting an existing Juicebox project into a revnet,
             // transfer the `JBProjects` NFT to this deployer.
-            IERC721(PROJECTS).safeTransferFrom(PROJECTS.ownerOf(revnetId), address(this), revnetId);
+            IERC721(PROJECTS).safeTransferFrom({from: PROJECTS.ownerOf(revnetId), to: address(this), tokenId: revnetId});
 
             // Launch the revnet rulesets for the pre-existing project.
             // slither-disable-next-line unused-return
@@ -984,7 +984,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
         // Store the cashout delay of the revnet if its stages are already in progress.
         // This prevents cashout liquidity/arbitrage issues for existing revnets which
         // are deploying to a new chain.
-        _setCashOutDelayIfNeeded(revnetId, configuration.stageConfigurations[0]);
+        _setCashOutDelayIfNeeded({revnetId: revnetId, firstStageConfig: configuration.stageConfigurations[0]});
 
         // Deploy the revnet's ERC-20 token.
         // slither-disable-next-line unused-return
@@ -1020,7 +1020,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
         });
 
         // Store the auto-mint amounts.
-        _storeAutomintAmounts(revnetId, configuration);
+        _storeAutomintAmounts({revnetId: revnetId, configuration: configuration});
 
         // Give the split operator their permissions.
         _setSplitOperatorOf({revnetId: revnetId, operator: configuration.splitOperator});
