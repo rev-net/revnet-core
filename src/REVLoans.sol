@@ -490,20 +490,17 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
             // If the loan doesn't exist, there's nothing left to liquidate.
             // slither-disable-next-line incorrect-equality
-            if (loan.createdAt == 0) { break; }
+            if (loan.createdAt == 0) break;
 
             // Keep a reference to the loan's owner.
             address owner = _ownerOf(loanId);
 
-            // If the loan is already burned, continue.
-            if (owner == address(0)) { continue; }
+            // If the loan is already burned, or if it hasn't passed its liquidation duration, continue.
+            if (owner == address(0) || (block.timestamp <= loan.createdAt + LOAN_LIQUIDATION_DURATION)) continue;
 
-<<<<<<< Updated upstream
-=======
             // Burn the loan.
             _burn(loanId);
 
->>>>>>> Stashed changes
             // If the loan has been paid back and there is still leftover collateral, return it to the owner.
             // slither-disable-next-line incorrect-equality
             if (loan.collateral > 0) {
@@ -617,11 +614,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // Accept the funds that'll be used to pay off loans.
         amount = _acceptFundsFor({token: loan.source.token, amount: amount, allowance: allowance});
 
-<<<<<<< Updated upstream
-        return _repayLoan(loanId, loan, amount, collateralToReturn, beneficiary);
-=======
-        return _repayLoan({loanId: loanId, loan: loan, borrowAmount: borrowAmount, collateralAmountToReturn: collateralAmountToReturn, beneficiary: beneficiary});
->>>>>>> Stashed changes
+        return _repayLoan({
+            loanId: loanId,
+            loan: loan,
+            borrowAmount: borrowAmount,
+            collateralAmountToReturn: collateralAmountToReturn,
+            beneficiary: beneficiary
+        });
     }
 
     /// @notice Sets the address of the resolver used to retrieve the tokenURI of loans.

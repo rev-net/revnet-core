@@ -965,11 +965,7 @@ contract REVDeployer is IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721
         } else {
             // If we're converting an existing Juicebox project into a revnet,
             // transfer the `JBProjects` NFT to this deployer.
-            IERC721(PROJECTS).safeTransferFrom({
-                from: PROJECTS.ownerOf(revnetId),
-                to: address(this),
-                tokenId: revnetId
-            });
+            IERC721(PROJECTS).safeTransferFrom({from: PROJECTS.ownerOf(revnetId), to: address(this), tokenId: revnetId});
 
             // Launch the revnet rulesets for the pre-existing project.
             // slither-disable-next-line unused-return
