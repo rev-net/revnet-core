@@ -104,5 +104,12 @@ interface IREVDeployer {
         external
         returns (address[] memory suckers);
 
-    function amountToAutoIssue(uint256 revnetId, uint256 stageId, address beneficiary) external view returns (uint256);
+    function amountToAutoIssue(
+        uint256 revnetId,
+        uint256 stageId,
+        address beneficiary
+    )
+        external
+        view
+        returns (uint256);
 }

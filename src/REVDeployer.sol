@@ -145,7 +145,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
     // slither-disable-next-line uninitialized-state
     mapping(uint256 revnetId => IJB721TiersHook tiered721Hook) public override tiered721HookOf;
 
-    /// @notice The amount of auto-issued tokens which have not been issued yet, including future stages, for each revnet.
+    /// @notice The amount of auto-issued tokens which have not been issued yet, including future stages, for each
+    /// revnet.
     /// @dev These tokens can be realized (issued) with `autoIssueFor(…)`.
     /// @custom:param revnetId The ID of the revnet to get the unrealized auto-issuance amount for.
     mapping(uint256 revnetId => uint256) public override unrealizedAutoIssuanceAmountOf;
@@ -378,7 +379,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
 
         // Add each auto-issuance to the byte-encoded representation.
         for (uint256 i; i < numberOfAutoIssuances; i++) {
-            encodedConfiguration = abi.encode(encodedConfiguration, _encodedAutoIssuance(stageConfiguration.autoIssuance[i]));
+            encodedConfiguration =
+                abi.encode(encodedConfiguration, _encodedAutoIssuance(stageConfiguration.autoIssuance[i]));
         }
     }
 
@@ -671,7 +673,13 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
         // Decrease the amount of unrealized auto-issue tokens.
         unrealizedAutoIssuanceAmountOf[revnetId] -= count;
 
-        emit AutoIssue({revnetId: revnetId, stageId: stageId, beneficiary: beneficiary, count: count, caller: _msgSender()});
+        emit AutoIssue({
+            revnetId: revnetId,
+            stageId: stageId,
+            beneficiary: beneficiary,
+            count: count,
+            caller: _msgSender()
+        });
 
         // Mint the tokens.
         _mintTokensOf({revnetId: revnetId, tokenCount: count, beneficiary: beneficiary});
