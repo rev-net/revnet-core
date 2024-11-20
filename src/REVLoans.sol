@@ -857,7 +857,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             });
             // ... or pay off the loan if needed.
         } else if (loan.amount > newBorrowAmount) {
-            _removeFrom({loan: loan, revnetId: revnetId, amount: loan.amount - newBorrowAmount});
+            _removeFrom({loan: loan, revnetId: revnetId, borrowAmount: loan.amount - newBorrowAmount});
         }
 
         // Add collateral if needed...
