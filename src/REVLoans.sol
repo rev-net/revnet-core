@@ -181,7 +181,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         return _borrowableAmountFrom({
             revnetId: revnetId,
             collateralAmount: collateralAmount,
-            pendingAutomintTokens: revnetOwner.unrealizedAutoMintAmountOf(revnetId),
+            pendingAutoIssuanceTokens: revnetOwner.unrealizedAutoIssuanceAmountOf(revnetId),
             decimals: decimals,
             currency: currency,
             currentStage: controller.RULESETS().currentOf(revnetId),
@@ -252,7 +252,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @param revnetId The ID of the revnet to check for borrowable assets from.
     /// @param collateralAmount The amount of collateral that the loan will be collateralized with.
     /// @param currentStage The current stage of the revnet.
-    /// @param pendingAutomintTokens The amount of tokens pending automint from the revnet.
+    /// @param pendingAutoIssuanceTokens The amount of tokens pending auto issuance from the revnet.
     /// @param decimals The decimals the resulting fixed point value will include.
     /// @param currency The currency that the resulting amount should be in terms of.
     /// @param terminals The terminals that the funds are being borrowed from.
@@ -261,7 +261,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     function _borrowableAmountFrom(
         uint256 revnetId,
         uint256 collateralAmount,
-        uint256 pendingAutomintTokens,
+        uint256 pendingAutoIssuanceTokens,
         uint256 decimals,
         uint256 currency,
         JBRuleset memory currentStage,
@@ -296,7 +296,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         return JBRedemptions.reclaimFrom({
             surplus: totalSurplus + totalBorrowed,
             tokensRedeemed: collateralAmount,
-            totalSupply: totalSupply + totalCollateral + pendingAutomintTokens,
+            totalSupply: totalSupply + totalCollateral + pendingAutoIssuanceTokens,
             redemptionRate: currentStage.redemptionRate()
         });
     }
@@ -811,8 +811,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             JBAccountingContext memory accountingContext =
                 loan.source.terminal.accountingContextForTokenOf({projectId: revnetId, token: loan.source.token});
 
-            // Keep a reference to the pending automint tokens.
-            uint256 pendingAutomintTokens = revnetOwner.unrealizedAutoMintAmountOf(revnetId);
+            // Keep a reference to the pending auto issuance tokens.
+            uint256 pendingAutoIssuanceTokens = revnetOwner.unrealizedAutoIssuanceAmountOf(revnetId);
 
             // Keep a reference to the current stage.
             JBRuleset memory currentStage = controller.RULESETS().currentOf(revnetId);
@@ -827,7 +827,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
                     && _borrowableAmountFrom({
                         revnetId: revnetId,
                         collateralAmount: newCollateralAmount,
-                        pendingAutomintTokens: pendingAutomintTokens,
+                        pendingAutoIssuanceTokens: pendingAutoIssuanceTokens,
                         decimals: accountingContext.decimals,
                         currency: accountingContext.currency,
                         currentStage: currentStage,
