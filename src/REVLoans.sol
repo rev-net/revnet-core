@@ -755,10 +755,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         uint256 revFeeAmount = JBFees.feeAmountFrom({amount: borrowAmount, feePercent: REV_PREPAID_FEE_PERCENT});
 
         // Increase the allowance for the beneficiary.
-        _beforeTransferTo({to: address(feeTerminal), token: loan.source.token, amount: revFeeAmount});
-
-        // The amount to pay as a fee.
-        uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? revFeeAmount : 0;
+        uint256 payValue = _beforeTransferTo({to: address(feeTerminal), token: loan.source.token, amount: revFeeAmount});
 
         // Pay the fee. Send the REV to the msg.sender.
         // slither-disable-next-line arbitrary-send-eth,unused-return
@@ -879,10 +876,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // The amount remaining in the contract should be the source fee.
         if (balance > 0) {
             // Increase the allowance for the beneficiary.
-            _beforeTransferTo({to: address(loan.source.terminal), token: loan.source.token, amount: balance});
-
-            // The amount to pay as a fee.
-            uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? balance : 0;
+            uint256 payValue =
+                _beforeTransferTo({to: address(loan.source.terminal), token: loan.source.token, amount: balance});
 
             // Pay the fee.
             // slither-disable-next-line unused-return
@@ -960,10 +955,12 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @param token The token being transferred.
     /// @param amount The number of tokens being transferred, as a fixed point number with the same number of decimals
     /// as the token specifies.
-    function _beforeTransferTo(address to, address token, uint256 amount) internal {
+    /// @return payValue The value to attach to the transaction being sent.
+    function _beforeTransferTo(address to, address token, uint256 amount) internal returns (uint256) {
         // If the token is the native token, no allowance needed.
-        if (token == JBConstants.NATIVE_TOKEN) return;
+        if (token == JBConstants.NATIVE_TOKEN) return amount;
         IERC20(token).safeIncreaseAllowance(to, amount);
+        return 0;
     }
 
     /// @notice Pays down a loan.
@@ -1154,10 +1151,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         totalBorrowedFrom[revnetId][loan.source.terminal][loan.source.token] -= borrowAmount;
 
         // Increase the allowance for the beneficiary.
-        _beforeTransferTo({to: address(loan.source.terminal), token: loan.source.token, amount: borrowAmount});
-
-        // The borrowed amount to return to the revnet.
-        uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? borrowAmount : 0;
+        uint256 payValue =
+            _beforeTransferTo({to: address(loan.source.terminal), token: loan.source.token, amount: borrowAmount});
 
         // Add the loaned amount back to the revnet.
         try loan.source.terminal.addToBalanceOf{value: payValue}({
