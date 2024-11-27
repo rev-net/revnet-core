@@ -106,8 +106,8 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
                 autoMints: mintConfs,
                 splitPercent: 2000, // 20%
                 initialIssuance: uint112(1000 * decimalMultiplier),
-                issuanceDecayFrequency: 90 days,
-                issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+                issuanceCutFrequency: 90 days,
+                issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
                 cashOutTaxRate: 6000, // 0.6
                 extraMetadata: 0
             });
@@ -118,8 +118,8 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             autoMints: new REVAutoMint[](0),
             splitPercent: 2000, // 20%
             initialIssuance: 0, // inherit from previous cycle.
-            issuanceDecayFrequency: 180 days,
-            issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+            issuanceCutFrequency: 180 days,
+            issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
             cashOutTaxRate: 1000, // 0.1
             extraMetadata: 0
         });
@@ -129,8 +129,8 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             autoMints: new REVAutoMint[](0),
             splitPercent: 0,
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
-            issuanceDecayFrequency: 0,
-            issuanceDecayPercent: 0,
+            issuanceCutFrequency: 0,
+            issuanceCutPercent: 0,
             cashOutTaxRate: 6000, // 0.6
             extraMetadata: 0
         });
@@ -208,8 +208,8 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
                 autoMints: mintConfs,
                 splitPercent: 2000, // 20%
                 initialIssuance: uint112(1000 * decimalMultiplier),
-                issuanceDecayFrequency: 90 days,
-                issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+                issuanceCutFrequency: 90 days,
+                issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
                 cashOutTaxRate: 0, //6000, // 0.6
                 extraMetadata: 0
             });
@@ -220,8 +220,8 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             autoMints: new REVAutoMint[](0),
             splitPercent: 2000, // 20%
             initialIssuance: 0, // inherit from previous cycle.
-            issuanceDecayFrequency: 180 days,
-            issuanceDecayPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+            issuanceCutFrequency: 180 days,
+            issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
             cashOutTaxRate: 0, //6000, // 0.6
             extraMetadata: 0
         });
@@ -231,8 +231,8 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             autoMints: new REVAutoMint[](0),
             splitPercent: 0,
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
-            issuanceDecayFrequency: 0,
-            issuanceDecayPercent: 0,
+            issuanceCutFrequency: 0,
+            issuanceCutPercent: 0,
             cashOutTaxRate: 0, //6000, // 0.6
             extraMetadata: 0
         });
