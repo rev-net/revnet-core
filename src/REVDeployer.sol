@@ -368,8 +368,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
                 : stageConfiguration.startsAtOrAfter,
             stageConfiguration.splitPercent,
             stageConfiguration.initialIssuance,
-            stageConfiguration.issuanceDecayFrequency,
-            stageConfiguration.issuanceDecayPercent,
+            stageConfiguration.issuanceCutFrequency,
+            stageConfiguration.issuanceCutPercent,
             stageConfiguration.cashOutTaxRate
         );
 
@@ -518,9 +518,9 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
             // Set up the ruleset.
             rulesetConfigurations[i] = JBRulesetConfig({
                 mustStartAtOrAfter: stageConfiguration.startsAtOrAfter,
-                duration: stageConfiguration.issuanceDecayFrequency,
+                duration: stageConfiguration.issuanceCutFrequency,
                 weight: stageConfiguration.initialIssuance,
-                decayPercent: stageConfiguration.issuanceDecayPercent,
+                cutPercent: stageConfiguration.issuanceCutPercent,
                 approvalHook: IJBRulesetApprovalHook(address(0)),
                 metadata: metadata,
                 splitGroups: new JBSplitGroup[](0),
