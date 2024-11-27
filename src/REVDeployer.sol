@@ -520,7 +520,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
                 mustStartAtOrAfter: stageConfiguration.startsAtOrAfter,
                 duration: stageConfiguration.issuanceCutFrequency,
                 weight: stageConfiguration.initialIssuance,
-                cutPercent: stageConfiguration.issuanceCutPercent,
+                decayPercent: stageConfiguration.issuanceCutPercent,
                 approvalHook: IJBRulesetApprovalHook(address(0)),
                 metadata: metadata,
                 splitGroups: new JBSplitGroup[](0),
