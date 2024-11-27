@@ -156,8 +156,8 @@ contract DeployScript is Script, Sphinx {
                 autoMints: mintConfs,
                 splitPercent: 3800, // 38%
                 initialIssuance: uint112(1000 * DECIMAL_MULTIPLIER),
-                issuanceDecayFrequency: 90 days,
-                issuanceDecayPercent: 380_000_000, // 38%
+                issuanceCutFrequency: 90 days,
+                issuanceCutPercent: 380_000_000, // 38%
                 cashOutTaxRate: 3000, // 0.3
                 extraMetadata: 4 // Allow adding suckers.
             });
@@ -173,8 +173,8 @@ contract DeployScript is Script, Sphinx {
                 autoMints: mintConfs,
                 splitPercent: 3800, // 40%
                 initialIssuance: 0, // inherit from previous cycle.
-                issuanceDecayFrequency: 180 days,
-                issuanceDecayPercent: 380_000_000, // 30%
+                issuanceCutFrequency: 180 days,
+                issuanceCutPercent: 380_000_000, // 30%
                 cashOutTaxRate: 3000, // 0.3
                 extraMetadata: 4 // Allow adding suckers.
             });
@@ -185,8 +185,8 @@ contract DeployScript is Script, Sphinx {
             autoMints: new REVAutoMint[](0),
             splitPercent: 1000, // 10%
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
-            issuanceDecayFrequency: 0,
-            issuanceDecayPercent: 0,
+            issuanceCutFrequency: 0,
+            issuanceCutPercent: 0,
             cashOutTaxRate: 1000, // 0.1
             extraMetadata: 4 // Allow adding suckers.
         });
