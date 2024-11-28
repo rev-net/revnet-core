@@ -373,11 +373,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
             stageConfiguration.cashOutTaxRate
         );
 
-        // Get a reference to the stage's auto-mints.
-        uint256 numberOfAutoMints = stageConfiguration.autoMints.length;
-
         // Add each auto-mint to the byte-encoded representation.
-        for (uint256 i; i < numberOfAutoMints; i++) {
+        for (uint256 i; i < stageConfiguration.autoMints.length; i++) {
             encodedConfiguration = abi.encode(encodedConfiguration, _encodedAutoMint(stageConfiguration.autoMints[i]));
         }
     }
@@ -399,24 +396,17 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
         pure
         returns (JBFundAccessLimitGroup[] memory fundAccessLimitGroups)
     {
-        // Keep a reference to the number of loan access groups there are.
-        uint256 numberOfLoanSources = configuration.loanSources.length;
-
-        // Keep a reference to the loan source to iterate on.
-        // Loans are sourced from a token accepted by one of the revnet's terminals.
-        REVLoanSource calldata loanSource;
-
         // Set up an unlimited allowance for the loan contract to use.
         JBCurrencyAmount[] memory loanAllowances = new JBCurrencyAmount[](1);
         loanAllowances[0] = JBCurrencyAmount({currency: configuration.baseCurrency, amount: type(uint224).max});
 
         // Initialize the fund access limit groups.
-        fundAccessLimitGroups = new JBFundAccessLimitGroup[](numberOfLoanSources);
+        fundAccessLimitGroups = new JBFundAccessLimitGroup[](configuration.loanSources.length);
 
         // Set up the fund access limits for the loans.
-        for (uint256 i; i < numberOfLoanSources; i++) {
+        for (uint256 i; i < configuration.loanSources.length; i++) {
             // Set the loan source being iterated on.
-            loanSource = configuration.loanSources[i];
+            REVLoanSource calldata loanSource = configuration.loanSources[i];
 
             // Set up the fund access limits for the loans.
             fundAccessLimitGroups[i] = JBFundAccessLimitGroup({
@@ -463,14 +453,11 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
         view
         returns (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration)
     {
-        // Keep a reference to the number of stages to queue as rulesets.
-        uint256 numberOfStages = configuration.stageConfigurations.length;
-
         // If there are no stages, revert.
-        if (numberOfStages == 0) revert REVDeployer_StagesRequired();
+        if (configuration.stageConfigurations.length == 0) revert REVDeployer_StagesRequired();
 
         // Initialize the array of rulesets.
-        rulesetConfigurations = new JBRulesetConfig[](numberOfStages);
+        rulesetConfigurations = new JBRulesetConfig[](configuration.stageConfigurations.length);
 
         // Add the base configuration to the byte-encoded configuration.
         encodedConfiguration = abi.encode(
@@ -481,9 +468,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
             configuration.description.salt
         );
 
-        // Keep a reference to the revnet stage being iterated on.
-        REVStageConfig calldata stageConfiguration;
-
         // Initialize fund access limit groups for the loan contract to use.
         JBFundAccessLimitGroup[] memory fundAccessLimitGroups = _makeLoanFundAccessLimits(configuration);
 
@@ -491,9 +475,9 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
         uint256 previousStartTime;
 
         // Iterate through each stage to set up its ruleset.
-        for (uint256 i; i < numberOfStages; i++) {
+        for (uint256 i; i < configuration.stageConfigurations.length; i++) {
             // Set the stage being iterated on.
-            stageConfiguration = configuration.stageConfigurations[i];
+            REVStageConfig calldata stageConfiguration = configuration.stageConfigurations[i];
 
             // If the stage's start time is not after the previous stage's start time, revert.
             if (stageConfiguration.startsAtOrAfter <= previousStartTime) {
@@ -549,17 +533,14 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
         // Keep a reference to the custom split operator permissions.
         uint256[] memory customSplitOperatorPermissionIndexes = _extraOperatorPermissions[revnetId];
 
-        // Keep a reference to the number of custom permissions.
-        uint256 numberOfCustomPermissionIndexes = customSplitOperatorPermissionIndexes.length;
-
         // Make the array that merges the default and custom operator permissions.
-        allOperatorPermissions = new uint256[](3 + numberOfCustomPermissionIndexes);
+        allOperatorPermissions = new uint256[](3 + customSplitOperatorPermissionIndexes.length);
         allOperatorPermissions[0] = JBPermissionIds.SET_SPLIT_GROUPS;
         allOperatorPermissions[1] = JBPermissionIds.SET_BUYBACK_POOL;
         allOperatorPermissions[2] = JBPermissionIds.SET_PROJECT_URI;
 
         // Copy the custom permissions into the array.
-        for (uint256 i; i < numberOfCustomPermissionIndexes; i++) {
+        for (uint256 i; i < customSplitOperatorPermissionIndexes.length; i++) {
             allOperatorPermissions[3 + i] = customSplitOperatorPermissionIndexes[i];
         }
     }
@@ -815,22 +796,16 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
         internal
         returns (bool)
     {
-        // Keep a reference to the number of allowed posts.
-        uint256 numberOfAllowedPosts = allowedPosts.length;
-
         // If there are no posts to allow, return.
-        if (numberOfAllowedPosts == 0) return false;
+        if (allowedPosts.length == 0) return false;
 
         // Keep a reference to the formatted allowed posts.
-        CTAllowedPost[] memory formattedAllowedPosts = new CTAllowedPost[](numberOfAllowedPosts);
-
-        // Keep a reference to the post being iterated on.
-        REVCroptopAllowedPost calldata post;
+        CTAllowedPost[] memory formattedAllowedPosts = new CTAllowedPost[](allowedPosts.length);
 
         // Iterate through each post to add it to the formatted list.
-        for (uint256 i; i < numberOfAllowedPosts; i++) {
+        for (uint256 i; i < allowedPosts.length; i++) {
             // Set the post being iterated on.
-            post = allowedPosts[i];
+            REVCroptopAllowedPost calldata post = allowedPosts[i];
 
             // Set the formatted post.
             formattedAllowedPosts[i] = CTAllowedPost({
@@ -1171,18 +1146,12 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
     /// @param revnetId The ID of the revnet to set up the buyback hook for.
     /// @param buybackHookConfiguration The address of the hook and a list of pools to use for buybacks.
     function _setupBuybackHookOf(uint256 revnetId, REVBuybackHookConfig calldata buybackHookConfiguration) internal {
-        // Get a reference to the number of pools being set up.
-        uint256 numberOfPoolsToSetup = buybackHookConfiguration.poolConfigurations.length;
-
-        // Keep a reference to the pool being iterated on.
-        REVBuybackPoolConfig calldata poolConfig;
-
         // Store the buyback hook.
         buybackHookOf[revnetId] = buybackHookConfiguration.hook;
 
-        for (uint256 i; i < numberOfPoolsToSetup; i++) {
+        for (uint256 i; i < buybackHookConfiguration.poolConfigurations.length; i++) {
             // Set the pool being iterated on.
-            poolConfig = buybackHookConfiguration.poolConfigurations[i];
+            REVBuybackPoolConfig calldata poolConfig = buybackHookConfiguration.poolConfigurations[i];
 
             // Register the pool within the buyback contract.
             // slither-disable-next-line unused-return
@@ -1200,30 +1169,18 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
     /// @param revnetId The ID of the revnet to store the auto-mint amounts for.
     /// @param configuration The revnet's configuration. See `REVConfig`.
     function _storeAutomintAmounts(uint256 revnetId, REVConfig calldata configuration) internal {
-        // Keep a reference to the number of stages the revnet has.
-        uint256 numberOfStages = configuration.stageConfigurations.length;
-
-        // Keep a reference to the stage configuration being iterated on.
-        REVStageConfig calldata stageConfiguration;
-
         // Keep a reference to the total amount of tokens which can be auto-minted.
         uint256 totalUnrealizedAutoMintAmount;
 
         // Loop through each stage to store its auto-mint amounts.
-        for (uint256 i; i < numberOfStages; i++) {
+        for (uint256 i; i < configuration.stageConfigurations.length; i++) {
             // Set the stage configuration being iterated on.
-            stageConfiguration = configuration.stageConfigurations[i];
-
-            // Keep a reference to the number of mints to store.
-            uint256 numberOfMints = stageConfiguration.autoMints.length;
-
-            // Keep a reference to the mint config being iterated on.
-            REVAutoMint calldata mintConfig;
+            REVStageConfig calldata stageConfiguration = configuration.stageConfigurations[i];
 
             // Loop through each mint to store its amount.
-            for (uint256 j; j < numberOfMints; j++) {
+            for (uint256 j; j < stageConfiguration.autoMints.length; j++) {
                 // Set the mint config being iterated on.
-                mintConfig = stageConfiguration.autoMints[j];
+                REVAutoMint calldata mintConfig = stageConfiguration.autoMints[j];
 
                 // If the mint config is for another chain, skip it.
                 if (mintConfig.chainId != block.chainid) continue;
