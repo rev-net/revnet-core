@@ -41,7 +41,7 @@ import {CTPublisher} from "@croptop/core/src/CTPublisher.sol";
 import {CTAllowedPost} from "@croptop/core/src/structs/CTAllowedPost.sol";
 
 import {IREVDeployer} from "./interfaces/IREVDeployer.sol";
-import {REVAutoMint} from "./structs/REVAutoMint.sol";
+import {REVAutoIssuance} from "./structs/REVAutoIssuance.sol";
 import {REVBuybackHookConfig} from "./structs/REVBuybackHookConfig.sol";
 import {REVBuybackPoolConfig} from "./structs/REVBuybackPoolConfig.sol";
 import {REVConfig} from "./structs/REVConfig.sol";
@@ -117,12 +117,12 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
 
     /// @notice The number of revnet tokens which can be "auto-minted" (minted without payments)
     /// for a specific beneficiary during a stage. Think of this as a per-stage premint.
-    /// @dev These tokens can be minted with `autoMintFor(…)`.
+    /// @dev These tokens can be minted with `autoIssueFor(…)`.
     /// @custom:param revnetId The ID of the revnet to get the auto-mint amount for.
     /// @custom:param stageId The ID of the stage to get the auto-mint amount for.
     /// @custom:param beneficiary The beneficiary of the auto-mint.
     mapping(uint256 revnetId => mapping(uint256 stageId => mapping(address beneficiary => uint256))) public override
-        amountToAutoMint;
+        amountToAutoIssue;
 
     /// @notice Each revnet's buyback data hook. These return buyback hook data.
     /// @dev Buyback hooks are a combined data hook/pay hook.
@@ -146,9 +146,9 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
     mapping(uint256 revnetId => IJB721TiersHook tiered721Hook) public override tiered721HookOf;
 
     /// @notice The amount of auto-mint tokens which have not been minted yet, including future stages, for each revnet.
-    /// @dev These tokens can be realized (minted) with `autoMintFor(…)`.
-    /// @custom:param revnetId The ID of the revnet to get the unrealized auto-mint amount for.
-    mapping(uint256 revnetId => uint256) public override unrealizedAutoMintAmountOf;
+    /// @dev These tokens can be realized (minted) with `autoIssueFor(…)`.
+    /// @custom:param revnetId The ID of the revnet to get the unrealized auto-issuance amount for.
+    mapping(uint256 revnetId => uint256) public override unrealizedAutoIssuanceAmountOf;
 
     //*********************************************************************//
     // ------------------- internal stored properties -------------------- //
@@ -339,11 +339,11 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
         if (!isSplitOperatorOf(revnetId, operator)) revert REVDeployer_Unauthorized();
     }
 
-    /// @notice Encodes an auto-mint.
-    /// @param autoMint The auto-mint to encode.
-    /// @return encodedAutoMint The encoded auto-mint.
-    function _encodedAutoMint(REVAutoMint calldata autoMint) private pure returns (bytes memory) {
-        return abi.encode(autoMint.chainId, autoMint.beneficiary, autoMint.count);
+    /// @notice Encodes an auto-issuance.
+    /// @param autoIssuance The auto-issuance to encode.
+    /// @return encodedAutoIssuance The encoded auto-issuance.
+    function _encodedAutoIssuance(REVAutoIssuance calldata autoIssuance) private pure returns (bytes memory) {
+        return abi.encode(autoIssuance.chainId, autoIssuance.beneficiary, autoIssuance.count);
     }
 
     /// @notice Encodes a revnet stage. This is used for sucker deployment salts.
@@ -374,8 +374,9 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
         );
 
         // Add each auto-mint to the byte-encoded representation.
-        for (uint256 i; i < stageConfiguration.autoMints.length; i++) {
-            encodedConfiguration = abi.encode(encodedConfiguration, _encodedAutoMint(stageConfiguration.autoMints[i]));
+        for (uint256 i; i < stageConfiguration.autoIssuances.length; i++) {
+            encodedConfiguration =
+                abi.encode(encodedConfiguration, _encodedAutoIssuance(stageConfiguration.autoIssuances[i]));
         }
     }
 
@@ -634,25 +635,31 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
     /// @param revnetId The ID of the revnet to auto-mint tokens from.
     /// @param stageId The ID of the stage auto-mint tokens are available from.
     /// @param beneficiary The address to auto-mint tokens to.
-    function autoMintFor(uint256 revnetId, uint256 stageId, address beneficiary) external override {
+    function autoIssueFor(uint256 revnetId, uint256 stageId, address beneficiary) external override {
         // Make sure the stage has started.
         if (CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId).start > block.timestamp) {
             revert REVDeployer_StageNotStarted();
         }
 
-        // Get a reference to the number of tokens to auto-mint.
-        uint256 count = amountToAutoMint[revnetId][stageId][beneficiary];
+        // Get a reference to the number of tokens to auto-issue.
+        uint256 count = amountToAutoIssue[revnetId][stageId][beneficiary];
 
         // If there's nothing to auto-mint, return.
         if (count == 0) return;
 
         // Reset the auto-mint amount.
-        amountToAutoMint[revnetId][stageId][beneficiary] = 0;
+        amountToAutoIssue[revnetId][stageId][beneficiary] = 0;
 
-        // Decrease the amount of unrealized auto-mint tokens.
-        unrealizedAutoMintAmountOf[revnetId] -= count;
+        // Decrease the amount of unrealized auto-issuance tokens.
+        unrealizedAutoIssuanceAmountOf[revnetId] -= count;
 
-        emit Mint({revnetId: revnetId, stageId: stageId, beneficiary: beneficiary, count: count, caller: _msgSender()});
+        emit AutoIssue({
+            revnetId: revnetId,
+            stageId: stageId,
+            beneficiary: beneficiary,
+            count: count,
+            caller: _msgSender()
+        });
 
         // Mint the tokens.
         _mintTokensOf({revnetId: revnetId, tokenCount: count, beneficiary: beneficiary});
@@ -994,8 +1001,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
             splitGroups: _makeOperatorSplitGroupWith(configuration.splitOperator)
         });
 
-        // Store the auto-mint amounts.
-        _storeAutomintAmounts({revnetId: revnetId, configuration: configuration});
+        // Store the auto-issuance amounts.
+        _storeAutoIssuanceAmounts({revnetId: revnetId, configuration: configuration});
 
         // Give the split operator their permissions.
         _setSplitOperatorOf({revnetId: revnetId, operator: configuration.splitOperator});
@@ -1165,53 +1172,53 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
         }
     }
 
-    /// @notice Stores the auto-mint amounts for each of a revnet's stages.
+    /// @notice Stores the auto-issuance amounts for each of a revnet's stages.
     /// @param revnetId The ID of the revnet to store the auto-mint amounts for.
     /// @param configuration The revnet's configuration. See `REVConfig`.
-    function _storeAutomintAmounts(uint256 revnetId, REVConfig calldata configuration) internal {
+    function _storeAutoIssuanceAmounts(uint256 revnetId, REVConfig calldata configuration) internal {
         // Keep a reference to the total amount of tokens which can be auto-minted.
-        uint256 totalUnrealizedAutoMintAmount;
+        uint256 totalUnrealizedAutoIssuanceAmount;
 
-        // Loop through each stage to store its auto-mint amounts.
+        // Loop through each stage to store its auto-issuance amounts.
         for (uint256 i; i < configuration.stageConfigurations.length; i++) {
             // Set the stage configuration being iterated on.
             REVStageConfig calldata stageConfiguration = configuration.stageConfigurations[i];
 
             // Loop through each mint to store its amount.
-            for (uint256 j; j < stageConfiguration.autoMints.length; j++) {
+            for (uint256 j; j < stageConfiguration.autoIssuances.length; j++) {
                 // Set the mint config being iterated on.
-                REVAutoMint calldata mintConfig = stageConfiguration.autoMints[j];
+                REVAutoIssuance calldata issuanceConfig = stageConfiguration.autoIssuances[j];
 
-                // If the mint config is for another chain, skip it.
-                if (mintConfig.chainId != block.chainid) continue;
+                // If the issuance config is for another chain, skip it.
+                if (issuanceConfig.chainId != block.chainid) continue;
 
                 // If there's nothing to auto-mint, continue.
-                if (mintConfig.count == 0) continue;
+                if (issuanceConfig.count == 0) continue;
 
-                emit StoreAutoMintAmount({
+                emit StoreAutoIssuanceAmount({
                     revnetId: revnetId,
                     stageId: block.timestamp + i,
-                    beneficiary: mintConfig.beneficiary,
-                    count: mintConfig.count,
+                    beneficiary: issuanceConfig.beneficiary,
+                    count: issuanceConfig.count,
                     caller: _msgSender()
                 });
 
-                // If the auto-mint is for the first stage, or a stage which has already started,
+                // If the auto-issuance is for the first stage, or a stage which has already started,
                 // mint the tokens right away.
                 if (i == 0 || stageConfiguration.startsAtOrAfter <= block.timestamp) {
-                    emit Mint({
+                    emit AutoIssue({
                         revnetId: revnetId,
                         stageId: block.timestamp + i,
-                        beneficiary: mintConfig.beneficiary,
-                        count: mintConfig.count,
+                        beneficiary: issuanceConfig.beneficiary,
+                        count: issuanceConfig.count,
                         caller: _msgSender()
                     });
 
                     // slither-disable-next-line reentrancy-events,reentrancy-no-eth,reentrancy-benign
                     _mintTokensOf({
                         revnetId: revnetId,
-                        tokenCount: mintConfig.count,
-                        beneficiary: mintConfig.beneficiary
+                        tokenCount: issuanceConfig.count,
+                        beneficiary: issuanceConfig.beneficiary
                     });
                 }
                 // Otherwise, store the amount of tokens that can be auto-minted on this chain during this stage.
@@ -1219,15 +1226,15 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
                     // The first stage ID is stored at this block's timestamp,
                     // and further stage IDs have incrementally increasing IDs
                     // slither-disable-next-line reentrancy-events
-                    amountToAutoMint[revnetId][block.timestamp + i][mintConfig.beneficiary] += mintConfig.count;
+                    amountToAutoIssue[revnetId][block.timestamp + i][issuanceConfig.beneficiary] += issuanceConfig.count;
 
-                    // Add to the total unrealized auto-mint amount.
-                    totalUnrealizedAutoMintAmount += mintConfig.count;
+                    // Add to the total unrealized auto-issuance amount.
+                    totalUnrealizedAutoIssuanceAmount += issuanceConfig.count;
                 }
             }
         }
 
-        // Store the unrealized auto-mint amount.
-        unrealizedAutoMintAmountOf[revnetId] = totalUnrealizedAutoMintAmount;
+        // Store the unrealized auto-issuance amount.
+        unrealizedAutoIssuanceAmountOf[revnetId] = totalUnrealizedAutoIssuanceAmount;
     }
 }

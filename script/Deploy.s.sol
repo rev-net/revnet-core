@@ -20,7 +20,7 @@ import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
 
 import {REVDeployer} from "./../src/REVDeployer.sol";
-import {REVAutoMint} from "../src/structs/REVAutoMint.sol";
+import {REVAutoIssuance} from "../src/structs/REVAutoIssuance.sol";
 import {REVBuybackHookConfig} from "../src/structs/REVBuybackHookConfig.sol";
 import {REVConfig} from "../src/structs/REVConfig.sol";
 import {REVDescription} from "../src/structs/REVDescription.sol";
@@ -144,8 +144,8 @@ contract DeployScript is Script, Sphinx {
         REVStageConfig[] memory stageConfigurations = new REVStageConfig[](3);
 
         {
-            REVAutoMint[] memory mintConfs = new REVAutoMint[](1);
-            mintConfs[0] = REVAutoMint({
+            REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](1);
+            issuanceConfs[0] = REVAutoIssuance({
                 chainId: PREMINT_CHAIN_ID,
                 count: uint104(75_000 * DECIMAL_MULTIPLIER),
                 beneficiary: OPERATOR
@@ -153,7 +153,7 @@ contract DeployScript is Script, Sphinx {
 
             stageConfigurations[0] = REVStageConfig({
                 startsAtOrAfter: uint40(block.timestamp + TIME_UNTIL_START),
-                autoMints: mintConfs,
+                autoIssuances: issuanceConfs,
                 splitPercent: 3800, // 38%
                 initialIssuance: uint112(1000 * DECIMAL_MULTIPLIER),
                 issuanceCutFrequency: 90 days,
@@ -162,7 +162,7 @@ contract DeployScript is Script, Sphinx {
                 extraMetadata: 4 // Allow adding suckers.
             });
 
-            mintConfs[0] = REVAutoMint({
+            issuanceConfs[0] = REVAutoIssuance({
                 chainId: PREMINT_CHAIN_ID,
                 count: uint104(135_000 * DECIMAL_MULTIPLIER),
                 beneficiary: OPERATOR
@@ -170,7 +170,7 @@ contract DeployScript is Script, Sphinx {
 
             stageConfigurations[1] = REVStageConfig({
                 startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 720 days),
-                autoMints: mintConfs,
+                autoIssuances: issuanceConfs,
                 splitPercent: 3800, // 40%
                 initialIssuance: 0, // inherit from previous cycle.
                 issuanceCutFrequency: 180 days,
@@ -182,7 +182,7 @@ contract DeployScript is Script, Sphinx {
 
         stageConfigurations[2] = REVStageConfig({
             startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (7200 days)),
-            autoMints: new REVAutoMint[](0),
+            autoIssuances: new REVAutoIssuance[](0),
             splitPercent: 1000, // 10%
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
             issuanceCutFrequency: 0,
