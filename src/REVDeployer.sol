@@ -77,10 +77,10 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @dev 30 days, in seconds.
     uint256 public constant override CASH_OUT_DELAY = 2_592_000;
 
-    /// @notice The cashout fee (as a fraction out of `JBConstants.MAX_FEE`).
+    /// @notice The cash out fee (as a fraction out of `JBConstants.MAX_FEE`).
     /// Cashout fees are paid to the revnet with the `FEE_REVNET_ID`.
-    /// @dev Fees are charged on cashouts if the cashout tax rate is greater than 0%.
-    /// @dev When suckers withdraw funds, they do not pay cashout fees.
+    /// @dev Fees are charged on cashouts if the cash out tax rate is greater than 0%.
+    /// @dev When suckers withdraw funds, they do not pay cash out fees.
     uint256 public constant override FEE = 25; // 2.5%
 
     //*********************************************************************//
@@ -93,7 +93,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @notice The directory of terminals and controllers for Juicebox projects (and revnets).
     IJBDirectory public immutable override DIRECTORY;
 
-    /// @notice The Juicebox project ID of the revnet that receives cashout fees.
+    /// @notice The Juicebox project ID of the revnet that receives cash out fees.
     uint256 public immutable override FEE_REVNET_ID;
 
     /// @notice Deploys tiered ERC-721 hooks for revnets.
@@ -131,12 +131,12 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
     /// @notice The timestamp of when cashouts will become available to a specific revnet's participants.
     /// @dev Only applies to existing revnets which are deploying onto a new network.
-    /// @custom:param revnetId The ID of the revnet to get the cashout delay for.
+    /// @custom:param revnetId The ID of the revnet to get the cash out delay for.
     mapping(uint256 revnetId => uint256 cashOutDelay) public override cashOutDelayOf;
 
     /// @notice Each revnet's loan contract.
     /// @dev Revnets can offer loans to their participants, collateralized by their tokens.
-    /// Participants can borrow up to the current cashout value of their tokens.
+    /// Participants can borrow up to the current cash out value of their tokens.
     /// @custom:param revnetId The ID of the revnet to get the loan contract of.
     mapping(uint256 revnetId => address) public override loansOf;
 
@@ -233,20 +233,20 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             JBCashOutHookSpecification[] memory hookSpecifications
         )
     {
-        // If the cash out is from a sucker, return the full cashout amount without taxes or fees.
+        // If the cash out is from a sucker, return the full cash out amount without taxes or fees.
         if (_isSuckerOf({revnetId: context.projectId, addr: context.holder})) {
             return (JBConstants.MAX_CASH_OUT_TAX_RATE, context.cashOutCount, context.totalSupply, hookSpecifications);
         }
 
-        // Enforce the cashout delay.
+        // Enforce the cash out delay.
         if (cashOutDelayOf[context.projectId] > block.timestamp) {
             revert REVDeployer_CashOutDelayNotFinished();
         }
 
-        // Get the terminal that will receive the cashout fee.
+        // Get the terminal that will receive the cash out fee.
         IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf(FEE_REVNET_ID, context.surplus.token);
 
-        // If there's no cashout tax (100% cash out tax rate), or if there's no fee terminal, do not charge a fee.
+        // If there's no cash out tax (100% cash out tax rate), or if there's no fee terminal, do not charge a fee.
         if (context.cashOutTaxRate == JBConstants.MAX_CASH_OUT_TAX_RATE || address(feeTerminal) == address(0)) {
             return (context.cashOutTaxRate, context.cashOutCount, context.totalSupply, hookSpecifications);
         }
@@ -267,7 +267,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             metadata: abi.encode(feeTerminal)
         });
 
-        // Return the cashout rate and the number of revnet tokens to cash out, minus the tokens being used to pay the
+        // Return the cash out rate and the number of revnet tokens to cash out, minus the tokens being used to pay the
         // fee.
         return (context.cashOutTaxRate, context.cashOutCount - feeCashOutCount, context.totalSupply, hookSpecifications);
     }
@@ -593,8 +593,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     // --------------------- external transactions ----------------------- //
     //*********************************************************************//
 
-    /// @notice Processes the cashout fee from a cash out.
-    /// @param context Cashout context passed in by the terminal.
+    /// @notice Processes the fee from a cash out.
+    /// @param context Cash out context passed in by the terminal.
     function afterCashOutRecordedWith(JBAfterCashOutRecordedContext calldata context) external payable {
         // Only the revnet's payment terminals can access this function.
         if (!DIRECTORY.isTerminalOf(context.projectId, IJBTerminal(msg.sender))) {
@@ -964,8 +964,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             });
         }
 
-        // Store the cashout delay of the revnet if its stages are already in progress.
-        // This prevents cashout liquidity/arbitrage issues for existing revnets which
+        // Store the cash out delay of the revnet if its stages are already in progress.
+        // This prevents cash out liquidity/arbitrage issues for existing revnets which
         // are deploying to a new chain.
         _setCashOutDelayIfNeeded({revnetId: revnetId, firstStageConfig: configuration.stageConfigurations[0]});
 
@@ -1081,19 +1081,19 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     }
 
     /// @notice Sets the cash out delay if the revnet's stages are already in progress.
-    /// @dev This prevents cashout liquidity/arbitrage issues for existing revnets which
+    /// @dev This prevents cash out liquidity/arbitrage issues for existing revnets which
     /// are deploying to a new chain.
     /// @param revnetId The ID of the revnet to set the cash out delay for.
     /// @param firstStageConfig The revnet's first stage.
     function _setCashOutDelayIfNeeded(uint256 revnetId, REVStageConfig calldata firstStageConfig) internal {
         // If this is the first revnet being deployed (with a `startsAtOrAfter` of 0),
-        // or if the first stage hasn't started yet, we don't need to set a cashout delay.
+        // or if the first stage hasn't started yet, we don't need to set a cash out delay.
         if (firstStageConfig.startsAtOrAfter == 0 || firstStageConfig.startsAtOrAfter >= block.timestamp) return;
 
-        // Calculate the timestamp at which the cashout delay ends.
+        // Calculate the timestamp at which the cash out delay ends.
         uint256 cashOutDelay = block.timestamp + CASH_OUT_DELAY;
 
-        // Store the cashout delay.
+        // Store the cash out delay.
         cashOutDelayOf[revnetId] = cashOutDelay;
 
         emit SetCashOutDelay({revnetId: revnetId, cashOutDelay: cashOutDelay, caller: _msgSender()});
