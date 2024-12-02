@@ -8,23 +8,23 @@ import {mulDiv} from "@prb/math/src/Common.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
 import {IJBBuybackHook} from "@bananapus/buyback-hook/src/interfaces/IJBBuybackHook.sol";
+import {IJBCashOutHook} from "@bananapus/core/src/interfaces/IJBCashOutHook.sol";
 import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
 import {IJBPayHook} from "@bananapus/core/src/interfaces/IJBPayHook.sol";
 import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
 import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
 import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
-import {IJBRedeemHook} from "@bananapus/core/src/interfaces/IJBRedeemHook.sol";
 import {IJBRulesetApprovalHook} from "@bananapus/core/src/interfaces/IJBRulesetApprovalHook.sol";
 import {IJBRulesetDataHook} from "@bananapus/core/src/interfaces/IJBRulesetDataHook.sol";
 import {IJBSplitHook} from "@bananapus/core/src/interfaces/IJBSplitHook.sol";
 import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
+import {JBCashOuts} from "@bananapus/core/src/libraries/JBCashOuts.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
-import {JBRedemptions} from "@bananapus/core/src/libraries/JBRedemptions.sol";
 import {JBSplitGroupIds} from "@bananapus/core/src/libraries/JBSplitGroupIds.sol";
-import {JBAfterRedeemRecordedContext} from "@bananapus/core/src/structs/JBAfterRedeemRecordedContext.sol";
+import {JBAfterCashOutRecordedContext} from "@bananapus/core/src/structs/JBAfterCashOutRecordedContext.sol";
 import {JBBeforePayRecordedContext} from "@bananapus/core/src/structs/JBBeforePayRecordedContext.sol";
-import {JBBeforeRedeemRecordedContext} from "@bananapus/core/src/structs/JBBeforeRedeemRecordedContext.sol";
+import {JBBeforeCashOutRecordedContext} from "@bananapus/core/src/structs/JBBeforeCashOutRecordedContext.sol";
 import {JBCurrencyAmount} from "@bananapus/core/src/structs/JBCurrencyAmount.sol";
 import {JBFundAccessLimitGroup} from "@bananapus/core/src/structs/JBFundAccessLimitGroup.sol";
 import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.sol";
@@ -34,7 +34,7 @@ import {JBRulesetMetadata} from "@bananapus/core/src/structs/JBRulesetMetadata.s
 import {JBSplit} from "@bananapus/core/src/structs/JBSplit.sol";
 import {JBSplitGroup} from "@bananapus/core/src/structs/JBSplitGroup.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
-import {JBRedeemHookSpecification} from "@bananapus/core/src/structs/JBRedeemHookSpecification.sol";
+import {JBCashOutHookSpecification} from "@bananapus/core/src/structs/JBCashOutHookSpecification.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
 import {IJBSuckerRegistry} from "@bananapus/suckers/src/interfaces/IJBSuckerRegistry.sol";
 import {CTPublisher} from "@croptop/core/src/CTPublisher.sol";
@@ -53,7 +53,7 @@ import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol
 
 /// @notice `REVDeployer` deploys, manages, and operates Revnets.
 /// @dev Revnets are unowned Juicebox projects which operate autonomously after deployment.
-contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRedeemHook, IERC721Receiver {
+contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCashOutHook, IERC721Receiver {
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
@@ -213,28 +213,29 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
         if (usesBuybackHook) hookSpecifications[1] = buybackHookSpecifications[0];
     }
 
-    /// @notice Determine how a redemption from a revnet should be processed.
-    /// @dev This function is part of `IJBRulesetDataHook`, and gets called before the revnet processes a redemption.
-    /// @dev If a sucker is redeeming, no taxes or fees are imposed.
-    /// @param context Standard Juicebox redemption context. See `JBBeforeRedeemRecordedContext`.
-    /// @return redemptionRate The redemption rate, which influences the amount of terminal tokens which get reclaimed.
-    /// @return redeemCount The number of revnet tokens that are redeemed.
+    /// @notice Determine how a cash out from a revnet should be processed.
+    /// @dev This function is part of `IJBRulesetDataHook`, and gets called before the revnet processes a cash out.
+    /// @dev If a sucker is cashing out, no taxes or fees are imposed.
+    /// @param context Standard Juicebox cash out context. See `JBBeforeCashOutRecordedContext`.
+    /// @return cashOutTaxRate The cash out tax rate, which influences the amount of terminal tokens which get cashed
+    /// out.
+    /// @return cashOutCount The number of revnet tokens that are cashed out.
     /// @return totalSupply The total revnet token supply.
-    /// @return hookSpecifications The amount of funds and the data to send to redeem hooks (this contract).
-    function beforeRedeemRecordedWith(JBBeforeRedeemRecordedContext calldata context)
+    /// @return hookSpecifications The amount of funds and the data to send to cash out hooks (this contract).
+    function beforeCashOutRecordedWith(JBBeforeCashOutRecordedContext calldata context)
         external
         view
         override
         returns (
-            uint256 redemptionRate,
-            uint256 redeemCount,
+            uint256 cashOutTaxRate,
+            uint256 cashOutCount,
             uint256 totalSupply,
-            JBRedeemHookSpecification[] memory hookSpecifications
+            JBCashOutHookSpecification[] memory hookSpecifications
         )
     {
-        // If the redeemer is a sucker, return the full redemption amount without taxes or fees.
+        // If the cash out is from a sucker, return the full cashout amount without taxes or fees.
         if (_isSuckerOf({revnetId: context.projectId, addr: context.holder})) {
-            return (JBConstants.MAX_REDEMPTION_RATE, context.redeemCount, context.totalSupply, hookSpecifications);
+            return (JBConstants.MAX_CASH_OUT_TAX_RATE, context.cashOutCount, context.totalSupply, hookSpecifications);
         }
 
         // Enforce the cashout delay.
@@ -245,30 +246,30 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
         // Get the terminal that will receive the cashout fee.
         IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf(FEE_REVNET_ID, context.surplus.token);
 
-        // If there's no cashout tax (100% redemption rate), or if there's no fee terminal, do not charge a fee.
-        if (context.redemptionRate == JBConstants.MAX_REDEMPTION_RATE || address(feeTerminal) == address(0)) {
-            return (context.redemptionRate, context.redeemCount, context.totalSupply, hookSpecifications);
+        // If there's no cashout tax (100% cash out tax rate), or if there's no fee terminal, do not charge a fee.
+        if (context.cashOutTaxRate == JBConstants.MAX_CASH_OUT_TAX_RATE || address(feeTerminal) == address(0)) {
+            return (context.cashOutTaxRate, context.cashOutCount, context.totalSupply, hookSpecifications);
         }
 
-        // Get a reference to the number of tokens being used to pay the fee (out of the total being redeemed).
-        uint256 feeRedeemCount = mulDiv(context.redeemCount, FEE, JBConstants.MAX_FEE);
+        // Get a reference to the number of tokens being used to pay the fee (out of the total being cashed out).
+        uint256 feeCashOutCount = mulDiv(context.cashOutCount, FEE, JBConstants.MAX_FEE);
 
-        // Assemble a redeem hook specification to invoke `afterRedeemRecordedWith(…)` with, to process the fee.
-        hookSpecifications = new JBRedeemHookSpecification[](1);
-        hookSpecifications[0] = JBRedeemHookSpecification({
-            hook: IJBRedeemHook(address(this)),
-            amount: JBRedemptions.reclaimFrom({
+        // Assemble a cash out hook specification to invoke `afterCashOutRecordedWith(…)` with, to process the fee.
+        hookSpecifications = new JBCashOutHookSpecification[](1);
+        hookSpecifications[0] = JBCashOutHookSpecification({
+            hook: IJBCashOutHook(address(this)),
+            amount: JBCashOuts.cashOutFrom({
                 surplus: context.surplus.value,
-                tokensRedeemed: feeRedeemCount,
+                cashOutCount: feeCashOutCount,
                 totalSupply: context.totalSupply,
-                redemptionRate: context.redemptionRate
+                cashOutTaxRate: context.cashOutTaxRate
             }),
             metadata: abi.encode(feeTerminal)
         });
 
-        // Return the redemption rate and the number of revnet tokens to redeem, minus the tokens being used to pay the
+        // Return the cashout rate and the number of revnet tokens to cash out, minus the tokens being used to pay the
         // fee.
-        return (context.redemptionRate, context.redeemCount - feeRedeemCount, context.totalSupply, hookSpecifications);
+        return (context.cashOutTaxRate, context.cashOutCount - feeCashOutCount, context.totalSupply, hookSpecifications);
     }
 
     /// @notice A flag indicating whether an address has permission to mint a revnet's tokens on-demand.
@@ -325,7 +326,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
     /// @return A flag indicating if the provided interface ID is supported.
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
         return interfaceId == type(IREVDeployer).interfaceId || interfaceId == type(IJBRulesetDataHook).interfaceId
-            || interfaceId == type(IJBRedeemHook).interfaceId || interfaceId == type(IERC721Receiver).interfaceId;
+            || interfaceId == type(IJBCashOutHook).interfaceId || interfaceId == type(IERC721Receiver).interfaceId;
     }
 
     //*********************************************************************//
@@ -486,14 +487,14 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
             }
 
             // Make sure the revnet doesn't prevent cashouts all together.
-            if (stageConfiguration.cashOutTaxRate >= JBConstants.MAX_REDEMPTION_RATE) {
+            if (stageConfiguration.cashOutTaxRate >= JBConstants.MAX_CASH_OUT_TAX_RATE) {
                 revert REVDeployer_CashOutsCantBeTurnedOffCompletely();
             }
 
             // Set up the ruleset's metadata.
             JBRulesetMetadata memory metadata;
             metadata.reservedPercent = stageConfiguration.splitPercent;
-            metadata.redemptionRate = JBConstants.MAX_REDEMPTION_RATE - stageConfiguration.cashOutTaxRate;
+            metadata.cashOutTaxRate = stageConfiguration.cashOutTaxRate;
             metadata.baseCurrency = configuration.baseCurrency;
             metadata.allowOwnerMinting = true; // Allow this contract to auto-mint tokens as the revnet's owner.
             metadata.useDataHookForPay = true; // Call this contract's `beforePayRecordedWith(…)` callback on payments.
@@ -505,7 +506,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
                 mustStartAtOrAfter: stageConfiguration.startsAtOrAfter,
                 duration: stageConfiguration.issuanceCutFrequency,
                 weight: stageConfiguration.initialIssuance,
-                decayPercent: stageConfiguration.issuanceCutPercent,
+                weightCutPercent: stageConfiguration.issuanceCutPercent,
                 approvalHook: IJBRulesetApprovalHook(address(0)),
                 metadata: metadata,
                 splitGroups: new JBSplitGroup[](0),
@@ -592,16 +593,16 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
     // --------------------- external transactions ----------------------- //
     //*********************************************************************//
 
-    /// @notice Processes the cashout fee from a redemption.
-    /// @param context Redemption context passed in by the terminal.
-    function afterRedeemRecordedWith(JBAfterRedeemRecordedContext calldata context) external payable {
+    /// @notice Processes the cashout fee from a cash out.
+    /// @param context Cashout context passed in by the terminal.
+    function afterCashOutRecordedWith(JBAfterCashOutRecordedContext calldata context) external payable {
         // Only the revnet's payment terminals can access this function.
         if (!DIRECTORY.isTerminalOf(context.projectId, IJBTerminal(msg.sender))) {
             revert REVDeployer_Unauthorized();
         }
 
         // Parse the metadata forwarded from the data hook to get the fee terminal.
-        // See `beforeRedeemRecordedWith(…)`.
+        // See `beforeCashOutRecordedWith(…)`.
         (IJBTerminal feeTerminal) = abi.decode(context.hookMetadata, (IJBTerminal));
 
         // Determine how much to pay in `msg.value` (in the native currency).
@@ -668,7 +669,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
     /// @notice Launch a revnet, or convert an existing Juicebox project into a revnet.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration Core revnet configuration. See `REVConfig`.
-    /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and redemptions.
+    /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
     /// @param buybackHookConfiguration The buyback hook and pools to set up for the revnet.
     /// The buyback hook buys tokens from a Uniswap pool if minting new tokens would be more expensive.
     /// @param suckerDeploymentConfiguration The suckers to set up for the revnet. Suckers facilitate cross-chain
@@ -730,7 +731,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
     /// @notice Launch a revnet which sells tiered ERC-721s and (optionally) allows croptop posts to its ERC-721 tiers.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration Core revnet configuration. See `REVConfig`.
-    /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and redemptions.
+    /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
     /// @param buybackHookConfiguration The buyback hook and pools to set up for the revnet.
     /// The buyback hook buys tokens from a Uniswap pool if minting new tokens would be more expensive.
     /// @param suckerDeploymentConfiguration The suckers to set up for the revnet. Suckers facilitate cross-chain
@@ -834,7 +835,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
     /// @notice Deploy a revnet which sells tiered ERC-721s and (optionally) allows croptop posts to its ERC-721 tiers.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration Core revnet configuration. See `REVConfig`.
-    /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and redemptions.
+    /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
     /// @param buybackHookConfiguration The buyback hook and pools to set up for the revnet.
     /// The buyback hook buys tokens from a Uniswap pool if minting new tokens would be more expensive.
     /// @param suckerDeploymentConfiguration The suckers to set up for the revnet. Suckers facilitate cross-chain
@@ -918,7 +919,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
     /// @notice Deploy a revnet, or convert an existing Juicebox project into a revnet.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param configuration Core revnet configuration. See `REVConfig`.
-    /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and redemptions.
+    /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
     /// @param buybackHookConfiguration The buyback hook and pools to set up for the revnet.
     /// The buyback hook buys tokens from a Uniswap pool if minting new tokens would be more expensive.
     /// @param suckerDeploymentConfiguration The suckers to set up for the revnet. Suckers facilitate cross-chain

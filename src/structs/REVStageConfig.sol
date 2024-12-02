@@ -16,7 +16,8 @@ import {REVAutoIssuance} from "./REVAutoIssuance.sol";
 /// @custom:member issuanceCutPercent The percent that issuance should decrease over time. This percentage is out
 /// of 1_000_000_000 (JBConstants.MAX_CUT_PERCENT). 0% corresponds to no issuance increase.
 /// @custom:member cashOutTaxRate The factor determining how much each token can cash out from the revnet once
-/// redeemed. This rate is out of 10_000 (JBConstants.MAX_REDEMPTION_RATE). 0% corresponds to no tax when cashing out.
+/// cashed out. This rate is out of 10_000 (JBConstants.MAX_CASH_OUT_TAX_RATE). 0% corresponds to no tax when cashing
+/// out.
 /// @custom:member extraMetadata Extra info to attach set into this stage that may affect hooks.
 struct REVStageConfig {
     uint40 startsAtOrAfter;

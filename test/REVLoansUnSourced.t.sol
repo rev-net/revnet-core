@@ -105,7 +105,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
                 splitPercent: 2000, // 20%
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceCutFrequency: 90 days,
-                issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+                issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
                 cashOutTaxRate: 6000, // 0.6
                 extraMetadata: 0
             });
@@ -117,7 +117,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
             splitPercent: 2000, // 20%
             initialIssuance: 0, // inherit from previous cycle.
             issuanceCutFrequency: 180 days,
-            issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+            issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
             cashOutTaxRate: 6000, // 0.6
             extraMetadata: 0
         });
@@ -207,7 +207,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
                 splitPercent: 2000, // 20%
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceCutFrequency: 90 days,
-                issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+                issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
                 cashOutTaxRate: 6000, // 0.6
                 extraMetadata: 0
             });
@@ -219,7 +219,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
             splitPercent: 2000, // 20%
             initialIssuance: 0, // inherit from previous cycle.
             issuanceCutFrequency: 180 days,
-            issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+            issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
             cashOutTaxRate: 6000, // 0.6
             extraMetadata: 0
         });
