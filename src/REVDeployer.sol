@@ -374,8 +374,9 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
         );
 
         // Add each auto-mint to the byte-encoded representation.
-        for (uint256 i; i < stageConfiguration.numberOfAutoIssuances.length; i++) {
-            encodedConfiguration = abi.encode(encodedConfiguration, _encodedAutoMint(stageConfiguration.numberOfAutoIssuances[i]));
+        for (uint256 i; i < stageConfiguration.autoIssuances.length; i++) {
+            encodedConfiguration =
+                abi.encode(encodedConfiguration, _encodedAutoIssuance(stageConfiguration.autoIssuances[i]));
         }
     }
 
@@ -1186,7 +1187,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBRed
             // Loop through each mint to store its amount.
             for (uint256 j; j < stageConfiguration.autoIssuances.length; j++) {
                 // Set the mint config being iterated on.
-                REVAutoMint calldata issuanceConfig = stageConfiguration.autoIssuances[j];
+                REVAutoIssuance calldata issuanceConfig = stageConfiguration.autoIssuances[j];
 
                 // If the issuance config is for another chain, skip it.
                 if (issuanceConfig.chainId != block.chainid) continue;
