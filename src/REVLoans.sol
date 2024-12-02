@@ -383,16 +383,10 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // Keep a reference to all sources being used to loaned out from this revnet.
         REVLoanSource[] memory sources = _loanSourcesOf[revnetId];
 
-        // Keep a reference to the number of sources being loaned out.
-        uint256 numberOfSources = sources.length;
-
-        // Keep a reference to the source being iterated on.
-        REVLoanSource memory source;
-
         // Iterate over all sources being used to loaned out.
-        for (uint256 i = 0; i < numberOfSources; i++) {
+        for (uint256 i; i < sources.length; i++) {
             // Get a reference to the token being iterated on.
-            source = sources[i];
+            REVLoanSource memory source = sources[i];
 
             // Get a reference to the accounting context for the source.
             JBAccountingContext memory accountingContext =
@@ -754,8 +748,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // Get the amount of additional fee to take for REV.
         uint256 revFeeAmount = JBFees.feeAmountFrom({amount: borrowAmount, feePercent: REV_PREPAID_FEE_PERCENT});
 
-        // The amount to pay as a fee.
-        uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? revFeeAmount : 0;
+        // Increase the allowance for the beneficiary.
+        uint256 payValue = _beforeTransferTo({to: address(feeTerminal), token: loan.source.token, amount: revFeeAmount});
 
         // Pay the fee. Send the REV to the msg.sender.
         // slither-disable-next-line arbitrary-send-eth,unused-return
@@ -854,12 +848,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             });
             // ... or pay off the loan if needed.
         } else if (loan.amount > newBorrowAmount) {
-            _removeFrom({
-                loan: loan,
-                revnetId: revnetId,
-                borrowAmount: loan.amount - newBorrowAmount,
-                sourceFeeAmount: sourceFeeAmount
-            });
+            _removeFrom({loan: loan, revnetId: revnetId, borrowAmount: loan.amount - newBorrowAmount});
         }
 
         // Add collateral if needed...
@@ -880,8 +869,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
         // The amount remaining in the contract should be the source fee.
         if (balance > 0) {
-            // The amount to pay as a fee.
-            uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? balance : 0;
+            // Increase the allowance for the beneficiary.
+            uint256 payValue =
+                _beforeTransferTo({to: address(loan.source.terminal), token: loan.source.token, amount: balance});
 
             // Pay the fee.
             // slither-disable-next-line unused-return
@@ -952,6 +942,19 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
         // The amount should reflect the change in balance.
         return _balanceOf(token) - balanceBefore;
+    }
+
+    /// @notice Logic to be triggered before transferring tokens from this contract.
+    /// @param to The address the transfer is going to.
+    /// @param token The token being transferred.
+    /// @param amount The number of tokens being transferred, as a fixed point number with the same number of decimals
+    /// as the token specifies.
+    /// @return payValue The value to attach to the transaction being sent.
+    function _beforeTransferTo(address to, address token, uint256 amount) internal returns (uint256) {
+        // If the token is the native token, no allowance needed.
+        if (token == JBConstants.NATIVE_TOKEN) return amount;
+        IERC20(token).safeIncreaseAllowance(to, amount);
+        return 0;
     }
 
     /// @notice Pays down a loan.
@@ -1135,27 +1138,21 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @notice Pays off a loan.
     /// @param loan The loan being paid off.
     /// @param revnetId The ID of the revnet the loan is being paid off in.
+
     /// @param borrowAmount The amount being paid off, denominated in the currency of the source's accounting context.
-    /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
-    function _removeFrom(
-        REVLoan memory loan,
-        uint256 revnetId,
-        uint256 borrowAmount,
-        uint256 sourceFeeAmount
-    )
-        internal
-    {
+    function _removeFrom(REVLoan memory loan, uint256 revnetId, uint256 borrowAmount) internal {
         // Decrement the total amount of a token being loaned out by the revnet from its terminal.
         totalBorrowedFrom[revnetId][loan.source.terminal][loan.source.token] -= borrowAmount;
 
-        // The borrowed amount to return to the revnet.
-        uint256 payValue = loan.source.token == JBConstants.NATIVE_TOKEN ? borrowAmount : 0;
+        // Increase the allowance for the beneficiary.
+        uint256 payValue =
+            _beforeTransferTo({to: address(loan.source.terminal), token: loan.source.token, amount: borrowAmount});
 
         // Add the loaned amount back to the revnet.
         try loan.source.terminal.addToBalanceOf{value: payValue}({
             projectId: revnetId,
             token: loan.source.token,
-            amount: _balanceOf(loan.source.token) - sourceFeeAmount,
+            amount: borrowAmount,
             shouldReturnHeldFees: false,
             memo: "Paying off loan",
             metadata: bytes(abi.encodePacked(REV_ID))
