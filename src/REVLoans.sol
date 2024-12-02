@@ -383,16 +383,10 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // Keep a reference to all sources being used to loaned out from this revnet.
         REVLoanSource[] memory sources = _loanSourcesOf[revnetId];
 
-        // Keep a reference to the number of sources being loaned out.
-        uint256 numberOfSources = sources.length;
-
-        // Keep a reference to the source being iterated on.
-        REVLoanSource memory source;
-
         // Iterate over all sources being used to loaned out.
-        for (uint256 i = 0; i < numberOfSources; i++) {
+        for (uint256 i; i < sources.length; i++) {
             // Get a reference to the token being iterated on.
-            source = sources[i];
+            REVLoanSource memory source = sources[i];
 
             // Get a reference to the accounting context for the source.
             JBAccountingContext memory accountingContext =
