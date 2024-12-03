@@ -107,7 +107,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
                 splitPercent: 2000, // 20%
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceCutFrequency: 90 days,
-                issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+                issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
                 cashOutTaxRate: 6000, // 0.6
                 extraMetadata: 0
             });
@@ -119,7 +119,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             splitPercent: 2000, // 20%
             initialIssuance: 0, // inherit from previous cycle.
             issuanceCutFrequency: 180 days,
-            issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+            issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
             cashOutTaxRate: 1000, // 0.1
             extraMetadata: 0
         });
@@ -209,7 +209,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
                 splitPercent: 2000, // 20%
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceCutFrequency: 90 days,
-                issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+                issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
                 cashOutTaxRate: 0, //6000, // 0.6
                 extraMetadata: 0
             });
@@ -221,7 +221,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             splitPercent: 2000, // 20%
             initialIssuance: 0, // inherit from previous cycle.
             issuanceCutFrequency: 180 days,
-            issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+            issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
             cashOutTaxRate: 0, //6000, // 0.6
             extraMetadata: 0
         });
@@ -501,7 +501,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Ensure we actually received ETH from the borrow
         assertGt(USER.balance, 100e18 - 1e18);
 
-        // warp to after redemption rate is higher in the second ruleset
+        // warp to after cash out tax rate is lower in the second ruleset
         vm.warp(block.timestamp + 721 days);
 
         // get the updated loanableFrom the same amount as earlier
@@ -583,7 +583,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Ensure we actually received ETH from the borrow
         assertGt(USER.balance, 100e18 - 1e18);
 
-        // warp to after redemption rate is higher in the second ruleset
+        // warp to after cash out tax rate is lower in the second ruleset
         vm.warp(block.timestamp + 721 days);
 
         // get the updated loanableFrom the same amount as earlier
@@ -646,7 +646,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Ensure we actually received ETH from the borrow
         assertGt(USER.balance, 100e18 - 1e18);
 
-        // warp to after redemption rate is higher in the second ruleset
+        // warp to after cash out tax rate is lower in the second ruleset
         vm.warp(block.timestamp + 721 days);
 
         // get the updated loanableFrom the same amount as earlier
@@ -704,7 +704,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Ensure we actually received ETH from the borrow
         assertGt(USER.balance, 100e18 - 1e18);
 
-        // warp to after redemption rate is higher in the second ruleset
+        // warp to after cash out tax rate is lower in the second ruleset
         vm.warp(block.timestamp + 721 days);
 
         // get the updated loanableFrom the same amount as earlier
@@ -761,7 +761,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Ensure we actually received ETH from the borrow
         assertGt(USER.balance, 100e18 - 1e18);
 
-        // warp to after redemption rate is higher in the second ruleset
+        // warp to after cash out tax rate is lower in the second ruleset
         vm.warp(block.timestamp + 721 days);
 
         // get the updated loanableFrom the same amount as earlier
@@ -836,7 +836,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
 
-        // warp to after redemption rate is higher in the second ruleset
+        // warp to after cash out tax rate is lower in the second ruleset
         vm.warp(block.timestamp + daysToWarp);
 
         // pay again to have balance for the refinance

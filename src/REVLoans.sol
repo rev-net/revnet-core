@@ -19,9 +19,9 @@ import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
 import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
 import {IJBTokens} from "@bananapus/core/src/interfaces/IJBTokens.sol";
 import {IJBTokenUriResolver} from "@bananapus/core/src/interfaces/IJBTokenUriResolver.sol";
+import {JBCashOuts} from "@bananapus/core/src/libraries/JBCashOuts.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBFees} from "@bananapus/core/src/libraries/JBFees.sol";
-import {JBRedemptions} from "@bananapus/core/src/libraries/JBRedemptions.sol";
 import {JBRulesetMetadataResolver} from "@bananapus/core/src/libraries/JBRulesetMetadataResolver.sol";
 import {JBSurplus} from "@bananapus/core/src/libraries/JBSurplus.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
@@ -277,6 +277,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         uint256 totalSurplus = JBSurplus.currentSurplusOf({
             projectId: revnetId,
             terminals: terminals,
+            accountingContexts: new JBAccountingContext[](0),
             decimals: decimals,
             currency: currency
         });
@@ -293,11 +294,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         uint256 totalCollateral = totalCollateralOf[revnetId];
 
         // Proportional.
-        return JBRedemptions.reclaimFrom({
+        return JBCashOuts.cashOutFrom({
             surplus: totalSurplus + totalBorrowed,
-            tokensRedeemed: collateralAmount,
+            cashOutCount: collateralAmount,
             totalSupply: totalSupply + totalCollateral + pendingAutoIssuanceTokens,
-            redemptionRate: currentStage.redemptionRate()
+            cashOutTaxRate: currentStage.cashOutTaxRate()
         });
     }
 

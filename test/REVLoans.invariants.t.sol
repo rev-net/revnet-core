@@ -16,7 +16,7 @@ import "@croptop/core/script/helpers/CroptopDeploymentLib.sol";
 import "@bananapus/swap-terminal/script/helpers/SwapTerminalDeploymentLib.sol";
 import "@bananapus/buyback-hook/script/helpers/BuybackDeploymentLib.sol";
 
-import {JBRedemptions} from "@bananapus/core/src/libraries/JBRedemptions.sol";
+import {JBCashOuts} from "@bananapus/core/src/libraries/JBCashOuts.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
 import {REVLoans} from "../src/REVLoans.sol";
@@ -316,7 +316,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
                 splitPercent: 2000, // 20%
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceCutFrequency: 90 days,
-                issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+                issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
                 cashOutTaxRate: 6000, // 0.6
                 extraMetadata: 0
             });
@@ -328,7 +328,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
             splitPercent: 2000, // 20%
             initialIssuance: 0, // inherit from previous cycle.
             issuanceCutFrequency: 180 days,
-            issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+            issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
             cashOutTaxRate: 1000, //0.1
             extraMetadata: 0
         });
@@ -418,7 +418,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
                 splitPercent: 2000, // 20%
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceCutFrequency: 90 days,
-                issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+                issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
                 cashOutTaxRate: 6000, // 0.6
                 extraMetadata: 0
             });
@@ -430,7 +430,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
             splitPercent: 9000, // 90%
             initialIssuance: 0, // this is a special number that is as close to max price as we can get.
             issuanceCutFrequency: 180 days,
-            issuanceCutPercent: JBConstants.MAX_DECAY_PERCENT / 2,
+            issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
             cashOutTaxRate: 0, // 0.0%
             extraMetadata: 0
         });
@@ -442,7 +442,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
             initialIssuance: 0, // this is a special number that is as close to max price as we can get.
             issuanceCutFrequency: 0,
             issuanceCutPercent: 0,
-            cashOutTaxRate: 0, // 0.0%
+            cashOutTaxRate: 500, // 0.05
             extraMetadata: 0
         });
 
