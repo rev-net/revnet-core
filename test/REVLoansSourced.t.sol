@@ -128,7 +128,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (20 * 365 days)),
             autoIssuances: new REVAutoIssuance[](0),
             splitPercent: 0,
-            initialIssuance: 1, // this is a special number that is as close to max price as we can get.
+            initialIssuance: 1,
             issuanceCutFrequency: 0,
             issuanceCutPercent: 0,
             cashOutTaxRate: 6000, // 0.6
