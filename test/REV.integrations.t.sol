@@ -27,6 +27,8 @@ import {JBSuckerRegistry} from "@bananapus/suckers/src/JBSuckerRegistry.sol";
 import {JBTokenMapping} from "@bananapus/suckers/src/structs/JBTokenMapping.sol";
 import {JB721TiersHookDeployer} from "@bananapus/721-hook/src/JB721TiersHookDeployer.sol";
 import {JBArbitrumSuckerDeployer} from "@bananapus/suckers/src/deployers/JBArbitrumSuckerDeployer.sol";
+import {JBArbitrumSucker, JBLayer, IArbGatewayRouter, IInbox} from "@bananapus/suckers/src/JBArbitrumSucker.sol";
+import {JBAddToBalanceMode} from "@bananapus/suckers/src/enums/JBAddToBalanceMode.sol";
 import {JB721TiersHook} from "@bananapus/721-hook/src/JB721TiersHook.sol";
 import {JB721TiersHookStore} from "@bananapus/721-hook/src/JB721TiersHookStore.sol";
 import {JBAddressRegistry} from "@bananapus/address-registry/src/JBAddressRegistry.sol";
@@ -204,7 +206,20 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
             jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER, TRUSTED_FORWARDER
         );
 
-        ARB_SUCKER_DEPLOYER = new JBArbitrumSuckerDeployer(jbDirectory(), jbPermissions(), jbTokens(), multisig());
+        // Deploy the ARB sucker deployer.
+        JBArbitrumSuckerDeployer _deployer =
+            new JBArbitrumSuckerDeployer(jbDirectory(), jbPermissions(), jbTokens(), address(this));
+        ARB_SUCKER_DEPLOYER = IJBSuckerDeployer(address(_deployer));
+
+        // Deploy the ARB sucker singleton.
+        JBArbitrumSucker _singleton =
+            new JBArbitrumSucker(_deployer, jbDirectory(), jbPermissions(), jbTokens(), JBAddToBalanceMode.MANUAL);
+
+        // Set the layer specific confguration.
+        _deployer.setChainSpecificConstants(JBLayer.L1, IInbox(address(1)), IArbGatewayRouter(address(1)));
+
+        // Set the singleton for the deployer.
+        _deployer.configureSingleton(_singleton);
 
         // Approve the basic deployer to configure the project.
         vm.startPrank(address(multisig()));
@@ -267,8 +282,9 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
 
         JBTokenMapping[] memory tokenMapping = new JBTokenMapping[](1);
 
+        address token = makeAddr("someToken");
         tokenMapping[0] = JBTokenMapping({
-            localToken: makeAddr("someToken"),
+            localToken: token,
             minGas: 200_000,
             remoteToken: makeAddr("someOtherToken"),
             minBridgeAmount: 100 // emoji
@@ -282,6 +298,10 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         // Arbitrum chainid so the deployer works
         vm.chainId(42_161);
         vm.prank(multisig());
+
+        // As a safety measure the newly created sucker will check that it has not missed a crosschain call.
+        // which wil call the balanceOf to check its own balance.
+        vm.mockCall(address(token), abi.encodeWithSelector(IERC20.balanceOf.selector), abi.encode(0));
 
         address[] memory suckers = REV_DEPLOYER.deploySuckersFor(REVNET_ID, ENCODED_CONFIG, revConfig);
 
