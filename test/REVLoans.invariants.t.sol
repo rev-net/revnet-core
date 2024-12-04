@@ -337,7 +337,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
             startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (20 * 365 days)),
             autoIssuances: new REVAutoIssuance[](0),
             splitPercent: 0,
-            initialIssuance: 1, 
+            initialIssuance: 1,
             issuanceCutFrequency: 0,
             issuanceCutPercent: 0,
             cashOutTaxRate: 500, // 0.05
