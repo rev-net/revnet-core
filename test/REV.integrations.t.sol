@@ -190,7 +190,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
 
         FEE_PROJECT_ID = jbProjects().createFor(multisig());
 
-        SUCKER_REGISTRY = new JBSuckerRegistry(jbDirectory(), jbPermissions(), multisig());
+        SUCKER_REGISTRY = new JBSuckerRegistry(jbDirectory(), jbPermissions(), multisig(), address(0));
 
         HOOK_STORE = new JB721TiersHookStore();
 
@@ -208,12 +208,13 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
 
         // Deploy the ARB sucker deployer.
         JBArbitrumSuckerDeployer _deployer =
-            new JBArbitrumSuckerDeployer(jbDirectory(), jbPermissions(), jbTokens(), address(this));
+            new JBArbitrumSuckerDeployer(jbDirectory(), jbPermissions(), jbTokens(), address(this), address(0));
         ARB_SUCKER_DEPLOYER = IJBSuckerDeployer(address(_deployer));
 
         // Deploy the ARB sucker singleton.
-        JBArbitrumSucker _singleton =
-            new JBArbitrumSucker(_deployer, jbDirectory(), jbPermissions(), jbTokens(), JBAddToBalanceMode.MANUAL);
+        JBArbitrumSucker _singleton = new JBArbitrumSucker(
+            _deployer, jbDirectory(), jbPermissions(), jbTokens(), JBAddToBalanceMode.MANUAL, address(0)
+        );
 
         // Set the layer specific confguration.
         _deployer.setChainSpecificConstants(JBLayer.L1, IInbox(address(1)), IArbGatewayRouter(address(1)));
