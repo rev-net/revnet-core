@@ -29,6 +29,7 @@ import {JBCurrencyAmount} from "@bananapus/core/src/structs/JBCurrencyAmount.sol
 import {JBFundAccessLimitGroup} from "@bananapus/core/src/structs/JBFundAccessLimitGroup.sol";
 import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
+import {JBRuleset} from "@bananapus/core/src/structs/JBRuleset.sol";
 import {JBRulesetConfig} from "@bananapus/core/src/structs/JBRulesetConfig.sol";
 import {JBRulesetMetadata} from "@bananapus/core/src/structs/JBRulesetMetadata.sol";
 import {JBSplit} from "@bananapus/core/src/structs/JBSplit.sol";
@@ -954,14 +955,22 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             // transfer the `JBProjects` NFT to this deployer.
             IERC721(PROJECTS).safeTransferFrom({from: PROJECTS.ownerOf(revnetId), to: address(this), tokenId: revnetId});
 
-            // Launch the revnet rulesets for the pre-existing project.
-            // slither-disable-next-line unused-return
-            CONTROLLER.launchRulesetsFor({
-                projectId: revnetId,
-                rulesetConfigurations: rulesetConfigurations,
-                terminalConfigurations: terminalConfigurations,
-                memo: ""
-            });
+            // Get the latest queued ruleset.
+            (JBRuleset memory ruleset,,) = CONTROLLER.latestQueuedRulesetOf(revnetId);
+
+            // If there are no rulesets queued, launch the revnet rulesets. Otherwise, queue the new rulesets.
+            if (ruleset.id == 0) {
+                // Launch the revnet rulesets for the pre-existing project.
+                // slither-disable-next-line unused-return
+                CONTROLLER.launchRulesetsFor({
+                    projectId: revnetId,
+                    rulesetConfigurations: rulesetConfigurations,
+                    terminalConfigurations: terminalConfigurations,
+                    memo: ""
+                });
+            } else {
+                CONTROLLER.queueRulesetsOf({projectId: revnetId, rulesetConfigurations: rulesetConfigurations, memo: ""});
+            }
         }
 
         // Store the cash out delay of the revnet if its stages are already in progress.
