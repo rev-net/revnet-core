@@ -19,6 +19,7 @@ import {IJBRulesetApprovalHook} from "@bananapus/core/src/interfaces/IJBRulesetA
 import {IJBRulesetDataHook} from "@bananapus/core/src/interfaces/IJBRulesetDataHook.sol";
 import {IJBSplitHook} from "@bananapus/core/src/interfaces/IJBSplitHook.sol";
 import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
+import {IJBToken} from "@bananapus/core/src/interfaces/IJBToken.sol";
 import {JBCashOuts} from "@bananapus/core/src/libraries/JBCashOuts.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBSplitGroupIds} from "@bananapus/core/src/libraries/JBSplitGroupIds.sol";
