@@ -554,7 +554,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         targetSelector(FuzzSelector({addr: address(PAY_HANDLER), selectors: selectors}));
     }
 
-    function invariant_A_User_Balance_And_Collateral() public {
+    function invariant_A_User_Balance_And_Collateral() public view {
         IJBToken token = jbTokens().tokenOf(REVNET_ID);
 
         uint256 userTokenBalance = token.balanceOf(USER);
@@ -564,7 +564,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         assertEq(PAY_HANDLER.COLLATERAL_SUM(), LOANS_CONTRACT.totalCollateralOf(REVNET_ID));
     }
 
-    function invariant_B_TotalBorrowed() public {
+    function invariant_B_TotalBorrowed() public view {
         uint256 expectedTotalBorrowed = PAY_HANDLER.BORROWED_SUM();
 
         // Get the actual total borrowed amount from the contract
