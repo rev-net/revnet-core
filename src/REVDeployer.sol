@@ -971,12 +971,14 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
         // Deploy the revnet's ERC-20 token.
         // slither-disable-next-line unused-return
-        CONTROLLER.deployERC20For({
-            projectId: revnetId,
-            name: configuration.description.name,
-            symbol: configuration.description.ticker,
-            salt: keccak256(abi.encode(configuration.description.salt, _msgSender()))
-        });
+        if (CONTROLLER.TOKENS().tokenOf(revnetId) == IJBToken(address(0))) {
+            CONTROLLER.deployERC20For({
+                projectId: revnetId,
+                name: configuration.description.name,
+                symbol: configuration.description.ticker,
+                salt: keccak256(abi.encode(configuration.description.salt, _msgSender()))
+            });
+        }
 
         // If specified, set up the buyback hook.
         if (buybackHookConfiguration.hook != IJBBuybackHook(address(0))) {
