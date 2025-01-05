@@ -475,9 +475,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // Get a reference to the loan ID.
         loanId = _generateLoanId({revnetId: revnetId, loanNumber: ++numberOfLoansFor[revnetId]});
 
-        // Mint the loan.
-        _mint({to: _msgSender(), tokenId: loanId});
-
         // Get a reference to the loan being created.
         REVLoan storage loan = _loanOf[loanId];
 
@@ -499,6 +496,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             sourceFeeAmount: sourceFeeAmount,
             beneficiary: beneficiary
         });
+
+        // Mint the loan.
+        _mint({to: _msgSender(), tokenId: loanId});
 
         emit Borrow({
             loanId: loanId,
