@@ -3,7 +3,6 @@ pragma solidity 0.8.23;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -47,7 +46,7 @@ import {REVLoanSource} from "./structs/REVLoanSource.sol";
 /// cannot be
 /// recouped.
 /// @dev The loaned amounts include the fees taken, meaning the amount paid back is the amount borrowed plus the fees.
-contract REVLoans is ERC721, ERC2771Context, ReentrancyGuard, IREVLoans, Ownable {
+contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     // A library that parses the packed ruleset metadata into a friendlier format.
     using JBRulesetMetadataResolver for JBRuleset;
 
@@ -647,7 +646,6 @@ contract REVLoans is ERC721, ERC2771Context, ReentrancyGuard, IREVLoans, Ownable
         external
         payable
         override
-        nonReentrant
         returns (uint256, REVLoan memory)
     {
         // Make sure only the loan's owner can manage it.
@@ -980,20 +978,6 @@ contract REVLoans is ERC721, ERC2771Context, ReentrancyGuard, IREVLoans, Ownable
         // Keep a reference to the fee that'll be taken.
         uint256 sourceFeeAmount = _determineSourceFeeAmount(loan, borrowAmount);
 
-        // If the amount being paid is greater than the loan's amount, return extra to the payer.
-        // amount is msg.value if token == JBConstants.NATIVE_TOKEN
-        if (borrowAmount > loan.amount + sourceFeeAmount) {
-            _transferFrom({
-                from: address(this),
-                to: payable(_msgSender()),
-                token: loan.source.token,
-                amount: borrowAmount - sourceFeeAmount - loan.amount
-            });
-
-            // Set the amount as the amount that can be paid off.
-            borrowAmount = sourceFeeAmount + loan.amount;
-        }
-
         // Get a reference to the revnet ID.
         uint256 revnetId = revnetIdOfLoanWith(loanId);
 
@@ -1002,7 +986,10 @@ contract REVLoans is ERC721, ERC2771Context, ReentrancyGuard, IREVLoans, Ownable
 
         // If the loan will carry no more amount or collateral, store its changes directly.
         // slither-disable-next-line incorrect-equality
-        if (borrowAmount - sourceFeeAmount == loan.amount && collateralAmountToReturn == loan.collateral) {
+        if (borrowAmount - sourceFeeAmount >= loan.amount) {
+            // If the loan is being paid off, return all collateral.
+            collateralAmountToReturn = loan.collateral;
+
             // Borrow in.
             _adjust({
                 loan: loan,
@@ -1013,13 +1000,23 @@ contract REVLoans is ERC721, ERC2771Context, ReentrancyGuard, IREVLoans, Ownable
                 beneficiary: beneficiary
             });
 
+            // If the amount being paid is greater than the loan's amount, return extra to the payer.
+            if (borrowAmount > loan.amount + sourceFeeAmount) {
+                _transferFrom({
+                    from: address(this),
+                    to: payable(_msgSender()),
+                    token: loan.source.token,
+                    amount: borrowAmount - sourceFeeAmount - loan.amount
+                });
+            }
+
             emit RepayLoan({
                 loanId: loanId,
                 revnetId: revnetId,
                 paidOffLoanId: loanId,
                 loan: loan,
                 paidOffLoan: loan,
-                borrowAmount: borrowAmount,
+                borrowAmount: sourceFeeAmount + loan.amount,
                 sourceFeeAmount: sourceFeeAmount,
                 collateralAmountToReturn: collateralAmountToReturn,
                 beneficiary: beneficiary,
@@ -1031,9 +1028,6 @@ contract REVLoans is ERC721, ERC2771Context, ReentrancyGuard, IREVLoans, Ownable
             // Make a new loan with the remaining amount and collateral.
             // Get a reference to the replacement loan ID.
             uint256 paidOffLoanId = _generateLoanId({revnetId: revnetId, loanNumber: ++numberOfLoansFor[revnetId]});
-
-            // Mint the replacement loan.
-            _mint({to: _msgSender(), tokenId: paidOffLoanId});
 
             // Get a reference to the loan being paid off.
             REVLoan storage paidOffLoan = _loanOf[paidOffLoanId];
@@ -1055,6 +1049,9 @@ contract REVLoans is ERC721, ERC2771Context, ReentrancyGuard, IREVLoans, Ownable
                 sourceFeeAmount: sourceFeeAmount,
                 beneficiary: beneficiary
             });
+
+            // Mint the replacement loan.
+            _mint({to: _msgSender(), tokenId: paidOffLoanId});
 
             emit RepayLoan({
                 loanId: loanId,
