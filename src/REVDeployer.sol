@@ -192,7 +192,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         }
 
         // Is there a buyback hook specification?
-        bool usesBuybackHook = buybackHookSpecifications.length != 0;
+        bool usesBuybackHook = buybackHookSpecifications.length == 1;
 
         // Keep a reference to the revnet's tiered ERC-721 hook.
         IJB721TiersHook tiered721Hook = tiered721HookOf[context.projectId];
