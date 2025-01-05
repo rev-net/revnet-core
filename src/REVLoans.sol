@@ -829,7 +829,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
                         terminals: terminals,
                         prices: controller.PRICES(),
                         tokens: controller.TOKENS()
-                    }) < newBorrowAmount
+                    }) != newBorrowAmount
             ) revert REVLoans_NotEnoughCollateral();
         }
 
