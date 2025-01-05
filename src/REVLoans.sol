@@ -3,6 +3,7 @@ pragma solidity 0.8.23;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -46,7 +47,7 @@ import {REVLoanSource} from "./structs/REVLoanSource.sol";
 /// cannot be
 /// recouped.
 /// @dev The loaned amounts include the fees taken, meaning the amount paid back is the amount borrowed plus the fees.
-contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
+contract REVLoans is ERC721, ERC2771Context, ReentrancyGuard, IREVLoans, Ownable {
     // A library that parses the packed ruleset metadata into a friendlier format.
     using JBRulesetMetadataResolver for JBRuleset;
 
@@ -646,6 +647,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         external
         payable
         override
+        nonReentrant
         returns (uint256, REVLoan memory)
     {
         // Make sure only the loan's owner can manage it.
