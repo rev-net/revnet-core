@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {mulDiv} from "@prb/math/src/Common.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
@@ -54,6 +56,9 @@ import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol
 /// @notice `REVDeployer` deploys, manages, and operates Revnets.
 /// @dev Revnets are unowned Juicebox projects which operate autonomously after deployment.
 contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCashOutHook, IERC721Receiver {
+    // A library that adds default safety checks to ERC20 functionality.
+    using SafeERC20 for IERC20;
+
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
@@ -596,9 +601,13 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @notice Processes the fee from a cash out.
     /// @param context Cash out context passed in by the terminal.
     function afterCashOutRecordedWith(JBAfterCashOutRecordedContext calldata context) external payable {
-        // Only the revnet's payment terminals can access this function.
-        if (!DIRECTORY.isTerminalOf(context.projectId, IJBTerminal(msg.sender))) {
-            revert REVDeployer_Unauthorized();
+        // If there's sufficient approval, transfer normally.
+        if (context.forwardedAmount.token != JBConstants.NATIVE_TOKEN) {
+            return IERC20(context.forwardedAmount.token).safeTransferFrom({
+                from: msg.sender,
+                to: address(this),
+                value: context.forwardedAmount.value
+            });
         }
 
         // Parse the metadata forwarded from the data hook to get the fee terminal.
@@ -606,7 +615,11 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         (IJBTerminal feeTerminal) = abi.decode(context.hookMetadata, (IJBTerminal));
 
         // Determine how much to pay in `msg.value` (in the native currency).
-        uint256 payValue = context.forwardedAmount.token == JBConstants.NATIVE_TOKEN ? context.forwardedAmount.value : 0;
+        uint256 payValue = _beforeTransferTo({
+            to: address(feeTerminal),
+            token: context.forwardedAmount.token,
+            amount: context.forwardedAmount.value
+        });
 
         // Pay the fee.
         // slither-disable-next-line arbitrary-send-eth,unused-return
@@ -619,7 +632,21 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             memo: "",
             metadata: bytes(abi.encodePacked(context.projectId))
         }) {} catch (bytes memory) {
+            // Decrease the allowance for the fee terminal if the token is not the native token.
+            if (context.forwardedAmount.token != JBConstants.NATIVE_TOKEN) {
+                IERC20(context.forwardedAmount.token).safeDecreaseAllowance({
+                    spender: address(feeTerminal),
+                    requestedDecrease: context.forwardedAmount.value
+                });
+            }
+
             // If the fee can't be processed, return the funds to the project.
+            payValue = _beforeTransferTo({
+                to: msg.sender,
+                token: context.forwardedAmount.token,
+                amount: context.forwardedAmount.value
+            });
+
             // slither-disable-next-line arbitrary-send-eth
             IJBTerminal(msg.sender).addToBalanceOf{value: payValue}({
                 projectId: context.projectId,
@@ -792,6 +819,19 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     //*********************************************************************//
     // --------------------- internal transactions ----------------------- //
     //*********************************************************************//
+
+    /// @notice Logic to be triggered before transferring tokens from this contract.
+    /// @param to The address the transfer is going to.
+    /// @param token The token being transferred.
+    /// @param amount The number of tokens being transferred, as a fixed point number with the same number of decimals
+    /// as the token specifies.
+    /// @return payValue The value to attach to the transaction being sent.
+    function _beforeTransferTo(address to, address token, uint256 amount) internal returns (uint256) {
+        // If the token is the native token, no allowance needed.
+        if (token == JBConstants.NATIVE_TOKEN) return amount;
+        IERC20(token).safeIncreaseAllowance(to, amount);
+        return 0;
+    }
 
     /// @notice Configure croptop posting.
     /// @param hook The hook that will be posted to.
