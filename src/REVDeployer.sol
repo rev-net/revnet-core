@@ -422,24 +422,13 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
     /// @notice Creates a reserved token split group that goes entirely to the specified split operator.
     /// @dev The operator can add other beneficiaries to the split group later, if they wish.
-    /// @param splitOperator The address to send the entire split amount to.
+    /// @param splits The splits to create.
     /// @return splitGroups The split group, entirely assigned to the operator.
-    function _makeOperatorSplitGroupWith(address splitOperator)
+    function _makeSplitGroupWith(JBSplit[] memory splits)
         internal
         pure
         returns (JBSplitGroup[] memory splitGroups)
     {
-        // Create a split group that assigns all of the splits to the operator.
-        JBSplit[] memory splits = new JBSplit[](1);
-        splits[0] = JBSplit({
-            preferAddToBalance: false,
-            percent: JBConstants.SPLITS_TOTAL_PERCENT,
-            projectId: 0,
-            beneficiary: payable(splitOperator),
-            lockedUntil: 0,
-            hook: IJBSplitHook(address(0))
-        });
-
         // Package the reserved token splits.
         splitGroups = new JBSplitGroup[](1);
         splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: splits});
@@ -993,17 +982,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             loansOf[revnetId] = configuration.loans;
         }
 
-        // Set up the reserved token split group under the default ruleset (0).
-        // This split group sends the revnet's reserved tokens to the split operator,
-        // who can allocate splits to other recipients later on.
-        CONTROLLER.setSplitGroupsOf({
-            projectId: revnetId,
-            rulesetId: 0,
-            splitGroups: _makeOperatorSplitGroupWith(configuration.splitOperator)
-        });
-
         // Store the auto-issuance amounts.
-        _storeAutoIssuanceAmounts({revnetId: revnetId, configuration: configuration});
+        _storeSplitsAndAutoIssuanceAmounts({revnetId: revnetId, configuration: configuration});
 
         // Give the split operator their permissions.
         _setSplitOperatorOf({revnetId: revnetId, operator: configuration.splitOperator});
@@ -1176,7 +1156,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @notice Stores the auto-issuance amounts for each of a revnet's stages.
     /// @param revnetId The ID of the revnet to store the auto-mint amounts for.
     /// @param configuration The revnet's configuration. See `REVConfig`.
-    function _storeAutoIssuanceAmounts(uint256 revnetId, REVConfig calldata configuration) internal {
+    function _storeSplitsAndAutoIssuanceAmounts(uint256 revnetId, REVConfig calldata configuration) internal {
         // Keep a reference to the total amount of tokens which can be auto-minted.
         uint256 totalUnrealizedAutoIssuanceAmount;
 
@@ -1184,6 +1164,13 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         for (uint256 i; i < configuration.stageConfigurations.length; i++) {
             // Set the stage configuration being iterated on.
             REVStageConfig calldata stageConfiguration = configuration.stageConfigurations[i];
+
+            // Set up the split group for this stage.
+            CONTROLLER.setSplitGroupsOf({
+                projectId: revnetId,
+                rulesetId: block.timestamp + i,
+                splitGroups: _makeSplitGroupWith(stageConfiguration.splits)
+            });
 
             // Loop through each mint to store its amount.
             for (uint256 j; j < stageConfiguration.autoIssuances.length; j++) {
