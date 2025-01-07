@@ -723,6 +723,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         // Deploy the suckers.
         suckers = _deploySuckersFor({
             revnetId: revnetId,
+            operator: _msgSender(),
             encodedConfiguration: encodedConfiguration,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
@@ -1012,6 +1013,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
             _deploySuckersFor({
                 revnetId: revnetId,
+                operator: configuration.splitOperator,
                 encodedConfiguration: encodedConfiguration,
                 suckerDeploymentConfiguration: suckerDeploymentConfiguration
             });
@@ -1033,12 +1035,14 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
     /// @notice Deploy suckers for a revnet.
     /// @param revnetId The ID of the revnet to deploy suckers for.
+    /// @param operator The address of the operator that can add new suckers in the future.
     /// @param encodedConfiguration A byte-encoded representation of the revnet's configuration.
     /// See `_makeRulesetConfigurations(…)` for encoding details. Clients can read the encoded configuration
     /// from the `DeployRevnet` event emitted by this contract.
     /// @param suckerDeploymentConfiguration The suckers to set up for the revnet.
     function _deploySuckersFor(
         uint256 revnetId,
+        address operator,
         bytes memory encodedConfiguration,
         REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
     )
@@ -1046,10 +1050,11 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         returns (address[] memory suckers)
     {
         // Compose the salt.
-        bytes32 salt = keccak256(abi.encode(encodedConfiguration, suckerDeploymentConfiguration.salt));
+        bytes32 salt = keccak256(abi.encode(operator, encodedConfiguration, suckerDeploymentConfiguration.salt));
 
         emit DeploySuckers({
             revnetId: revnetId,
+            operator: operator,
             salt: salt,
             encodedConfiguration: encodedConfiguration,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration,

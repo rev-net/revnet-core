@@ -24,6 +24,7 @@ interface IREVDeployer {
     event ReplaceSplitOperator(uint256 indexed revnetId, address indexed newSplitOperator, address caller);
     event DeploySuckers(
         uint256 indexed revnetId,
+        address indexed operator,
         bytes32 indexed salt,
         bytes encodedConfiguration,
         REVSuckerDeploymentConfig suckerDeploymentConfiguration,
