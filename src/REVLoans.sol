@@ -57,7 +57,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     //*********************************************************************//
   
     error REVLoans_CollateralExceedsLoan(uint256 collateralToReturn, uint256 loanCollateral);
-    error REVLoans_CollateralRequired();
     error REVLoans_DeployerMismatch(address revnetOwner, address deployer);
     error REVLoans_InvalidPrepaidFeePercent(uint256 prepaidFeePercent, uint256 min, uint256 max);
     error REVLoans_NotEnoughCollateral();
@@ -1128,8 +1127,20 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // Make sure there is enough collateral to transfer.
         if (collateralAmountToRemove > loan.collateral) revert REVLoans_NotEnoughCollateral();
 
-        // Make sure there is collateral if the loan has debt.
-        if (collateralAmountToRemove == loan.collateral && loan.amount != 0) revert REVLoans_CollateralRequired();
+        // Keep a reference to the new collateral amount.
+        uint256 newCollateralAmount = loan.collateral - collateralAmountToRemove;
+
+        // Keep a reference to the new borrow amount.
+        uint256 borrowAmount = _borrowAmountFrom({
+            loan: loan,
+            revnetId: revnetId,
+            collateralAmount: newCollateralAmount
+        });
+
+        // Make sure the borrow amount is not less than the original loan's amount.
+        if (borrowAmount < loan.amount) {
+            revert REVLoans_ReallocatingMoreCollateralThanBorrowedAmountAllows(borrowAmount, reallocatedLoan.amount);
+        }
 
         // Get a reference to the replacement loan ID.
         reallocatedLoanId = _generateLoanId(revnetId, ++numberOfLoansFor[revnetId]);
@@ -1148,26 +1159,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         reallocatedLoan.prepaidDuration = loan.prepaidDuration;
         reallocatedLoan.source = loan.source;
 
-        // Keep a reference to the new collateral amount.
-        uint256 newCollateralAmount = reallocatedLoan.collateral - collateralAmountToRemove;
-
-        // Keep a reference to the new borrow amount.
-        uint256 borrowAmount = _borrowAmountFrom({
-            loan: reallocatedLoan,
-            revnetId: revnetId,
-            collateralAmount: newCollateralAmount
-        });
-
-        // Make sure the borrow amount is not less than the original loan's amount.
-        if (borrowAmount < reallocatedLoan.amount) {
-            revert REVLoans_ReallocatingMoreCollateralThanBorrowedAmountAllows(borrowAmount, reallocatedLoan.amount);
-        }
-
         // Reduce the collateral of the reallocated loan.
         _adjust({
             loan: reallocatedLoan,
             revnetId: revnetId,
-            newBorrowAmount: borrowAmount,
+            newBorrowAmount: reallocatedLoan.amount, // Don't change the borrow amount.
             newCollateralAmount: newCollateralAmount,
             sourceFeeAmount: 0,
             beneficiary: payable(_msgSender()) // use the msgSender as the beneficiary, who will have the returned
