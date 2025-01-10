@@ -723,11 +723,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             collateralAmount: loan.collateral - collateralAmountToReturn
         });
 
-        // Keep a reference to the fee that'll be taken.
-        uint256 sourceFeeAmount = _determineSourceFeeAmount(loan, loan.amount - newBorrowAmount);
-
         // Get the amount of the loan being repaid.
-        uint256 repayBorrowAmount = loan.amount - newBorrowAmount + sourceFeeAmount;
+        uint256 repayBorrowAmount = loan.amount - newBorrowAmount;
+
+        // Keep a reference to the fee that'll be taken.
+        uint256 sourceFeeAmount = _determineSourceFeeAmount(loan, repayBorrowAmount);
+
+        // Add the fee to the repay amount.
+        repayBorrowAmount += sourceFeeAmount;
 
         // Make sure the minimum borrow amount is met.
         if (repayBorrowAmount > maxRepayBorrowAmount) {
