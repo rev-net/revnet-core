@@ -1151,7 +1151,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             collateralAmount: reallocatedLoan.collateral - collateralAmountToRemove
         });
 
-        // Reduce the collateral of the replacement loan.
+        // Reduce the collateral of the reallocated loan.
         _adjust({
             loan: reallocatedLoan,
             revnetId: revnetId,
