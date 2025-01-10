@@ -713,15 +713,21 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         maxRepayBorrowAmount =
             _acceptFundsFor({token: loan.source.token, amount: maxRepayBorrowAmount, allowance: allowance});
 
+        // Get a reference to the revnet ID of the loan being repaid.
+        uint256 revnetId = revnetIdOfLoanWith(loanId);
+
         // Get the new borrow amount.
         uint256 newBorrowAmount = _borrowAmountFrom({
             loan: loan,
-            revnetId: revnetIdOfLoanWith(loanId),
+            revnetId: revnetId,
             collateralAmount: loan.collateral - collateralAmountToReturn
         });
 
+        // Keep a reference to the fee that'll be taken.
+        uint256 sourceFeeAmount = _determineSourceFeeAmount(loan, loan.amount - newBorrowAmount);
+
         // Get the amount of the loan being repaid.
-        uint256 repayBorrowAmount = loan.amount - newBorrowAmount;
+        uint256 repayBorrowAmount = loan.amount - newBorrowAmount + sourceFeeAmount;
 
         // Make sure the minimum borrow amount is met.
         if (repayBorrowAmount > maxRepayBorrowAmount) {
@@ -731,11 +737,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         (paidOffLoanId, paidOffloan) = _repayLoan({
             loanId: loanId,
             loan: loan,
+            revnetId: revnetId,
             repayBorrowAmount: repayBorrowAmount,
+            sourceFeeAmount: sourceFeeAmount,
             collateralAmountToReturn: collateralAmountToReturn,
             beneficiary: beneficiary
         });
 
+        // If the max repay amount is greater than the repay amount, return the difference back to the payer.
         if (maxRepayBorrowAmount > repayBorrowAmount) {
             _transferFrom({
                 from: address(this),
@@ -744,6 +753,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
                 amount: maxRepayBorrowAmount - repayBorrowAmount
             });
         }
+
     }
 
     /// @notice Sets the address of the resolver used to retrieve the tokenURI of loans.
@@ -995,38 +1005,21 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @param loan The loan being paid down.
     /// @param repayBorrowAmount The amount being paid down from the loan, denominated in the currency of the source's
     /// accounting context.
+    /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
     /// @param collateralAmountToReturn The amount of collateral being returned that the loan no longer requires.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     function _repayLoan(
         uint256 loanId,
         REVLoan storage loan,
+        uint256 revnetId,
         uint256 repayBorrowAmount,
+        uint256 sourceFeeAmount,
         uint256 collateralAmountToReturn,
         address payable beneficiary
     )
         internal
         returns (uint256, REVLoan memory)
     {
-        // Keep a reference to the fee that'll be taken.
-        uint256 sourceFeeAmount = _determineSourceFeeAmount(loan, repayBorrowAmount);
-
-        // If the amount being paid is greater than the loan's amount, return extra to the payer.
-        // amount is msg.value if token == JBConstants.NATIVE_TOKEN
-        if (repayBorrowAmount > loan.amount + sourceFeeAmount) {
-            _transferFrom({
-                from: address(this),
-                to: payable(_msgSender()),
-                token: loan.source.token,
-                amount: repayBorrowAmount - sourceFeeAmount - loan.amount
-            });
-
-            // Set the amount as the amount that can be paid off.
-            repayBorrowAmount = sourceFeeAmount + loan.amount;
-        }
-
-        // Get a reference to the revnet ID.
-        uint256 revnetId = revnetIdOfLoanWith(loanId);
-
         // Burn the original loan.
         _burn(loanId);
 
