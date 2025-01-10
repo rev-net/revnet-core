@@ -66,6 +66,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     error REVLoans_PermitAllowanceNotEnough(uint256 allowanceAmount, uint256 requiredAmount);
     error REVLoans_NoMsgValueAllowed();
     error REVLoans_LoanExpired(uint256 timeSinceLoanCreated, uint256 loanLiquidationDuration);
+    error REVLoans_ReallocatingMoreCollateralThanBorrowedAmountAllows(uint256 newBorrowAmount, uint256 loanAmount);
     error REVLoans_Unauthorized(address caller, address owner);
     error REVLoans_UnderMinBorrowAmount(uint256 minBorrowAmount, uint256 borrowAmount);
 
@@ -1155,6 +1156,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             collateralAmount: newCollateralAmount
         });
 
+        // Make sure the borrow amount is not less than the original loan's amount.
+        if (borrowAmount < reallocatedLoan.amount) {
+            revert REVLoans_ReallocatingMoreCollateralThanBorrowedAmountAllows(borrowAmount, reallocatedLoan.amount);
+        }
+
         // Reduce the collateral of the reallocated loan.
         _adjust({
             loan: reallocatedLoan,
@@ -1165,18 +1171,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             beneficiary: payable(_msgSender()) // use the msgSender as the beneficiary, who will have the returned
                 // collateral tokens debited from their balance for the new loan.
         });
-
-        // If the borrow amount is less than the original loan's amount, transfer the difference back to the msg sender.
-        if (borrowAmount < reallocatedLoan.amount) {
-            _transferFrom({
-                from: address(this),
-                to: payable(_msgSender()),
-                token: loan.source.token,
-                amount: reallocatedLoan.amount - borrowAmount
-            });
-
-            reallocatedLoan.amount = uint112(borrowAmount);
-        }
 
         emit ReallocateCollateral({
             loanId: loanId,
