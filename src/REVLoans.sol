@@ -696,7 +696,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         external
         payable
         override
-        returns (uint256, REVLoan memory)
+        returns (uint256 paidOffLoanId, REVLoan memory paidOffloan)
     {
         // Make sure only the loan's owner can manage it.
         if (_ownerOf(loanId) != _msgSender()) revert REVLoans_Unauthorized(_msgSender(), _ownerOf(loanId));
@@ -727,7 +727,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             revert REVLoans_OverMaxRepayBorrowAmount(maxRepayBorrowAmount, repayBorrowAmount);
         }
 
-        _repayLoan({
+        (paidOffLoanId, paidOffloan) = _repayLoan({
             loanId: loanId,
             loan: loan,
             repayBorrowAmount: repayBorrowAmount,
