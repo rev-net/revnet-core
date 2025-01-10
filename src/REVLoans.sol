@@ -1145,10 +1145,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         reallocatedLoan.prepaidDuration = loan.prepaidDuration;
         reallocatedLoan.source = loan.source;
 
+        // Keep a reference to the new collateral amount.
+        uint256 newCollateralAmount = reallocatedLoan.collateral - collateralAmountToRemove;
+
+        // Keep a reference to the new borrow amount.
         uint256 borrowAmount = _borrowAmountFrom({
             loan: reallocatedLoan,
             revnetId: revnetId,
-            collateralAmount: reallocatedLoan.collateral - collateralAmountToRemove
+            collateralAmount: newCollateralAmount
         });
 
         // Reduce the collateral of the reallocated loan.
@@ -1156,7 +1160,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             loan: reallocatedLoan,
             revnetId: revnetId,
             newBorrowAmount: borrowAmount,
-            newCollateralAmount: reallocatedLoan.collateral - collateralAmountToRemove,
+            newCollateralAmount: newCollateralAmount,
             sourceFeeAmount: 0,
             beneficiary: payable(_msgSender()) // use the msgSender as the beneficiary, who will have the returned
                 // collateral tokens debited from their balance for the new loan.
