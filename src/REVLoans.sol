@@ -15,6 +15,7 @@ import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
 import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
 import {IJBPayoutTerminal} from "@bananapus/core/src/interfaces/IJBPayoutTerminal.sol";
 import {IJBPrices} from "@bananapus/core/src/interfaces/IJBPrices.sol";
+import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
 import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
 import {IJBTokenUriResolver} from "@bananapus/core/src/interfaces/IJBTokenUriResolver.sol";
 import {JBCashOuts} from "@bananapus/core/src/libraries/JBCashOuts.sol";
@@ -54,9 +55,10 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
-
+  
     error REVLoans_CollateralExceedsLoan(uint256 collateralToReturn, uint256 loanCollateral);
     error REVLoans_CollateralRequired();
+    error REVLoans_DeployerMismatch(address revnetOwner, address deployer);
     error REVLoans_InvalidPrepaidFeePercent(uint256 prepaidFeePercent, uint256 min, uint256 max);
     error REVLoans_NotEnoughCollateral();
     error REVLoans_OverflowAlert(uint256 value, uint256 limit);
@@ -113,6 +115,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
     /// @notice A contract that stores prices for each revnet.
     IJBPrices public immutable override PRICES;
+    
+    /// @notice Mints ERC-721s that represent revnet ownership and transfers.
+    IJBProjects public immutable override PROJECTS;
 
     /// @notice The ID of the REV revnet that will receive the fees.
     uint256 public immutable override REV_ID;
@@ -159,6 +164,35 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @notice The loans.
     /// @custom:member The ID of the loan.
     mapping(uint256 loanId => REVLoan) internal _loanOf;
+
+    //*********************************************************************//
+    // -------------------------- constructor ---------------------------- //
+    //*********************************************************************//
+    
+    /// @param deployer A contract from which revnets using this loans contract are deployed.
+    /// @param revId The ID of the REV revnet that will receive the fees.
+    /// @param owner The owner of the contract that can set the URI resolver.
+    /// @param permit2 A permit2 utility.
+    /// @param trustedForwarder A trusted forwarder of transactions to this contract.
+    constructor(
+        IREVDeployer deployer,
+        uint256 revId,
+        address owner,
+        IPermit2 permit2,
+        address trustedForwarder
+    )
+        ERC721("REV Loans", "$REVLOAN")
+        ERC2771Context(trustedForwarder)
+        Ownable(owner)
+    {
+        DEPLOYER = deployer;
+        CONTROLLER = deployer.CONTROLLER();
+        DIRECTORY = deployer.DIRECTORY();
+        PRICES = deployer.CONTROLLER().PRICES();
+        PROJECTS = deployer.PROJECTS();
+        REV_ID = revId;
+        PERMIT2 = permit2;
+    }
 
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
@@ -446,34 +480,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     }
 
     //*********************************************************************//
-    // -------------------------- constructor ---------------------------- //
-    //*********************************************************************//
-    
-    /// @param deployer A contract from which revnets using this loans contract are deployed.
-    /// @param revId The ID of the REV revnet that will receive the fees.
-    /// @param owner The owner of the contract that can set the URI resolver.
-    /// @param permit2 A permit2 utility.
-    /// @param trustedForwarder A trusted forwarder of transactions to this contract.
-    constructor(
-        IREVDeployer deployer,
-        uint256 revId,
-        address owner,
-        IPermit2 permit2,
-        address trustedForwarder
-    )
-        ERC721("REV Loans", "$REVLOAN")
-        ERC2771Context(trustedForwarder)
-        Ownable(owner)
-    {
-        DEPLOYER = deployer;
-        CONTROLLER = deployer.CONTROLLER();
-        DIRECTORY = deployer.DIRECTORY();
-        PRICES = deployer.CONTROLLER().PRICES();
-        REV_ID = revId;
-        PERMIT2 = permit2;
-    }
-
-    //*********************************************************************//
     // ---------------------- external transactions ---------------------- //
     //*********************************************************************//
 
@@ -500,6 +506,12 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         override
         returns (uint256 loanId, REVLoan memory)
     {
+        // Get a reference to the revnet owner.
+        address revnetOwner = PROJECTS.ownerOf(revnetId);
+
+        // Make sure the revnet was deployed with the deployer this loan expects.
+        if (revnetOwner != address(DEPLOYER)) revert REVLoans_DeployerMismatch(revnetOwner, address(DEPLOYER));
+
         // Make sure the prepaid fee percent is between 0 and 20%. Meaning an 16 year loan can be paid upfront with a
         // payment of 50% of the borrowed assets, the cheapest possible rate.
         if (prepaidFeePercent < SOURCE_MIN_PREPAID_FEE_PERCENT || prepaidFeePercent > MAX_PREPAID_FEE_PERCENT) {
