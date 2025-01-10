@@ -64,6 +64,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     error REVLoans_OverflowAlert(uint256 value, uint256 limit);
     error REVLoans_OverMaxRepayBorrowAmount(uint256 maxRepayBorrowAmount, uint256 repayBorrowAmount);
     error REVLoans_PermitAllowanceNotEnough(uint256 allowanceAmount, uint256 requiredAmount);
+    error REVLoans_NewBorrowAmountGreaterThanLoanAmount(uint256 newBorrowAmount, uint256 loanAmount);
     error REVLoans_NoMsgValueAllowed();
     error REVLoans_LoanExpired(uint256 timeSinceLoanCreated, uint256 loanLiquidationDuration);
     error REVLoans_ReallocatingMoreCollateralThanBorrowedAmountAllows(uint256 newBorrowAmount, uint256 loanAmount);
@@ -722,6 +723,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             revnetId: revnetId,
             collateralAmount: loan.collateral - collateralAmountToReturn
         });
+
+        // Make sure the new borrow amount is less than the loan's amount.
+        if (newBorrowAmount > loan.amount) {
+            revert REVLoans_NewBorrowAmountGreaterThanLoanAmount(newBorrowAmount, loan.amount);
+        }
 
         // Get the amount of the loan being repaid.
         uint256 repayBorrowAmount = loan.amount - newBorrowAmount;
