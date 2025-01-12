@@ -820,22 +820,25 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // Increment the amount of the token borrowed from the revnet from the terminal.
         totalBorrowedFrom[revnetId][loan.source.terminal][loan.source.token] += addedBorrowAmount;
 
-        // Get a reference to the accounting context for the source.
-        JBAccountingContext memory accountingContext =
-            loan.source.terminal.accountingContextForTokenOf({projectId: revnetId, token: loan.source.token});
+        uint256 netAmountPaidOut;
+        {
+            // Get a reference to the accounting context for the source.
+            JBAccountingContext memory accountingContext =
+                loan.source.terminal.accountingContextForTokenOf({projectId: revnetId, token: loan.source.token});
 
-        // Pull the amount to be loaned out of the revnet. This will incure the protocol fee.
-        // slither-disable-next-line unused-return
-        uint256 netAmountPaidOut = loan.source.terminal.useAllowanceOf({
-            projectId: revnetId,
-            token: loan.source.token,
-            amount: addedBorrowAmount,
-            currency: accountingContext.currency,
-            minTokensPaidOut: 0,
-            beneficiary: payable(address(this)),
-            feeBeneficiary: beneficiary,
-            memo: "Lending out to a borrower"
-        });
+            // Pull the amount to be loaned out of the revnet. This will incure the protocol fee.
+            // slither-disable-next-line unused-return
+            netAmountPaidOut = loan.source.terminal.useAllowanceOf({
+                projectId: revnetId,
+                token: loan.source.token,
+                amount: addedBorrowAmount,
+                currency: accountingContext.currency,
+                minTokensPaidOut: 0,
+                beneficiary: payable(address(this)),
+                feeBeneficiary: beneficiary,
+                memo: "Lending out to a borrower"
+            });
+        }
 
         // Get the amount of additional fee to take for REV.
         uint256 revFeeAmount = JBFees.feeAmountFrom({amount: addedBorrowAmount, feePercent: REV_PREPAID_FEE_PERCENT});
