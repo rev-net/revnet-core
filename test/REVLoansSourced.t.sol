@@ -427,7 +427,8 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 borrowableFromNewCollateral =
             LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, newCollateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
 
-        // TODO nowonder, if borrowableFromNewCollateral > loan.amount, we should expect a revert with REVLoans_NewBorrowAmountGreaterThanLoanAmount.
+        // TODO nowonder, if borrowableFromNewCollateral > loan.amount, we should expect a revert with
+        // REVLoans_NewBorrowAmountGreaterThanLoanAmount.
         uint256 amountDiff = borrowableFromNewCollateral > loan.amount ? 0 : loan.amount - borrowableFromNewCollateral;
 
         uint256 maxAmountPaidDown = loan.amount;

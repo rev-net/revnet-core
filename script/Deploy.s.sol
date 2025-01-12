@@ -284,14 +284,16 @@ contract DeployScript is Script, Sphinx {
                 abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher)
             );
 
-            _basicDeployer = !_revDeployerIsDeployed ? new REVDeployer{salt: DEPLOYER_SALT}(
+            _basicDeployer = !_revDeployerIsDeployed
+                ? new REVDeployer{salt: DEPLOYER_SALT}(
                     core.controller,
                     suckers.registry,
                     FEE_PROJECT_ID,
                     hook.hook_deployer,
                     croptop.publisher,
                     TRUSTED_FORWARDER
-                ) : REVDeployer(payable(_deployer));
+                )
+                : REVDeployer(payable(_deployer));
         }
         // Deploy revloans if its not deployed yet.
         REVLoans revloans;
@@ -312,7 +314,6 @@ contract DeployScript is Script, Sphinx {
                 })
                 : REVLoans(payable(_revloans));
         }
-
 
         // Approve the basic deployer to configure the project.
         core.projects.approve(address(_basicDeployer), FEE_PROJECT_ID);

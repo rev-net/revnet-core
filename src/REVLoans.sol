@@ -55,7 +55,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
-  
+
     error REVLoans_CollateralExceedsLoan(uint256 collateralToReturn, uint256 loanCollateral);
     error REVLoans_DeployerMismatch(address revnetOwner, address deployer);
     error REVLoans_InvalidPrepaidFeePercent(uint256 prepaidFeePercent, uint256 min, uint256 max);
@@ -116,7 +116,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
     /// @notice A contract that stores prices for each revnet.
     IJBPrices public immutable override PRICES;
-    
+
     /// @notice Mints ERC-721s that represent revnet ownership and transfers.
     IJBProjects public immutable override PROJECTS;
 
@@ -169,7 +169,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     //*********************************************************************//
     // -------------------------- constructor ---------------------------- //
     //*********************************************************************//
-    
+
     /// @param deployer A contract from which revnets using this loans contract are deployed.
     /// @param revId The ID of the REV revnet that will receive the fees.
     /// @param owner The owner of the contract that can set the URI resolver.
@@ -917,8 +917,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // If there is a source fee, pay it.
         if (sourceFeeAmount > 0) {
             // Increase the allowance for the beneficiary.
-            uint256 payValue =
-                _beforeTransferTo({to: address(loan.source.terminal), token: loan.source.token, amount: sourceFeeAmount});
+            uint256 payValue = _beforeTransferTo({
+                to: address(loan.source.terminal),
+                token: loan.source.token,
+                amount: sourceFeeAmount
+            });
 
             // Pay the fee.
             // slither-disable-next-line unused-return
@@ -1127,11 +1130,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         uint256 newCollateralAmount = loan.collateral - collateralAmountToRemove;
 
         // Keep a reference to the new borrow amount.
-        uint256 borrowAmount = _borrowAmountFrom({
-            loan: loan,
-            revnetId: revnetId,
-            collateralAmount: newCollateralAmount
-        });
+        uint256 borrowAmount =
+            _borrowAmountFrom({loan: loan, revnetId: revnetId, collateralAmount: newCollateralAmount});
 
         // Make sure the borrow amount is not less than the original loan's amount.
         if (borrowAmount < loan.amount) {
