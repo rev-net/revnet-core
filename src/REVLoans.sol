@@ -761,7 +761,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
                 amount: maxRepayBorrowAmount - repayBorrowAmount
             });
         }
-
     }
 
     /// @notice Sets the address of the resolver used to retrieve the tokenURI of loans.
@@ -915,21 +914,18 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             });
         }
 
-        // Get a reference to the amount remaining in this contract.
-        uint256 balance = _balanceOf(loan.source.token);
-
         // The amount remaining in the contract should be the source fee.
-        if (balance > 0) {
+        if (sourceFeeAmount > 0) {
             // Increase the allowance for the beneficiary.
             uint256 payValue =
-                _beforeTransferTo({to: address(loan.source.terminal), token: loan.source.token, amount: balance});
+                _beforeTransferTo({to: address(loan.source.terminal), token: loan.source.token, amount: sourceFeeAmount});
 
             // Pay the fee.
             // slither-disable-next-line unused-return
             try loan.source.terminal.pay{value: payValue}({
                 projectId: revnetId,
                 token: loan.source.token,
-                amount: balance,
+                amount: sourceFeeAmount,
                 beneficiary: beneficiary,
                 minReturnedTokens: 0,
                 memo: "Fee from loan",

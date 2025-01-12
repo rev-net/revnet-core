@@ -275,6 +275,24 @@ contract DeployScript is Script, Sphinx {
         // TODO figure out how to reference project ID if the contracts are already deployed.
         uint256 FEE_PROJECT_ID = core.projects.createFor(safeAddress());
 
+        REVDeployer _basicDeployer;
+        {
+            // Check if the contracts are already deployed or if there are any changes.
+            (address _deployer, bool _revDeployerIsDeployed) = _isDeployed(
+                DEPLOYER_SALT,
+                type(REVDeployer).creationCode,
+                abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher)
+            );
+
+            _basicDeployer = !_revDeployerIsDeployed ? new REVDeployer{salt: DEPLOYER_SALT}(
+                    core.controller,
+                    suckers.registry,
+                    FEE_PROJECT_ID,
+                    hook.hook_deployer,
+                    croptop.publisher,
+                    TRUSTED_FORWARDER
+                ) : REVDeployer(payable(_deployer));
+        }
         // Deploy revloans if its not deployed yet.
         REVLoans revloans;
         {
@@ -286,7 +304,7 @@ contract DeployScript is Script, Sphinx {
 
             revloans = !_revloansIsDeployed
                 ? new REVLoans{salt: REVLOANS_SALT}({
-                    projects: core.projects,
+                    deployer: _basicDeployer,
                     revId: FEE_PROJECT_ID,
                     owner: LOANS_OWNER,
                     permit2: PERMIT2,
@@ -295,38 +313,21 @@ contract DeployScript is Script, Sphinx {
                 : REVLoans(payable(_revloans));
         }
 
-        // Check if the contracts are already deployed or if there are any changes.
-        (, bool _revDeployerIsDeployed) = _isDeployed(
-            DEPLOYER_SALT,
-            type(REVDeployer).creationCode,
-            abi.encode(core.controller, suckers.registry, FEE_PROJECT_ID, hook.hook_deployer, croptop.publisher)
-        );
 
-        if (!_revDeployerIsDeployed) {
-            REVDeployer _basicDeployer = new REVDeployer{salt: DEPLOYER_SALT}(
-                core.controller,
-                suckers.registry,
-                FEE_PROJECT_ID,
-                hook.hook_deployer,
-                croptop.publisher,
-                TRUSTED_FORWARDER
-            );
+        // Approve the basic deployer to configure the project.
+        core.projects.approve(address(_basicDeployer), FEE_PROJECT_ID);
 
-            // Approve the basic deployer to configure the project.
-            core.projects.approve(address(_basicDeployer), FEE_PROJECT_ID);
+        // Build the config.
+        FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig(revloans);
 
-            // Build the config.
-            FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig(revloans);
-
-            // Configure the project.
-            _basicDeployer.deployFor({
-                revnetId: FEE_PROJECT_ID,
-                configuration: feeProjectConfig.configuration,
-                terminalConfigurations: feeProjectConfig.terminalConfigurations,
-                buybackHookConfiguration: feeProjectConfig.buybackHookConfiguration,
-                suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration
-            });
-        }
+        // Configure the project.
+        _basicDeployer.deployFor({
+            revnetId: FEE_PROJECT_ID,
+            configuration: feeProjectConfig.configuration,
+            terminalConfigurations: feeProjectConfig.terminalConfigurations,
+            buybackHookConfiguration: feeProjectConfig.buybackHookConfiguration,
+            suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration
+        });
     }
 
     function _isDeployed(

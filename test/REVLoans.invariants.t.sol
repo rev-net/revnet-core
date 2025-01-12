@@ -503,7 +503,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         );
 
         LOANS_CONTRACT = new REVLoans({
-            projects: jbProjects(),
+            deployer: REV_DEPLOYER,
             revId: FEE_PROJECT_ID,
             owner: address(this),
             permit2: permit2(),

@@ -96,7 +96,7 @@ interface IREVLoans {
     function borrowFrom(
         uint256 revnetId,
         REVLoanSource calldata source,
-        uint256 amount,
+        uint256 minBorrowAmount,
         uint256 collateral,
         address payable beneficiary,
         uint256 prepaidFeePercent
@@ -106,7 +106,7 @@ interface IREVLoans {
     function liquidateExpiredLoansFrom(uint256 revnetId, uint256 startingLoanId, uint256 count) external;
     function repayLoan(
         uint256 loanId,
-        uint256 newAmount,
+        uint256 maxRepayBorrowAmount,
         uint256 newCollateral,
         address payable beneficiary,
         JBSingleAllowance calldata allowance
@@ -118,7 +118,7 @@ interface IREVLoans {
         uint256 loanId,
         uint256 collateralToTransfer,
         REVLoanSource calldata source,
-        uint256 amount,
+        uint256 minBorrowAmount,
         uint256 collateralToAdd,
         address payable beneficiary,
         uint256 prepaidFeePercent
