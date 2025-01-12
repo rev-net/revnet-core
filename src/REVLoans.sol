@@ -829,7 +829,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
         // Pull the amount to be loaned out of the revnet. This will incure the protocol fee.
         // slither-disable-next-line unused-return
-        loan.source.terminal.useAllowanceOf({
+        uint256 netAmountPaidOut = loan.source.terminal.useAllowanceOf({
             projectId: revnetId,
             token: loan.source.token,
             amount: addedBorrowAmount,
@@ -863,7 +863,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             from: address(this),
             to: beneficiary,
             token: loan.source.token,
-            amount: _balanceOf(loan.source.token) - sourceFeeAmount
+            amount: netAmountPaidOut - revFeeAmount - sourceFeeAmount
         });
     }
 
@@ -917,7 +917,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             });
         }
 
-        // The amount remaining in the contract should be the source fee.
+        // If there is a source fee, pay it.
         if (sourceFeeAmount > 0) {
             // Increase the allowance for the beneficiary.
             uint256 payValue =
