@@ -752,16 +752,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             beneficiary: beneficiary
         });
 
-        // Get a reference to the balance in this contract.
-        uint256 balance = _balanceOf(loan.source.token);
-
         // If the max repay amount is greater than the repay amount, return the difference back to the payer.
-        if (balance > 0) {
+        if (maxRepayBorrowAmount > repayBorrowAmount) {
             _transferFrom({
                 from: address(this),
                 to: payable(_msgSender()),
                 token: loan.source.token,
-                amount: balance
+                amount: maxRepayBorrowAmount - repayBorrowAmount
             });
         }
     }
