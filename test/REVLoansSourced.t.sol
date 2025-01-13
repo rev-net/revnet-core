@@ -294,7 +294,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         );
 
         LOANS_CONTRACT = new REVLoans({
-            deployer: REV_DEPLOYER,
+            revnets: REV_DEPLOYER,
             revId: FEE_PROJECT_ID,
             owner: address(this),
             permit2: permit2(),

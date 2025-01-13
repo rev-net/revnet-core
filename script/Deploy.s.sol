@@ -242,8 +242,8 @@ contract DeployScript is Script, Sphinx {
                 suckerDeployerConfigurations[1] =
                     JBSuckerDeployerConfig({deployer: suckers.baseDeployer, mappings: tokenMappings});
 
-                // suckerDeployerConfigurations[2] =
-                //     JBSuckerDeployerConfig({deployer: suckers.arbitrumDeployer, mappings: tokenMappings});
+                suckerDeployerConfigurations[2] =
+                    JBSuckerDeployerConfig({deployer: suckers.arbitrumDeployer, mappings: tokenMappings});
             } else {
                 suckerDeployerConfigurations = new JBSuckerDeployerConfig[](1);
                 // L2 -> Mainnet
@@ -301,12 +301,12 @@ contract DeployScript is Script, Sphinx {
             (address _revloans, bool _revloansIsDeployed) = _isDeployed(
                 REVLOANS_SALT,
                 type(REVLoans).creationCode,
-                abi.encode(core.projects, FEE_PROJECT_ID, PERMIT2, TRUSTED_FORWARDER)
+                abi.encode(_basicDeployer, FEE_PROJECT_ID, PERMIT2, TRUSTED_FORWARDER)
             );
 
             revloans = !_revloansIsDeployed
                 ? new REVLoans{salt: REVLOANS_SALT}({
-                    deployer: _basicDeployer,
+                    revnets: _basicDeployer,
                     revId: FEE_PROJECT_ID,
                     owner: LOANS_OWNER,
                     permit2: PERMIT2,

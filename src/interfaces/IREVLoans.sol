@@ -53,7 +53,7 @@ interface IREVLoans {
     function MAX_PREPAID_FEE_PERCENT() external view returns (uint256);
     function PERMIT2() external view returns (IPermit2);
     function CONTROLLER() external view returns (IJBController);
-    function DEPLOYER() external view returns (IREVDeployer);
+    function REVNETS() external view returns (IREVDeployer);
     function DIRECTORY() external view returns (IJBDirectory);
     function PRICES() external view returns (IJBPrices);
     function PROJECTS() external view returns (IJBProjects);

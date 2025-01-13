@@ -57,7 +57,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     //*********************************************************************//
 
     error REVLoans_CollateralExceedsLoan(uint256 collateralToReturn, uint256 loanCollateral);
-    error REVLoans_DeployerMismatch(address revnetOwner, address deployer);
+    error REVLoans_RevnetsMismatch(address revnetOwner, address revnets);
     error REVLoans_InvalidPrepaidFeePercent(uint256 prepaidFeePercent, uint256 min, uint256 max);
     error REVLoans_NotEnoughCollateral();
     error REVLoans_OverflowAlert(uint256 value, uint256 limit);
@@ -109,7 +109,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     IJBController public immutable override CONTROLLER;
 
     /// @notice Mints ERC-721s that represent project ownership and transfers.
-    IREVDeployer public immutable override DEPLOYER;
+    IREVDeployer public immutable override REVNETS;
 
     /// @notice The directory of terminals and controllers for revnets.
     IJBDirectory public immutable override DIRECTORY;
@@ -170,13 +170,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     // -------------------------- constructor ---------------------------- //
     //*********************************************************************//
 
-    /// @param deployer A contract from which revnets using this loans contract are deployed.
+    /// @param revnets A contract from which revnets using this loans contract are deployed.
     /// @param revId The ID of the REV revnet that will receive the fees.
     /// @param owner The owner of the contract that can set the URI resolver.
     /// @param permit2 A permit2 utility.
     /// @param trustedForwarder A trusted forwarder of transactions to this contract.
     constructor(
-        IREVDeployer deployer,
+        IREVDeployer revnets,
         uint256 revId,
         address owner,
         IPermit2 permit2,
@@ -186,11 +186,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         ERC2771Context(trustedForwarder)
         Ownable(owner)
     {
-        DEPLOYER = deployer;
-        CONTROLLER = deployer.CONTROLLER();
-        DIRECTORY = deployer.DIRECTORY();
-        PRICES = deployer.CONTROLLER().PRICES();
-        PROJECTS = deployer.PROJECTS();
+        REVNETS = revnets;
+        CONTROLLER = revnets.CONTROLLER();
+        DIRECTORY = revnets.DIRECTORY();
+        PRICES = revnets.CONTROLLER().PRICES();
+        PROJECTS = revnets.PROJECTS();
         REV_ID = revId;
         PERMIT2 = permit2;
     }
@@ -221,7 +221,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         return _borrowableAmountFrom({
             revnetId: revnetId,
             collateralAmount: collateralAmount,
-            pendingAutoIssuanceTokens: DEPLOYER.unrealizedAutoIssuanceAmountOf(revnetId),
+            pendingAutoIssuanceTokens: REVNETS.unrealizedAutoIssuanceAmountOf(revnetId),
             decimals: decimals,
             currency: currency,
             currentStage: currentStage,
@@ -355,7 +355,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             loan.source.terminal.accountingContextForTokenOf({projectId: revnetId, token: loan.source.token});
 
         // Keep a reference to the pending auto issuance tokens.
-        uint256 pendingAutoIssuanceTokens = DEPLOYER.unrealizedAutoIssuanceAmountOf(revnetId);
+        uint256 pendingAutoIssuanceTokens = REVNETS.unrealizedAutoIssuanceAmountOf(revnetId);
 
         // Keep a reference to the current stage.
         (JBRuleset memory currentStage,) = CONTROLLER.currentRulesetOf(revnetId);
@@ -511,7 +511,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         address revnetOwner = PROJECTS.ownerOf(revnetId);
 
         // Make sure the revnet was deployed with the deployer this loan expects.
-        if (revnetOwner != address(DEPLOYER)) revert REVLoans_DeployerMismatch(revnetOwner, address(DEPLOYER));
+        if (revnetOwner != address(REVNETS)) revert REVLoans_RevnetsMismatch(revnetOwner, address(REVNETS));
 
         // Make sure the prepaid fee percent is between 0 and 20%. Meaning an 16 year loan can be paid upfront with a
         // payment of 50% of the borrowed assets, the cheapest possible rate.
