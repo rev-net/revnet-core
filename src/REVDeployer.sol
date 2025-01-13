@@ -60,6 +60,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
     error REVDeployer_CashOutDelayNotFinished();
     error REVDeployer_CashOutsCantBeTurnedOffCompletely();
+    error REVDeployer_MustHaveSplits();
     error REVDeployer_RulesetDoesNotAllowDeployingSuckers();
     error REVDeployer_StageNotStarted();
     error REVDeployer_StagesRequired();
@@ -1159,6 +1160,10 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     function _storeSplitsAndAutoIssuanceAmounts(uint256 revnetId, REVConfig calldata configuration) internal {
         // Keep a reference to the total amount of tokens which can be auto-minted.
         uint256 totalUnrealizedAutoIssuanceAmount;
+
+        // Make sure the revnet has at least one split if it has a split percent.
+        if (configuration.splitPercent > 0 && configuration.stageConfigurations.length == 0)
+            revert REVDeployer_MustHaveSplits();
 
         // Loop through each stage to store its auto-issuance amounts.
         for (uint256 i; i < configuration.stageConfigurations.length; i++) {
