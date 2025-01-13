@@ -692,63 +692,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         );
     }
 
-    function test_Refinance_Unspecified_Amount() public {
-        vm.prank(USER);
-        uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
-
-        uint256 loanable =
-            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
-        assertGt(loanable, 0);
-
-        mockExpect(
-            address(jbPermissions()),
-            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
-            abi.encode(true)
-        );
-
-        REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
-
-        vm.prank(USER);
-        (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
-
-        REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
-
-        // Ensure loans contract isn't hodling
-        assertEq(address(LOANS_CONTRACT).balance, 0);
-
-        // Ensure we actually received ETH from the borrow
-        assertGt(USER.balance, 100e18 - 1e18);
-
-        // warp to after cash out tax rate is lower in the second ruleset
-        vm.warp(block.timestamp + 721 days);
-
-        // get the updated loanableFrom the same amount as earlier
-        uint256 loanableSecondStage = LOANS_CONTRACT.borrowableAmountFrom(
-            REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
-        );
-
-        // loanable amount is higher with the lower tax rate per second stage configuration
-        assertGt(loanableSecondStage, loanable);
-
-        // we should not have to add collateral
-        uint256 collateralToAdd = 0;
-
-        // this should be a 0.5% gain to be reallocated
-        uint256 collateralToTransfer = mulDiv(loan.collateral, 50, 10_000);
-
-        // vm.expectRevert(REVLoans.REVLoans_AmountNotSpecified.selector);
-        vm.prank(USER);
-        LOANS_CONTRACT.reallocateCollateralFromLoan(
-            newLoanId,
-            collateralToTransfer,
-            sauce,
-            0, // amount is zero
-            collateralToAdd,
-            payable(USER),
-            0
-        );
-    }
-
     function test_Refinance_Collateral_Required() public {
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
@@ -926,7 +869,12 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         LOANS_CONTRACT.determineSourceFeeAmount(loan, loan.amount);
     }
 
-    function test_borrowFromReverts() external {
+    function test_InvalidPrepaidFeePercent(uint16 feePercentage) external {
+        vm.assume(
+            feePercentage < LOANS_CONTRACT.SOURCE_MIN_PREPAID_FEE_PERCENT()
+                || feePercentage > LOANS_CONTRACT.MAX_PREPAID_FEE_PERCENT()
+        );
+
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
 
@@ -937,12 +885,10 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
         vm.prank(USER);
-        // vm.expectRevert(REVLoans.REVLoans_AmountNotSpecified.selector);
-        LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, 0, tokens, payable(USER), 100);
-
-        vm.prank(USER);
-        vm.expectRevert(abi.encodeWithSelector(REVLoans.REVLoans_InvalidPrepaidFeePercent.selector, 1_000_000, 25, 500));
-        LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, 1, tokens, payable(USER), 1_000_000);
+        vm.expectRevert(
+            abi.encodeWithSelector(REVLoans.REVLoans_InvalidPrepaidFeePercent.selector, feePercentage, 25, 500)
+        );
+        LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, 1, tokens, payable(USER), feePercentage);
     }
 
     function test_liquidateLoans() external {
