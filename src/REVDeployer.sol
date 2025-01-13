@@ -58,6 +58,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
+    error REVDeployer_AutoIssuanceBeneficiaryZeroAddress();
     error REVDeployer_CashOutDelayNotFinished();
     error REVDeployer_CashOutsCantBeTurnedOffCompletely();
     error REVDeployer_RulesetDoesNotAllowDeployingSuckers();
@@ -1195,6 +1196,9 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
                 // If there's nothing to auto-mint, continue.
                 if (issuanceConfig.count == 0) continue;
+
+                // Make sure the beneficiary is not the zero address.
+                if (issuanceConfig.beneficiary == address(0)) revert REVDeployer_AutoIssuanceBeneficiaryZeroAddress();
 
                 emit StoreAutoIssuanceAmount({
                     revnetId: revnetId,
