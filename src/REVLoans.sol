@@ -709,10 +709,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             revert REVLoans_CollateralExceedsLoan(collateralAmountToReturn, loan.collateral);
         }
 
-        // Accept the funds that'll be used to pay off loans.
-        maxRepayBorrowAmount =
-            _acceptFundsFor({token: loan.source.token, amount: maxRepayBorrowAmount, allowance: allowance});
-
         // Get a reference to the revnet ID of the loan being repaid.
         uint256 revnetId = revnetIdOfLoanWith(loanId);
 
@@ -736,6 +732,10 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
         // Add the fee to the repay amount.
         repayBorrowAmount += sourceFeeAmount;
+
+        // Accept the funds that'll be used to pay off loans.
+        maxRepayBorrowAmount =
+            _acceptFundsFor({token: loan.source.token, amount: maxRepayBorrowAmount, allowance: allowance});
 
         // Make sure the minimum borrow amount is met.
         if (repayBorrowAmount > maxRepayBorrowAmount) {
