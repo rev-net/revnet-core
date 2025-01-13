@@ -1137,7 +1137,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
         // Make sure the borrow amount is not less than the original loan's amount.
         if (borrowAmount < loan.amount) {
-            revert REVLoans_ReallocatingMoreCollateralThanBorrowedAmountAllows(borrowAmount, reallocatedLoan.amount);
+            revert REVLoans_ReallocatingMoreCollateralThanBorrowedAmountAllows(borrowAmount, loan.amount);
         }
 
         // Get a reference to the replacement loan ID.
