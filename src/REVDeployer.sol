@@ -425,11 +425,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @dev The operator can add other beneficiaries to the split group later, if they wish.
     /// @param splits The splits to create.
     /// @return splitGroups The split group, entirely assigned to the operator.
-    function _makeSplitGroupWith(JBSplit[] memory splits)
-        internal
-        pure
-        returns (JBSplitGroup[] memory splitGroups)
-    {
+    function _makeSplitGroupWith(JBSplit[] memory splits) internal pure returns (JBSplitGroup[] memory splitGroups) {
         // Package the reserved token splits.
         splitGroups = new JBSplitGroup[](1);
         splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: splits});
@@ -1163,8 +1159,9 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
         // Make sure the revnet has at least one split if it has a split percent.
         // Otherwise, the split would go to this contract since its the revnet's owner.
-        if (configuration.stageConfigurations.splitPercent > 0 && configuration.stageConfigurations.length == 0)
+        if (configuration.stageConfigurations.splitPercent > 0 && configuration.stageConfigurations.length == 0) {
             revert REVDeployer_MustHaveSplits();
+        }
 
         // Loop through each stage to store its auto-issuance amounts.
         for (uint256 i; i < configuration.stageConfigurations.length; i++) {
