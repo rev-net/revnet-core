@@ -969,6 +969,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
                     memo: ""
                 });
             } else {
+                // slither-disable-next-line unused-return
                 CONTROLLER.queueRulesetsOf({projectId: revnetId, rulesetConfigurations: rulesetConfigurations, memo: ""});
             }
         }
