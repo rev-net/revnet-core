@@ -953,11 +953,12 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             // Keep a reference to the Juicebox project's owner.
             address owner = PROJECTS.ownerOf(revnetId);
 
+            // Make sure the caller is the owner of the Juicebox project.
+            if (_msgSender() != owner) revert REVDeployer_Unauthorized();
+
             // If we're converting an existing Juicebox project into a revnet,
             // transfer the `JBProjects` NFT to this deployer.
-            if (_msgSender() == owner) {
-                IERC721(PROJECTS).safeTransferFrom({from: owner, to: address(this), tokenId: revnetId});
-            }
+            IERC721(PROJECTS).safeTransferFrom({from: owner, to: address(this), tokenId: revnetId});
 
             // Launch the revnet rulesets for the pre-existing project.
             // slither-disable-next-line unused-return
