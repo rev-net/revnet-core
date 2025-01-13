@@ -458,11 +458,27 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // empty allowance data
         JBSingleAllowance memory allowance;
 
+        if (borrowableFromNewCollateral > loan.amount) {
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    REVLoans.REVLoans_NewBorrowAmountGreaterThanLoanAmount.selector,
+                    borrowableFromNewCollateral,
+                    loan.amount
+                )
+            );
+        }
+
         // call to pay-down the loan
         vm.prank(USER);
         (, REVLoan memory reducedLoan) = LOANS_CONTRACT.repayLoan{value: maxAmountPaidDown}(
             newLoanId, maxAmountPaidDown, collateralReturned, payable(USER), allowance
         );
+
+        if (borrowableFromNewCollateral > loan.amount) {
+            // End of the test, its not possible to `repay` a loan with such a small amount that the loan value goes up.
+            // The `collateralReturned` should be increased so the value of the loan goes down.
+            return;
+        }
 
         assertApproxEqAbs(reducedLoan.amount, loan.amount - amountDiff, 1);
         assertEq(reducedLoan.collateral, loan.collateral - collateralReturned);
