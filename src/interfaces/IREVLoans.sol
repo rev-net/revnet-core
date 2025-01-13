@@ -50,7 +50,6 @@ interface IREVLoans {
     event SetTokenUriResolver(IJBTokenUriResolver indexed resolver, address caller);
 
     function LOAN_LIQUIDATION_DURATION() external view returns (uint256);
-    function MAX_PREPAID_FEE_PERCENT() external view returns (uint256);
     function PERMIT2() external view returns (IPermit2);
     function CONTROLLER() external view returns (IJBController);
     function REVNETS() external view returns (IREVDeployer);
@@ -59,7 +58,8 @@ interface IREVLoans {
     function PROJECTS() external view returns (IJBProjects);
     function REV_ID() external view returns (uint256);
     function REV_PREPAID_FEE_PERCENT() external view returns (uint256);
-    function SOURCE_MIN_PREPAID_FEE_PERCENT() external view returns (uint256);
+    function MIN_PREPAID_FEE_PERCENT() external view returns (uint256);
+    function MAX_PREPAID_FEE_PERCENT() external view returns (uint256);
 
     function borrowableAmountFrom(
         uint256 revnetId,

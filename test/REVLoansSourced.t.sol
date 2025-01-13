@@ -871,7 +871,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
     function test_InvalidPrepaidFeePercent(uint16 feePercentage) external {
         vm.assume(
-            feePercentage < LOANS_CONTRACT.SOURCE_MIN_PREPAID_FEE_PERCENT()
+            feePercentage < LOANS_CONTRACT.MIN_PREPAID_FEE_PERCENT()
                 || feePercentage > LOANS_CONTRACT.MAX_PREPAID_FEE_PERCENT()
         );
 

@@ -88,7 +88,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     uint256 public constant override REV_PREPAID_FEE_PERCENT = 5; // 0.5%
 
     /// @dev A fee of 2.5% is charged by the loan's source upfront.
-    uint256 public constant override SOURCE_MIN_PREPAID_FEE_PERCENT = 25; // 2.5%
+    uint256 public constant override MIN_PREPAID_FEE_PERCENT = 25; // 2.5%
 
     //*********************************************************************//
     // -------------------- private constant properties ------------------ //
@@ -515,9 +515,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
         // Make sure the prepaid fee percent is between 0 and 20%. Meaning an 16 year loan can be paid upfront with a
         // payment of 50% of the borrowed assets, the cheapest possible rate.
-        if (prepaidFeePercent < SOURCE_MIN_PREPAID_FEE_PERCENT || prepaidFeePercent > MAX_PREPAID_FEE_PERCENT) {
+        if (prepaidFeePercent < MIN_PREPAID_FEE_PERCENT || prepaidFeePercent > MAX_PREPAID_FEE_PERCENT) {
             revert REVLoans_InvalidPrepaidFeePercent(
-                prepaidFeePercent, SOURCE_MIN_PREPAID_FEE_PERCENT, MAX_PREPAID_FEE_PERCENT
+                prepaidFeePercent, MIN_PREPAID_FEE_PERCENT, MAX_PREPAID_FEE_PERCENT
             );
         }
 
