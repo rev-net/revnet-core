@@ -236,7 +236,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     {
         // If the cash out is from a sucker, return the full cash out amount without taxes or fees.
         if (_isSuckerOf({revnetId: context.projectId, addr: context.holder})) {
-            return (JBConstants.MAX_CASH_OUT_TAX_RATE, context.cashOutCount, context.totalSupply, hookSpecifications);
+            return (0, context.cashOutCount, context.totalSupply, hookSpecifications);
         }
 
         // Enforce the cash out delay.
@@ -248,7 +248,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf(FEE_REVNET_ID, context.surplus.token);
 
         // If there's no cash out tax (100% cash out tax rate), or if there's no fee terminal, do not charge a fee.
-        if (context.cashOutTaxRate == JBConstants.MAX_CASH_OUT_TAX_RATE || address(feeTerminal) == address(0)) {
+        if (context.cashOutTaxRate == 0 || address(feeTerminal) == address(0)) {
             return (context.cashOutTaxRate, context.cashOutCount, context.totalSupply, hookSpecifications);
         }
 
