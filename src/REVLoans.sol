@@ -487,7 +487,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @notice Open a loan by borrowing from a revnet.
     /// @param revnetId The ID of the revnet being borrowed from.
     /// @param source The source of the loan being borrowed.
-    /// @param minBorrowAmount The minimum amount being borrowed, denominated in the currency of the source's accounting
+    /// @param minBorrowAmount The minimum amount being borrowed, denominated in the token of the source's accounting
     /// context.
     /// @param collateralAmount The amount of tokens to use as collateral for the loan.
     /// @param beneficiary The address that'll receive the borrowed funds and the tokens resulting from fee payments.
@@ -630,7 +630,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @param loanId The ID of the loan to reallocate collateral from.
     /// @param collateralAmountToTransfer The amount of collateral to transfer from the original loan.
     /// @param source The source of the loan to create.
-    /// @param minBorrowAmount The minimum amount being borrowed, denominated in the currency of the source's accounting
+    /// @param minBorrowAmount The minimum amount being borrowed, denominated in the token of the source's accounting
     /// context.
     /// @param collateralAmountToAdd The amount of collateral to add to the loan.
     /// @param beneficiary The address that'll receive the borrowed funds and the tokens resulting from fee payments.
@@ -680,7 +680,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @notice Allows the owner of a loan to pay it back or receive returned collateral no longer necessary to support
     /// the loan.
     /// @param loanId The ID of the loan being adjusted.
-    /// @param maxRepayBorrowAmount The maximum amount being paid off, denominated in the currency of the source's
+    /// @param maxRepayBorrowAmount The maximum amount being paid off, denominated in the token of the source's
     /// accounting context.
     /// @param collateralAmountToReturn The amount of collateral to return being returned from the loan.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
@@ -795,9 +795,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @notice Add a new amount to the loan that is greater than the previous amount.
     /// @param loan The loan being added to.
     /// @param revnetId The ID of the revnet the loan is being added in.
-    /// @param addedBorrowAmount The amount being added to the loan, denominated in the currency of the source's
-    /// accounting
-    /// context.
+    /// @param addedBorrowAmount The amount being added to the loan, denominated in the token of the source's
+    /// accounting context.
     /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
     /// @param feeTerminal The terminal that the fee will be paid to.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
@@ -871,7 +870,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// to support the loan.
     /// @param loan The loan being adjusted.
     /// @param revnetId The ID of the revnet the loan is being adjusted in.
-    /// @param newBorrowAmount The new amount of the loan, denominated in the currency of the source's accounting
+    /// @param newBorrowAmount The new amount of the loan, denominated in the token of the source's accounting
     /// context.
     /// @param newCollateralAmount The new amount of collateral backing the loan.
     /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
@@ -1013,7 +1012,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @notice Pays down a loan.
     /// @param loanId The ID of the loan being paid down.
     /// @param loan The loan being paid down.
-    /// @param repayBorrowAmount The amount being paid down from the loan, denominated in the currency of the source's
+    /// @param repayBorrowAmount The amount being paid down from the loan, denominated in the token of the source's
     /// accounting context.
     /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
     /// @param collateralAmountToReturn The amount of collateral being returned that the loan no longer requires.
@@ -1182,7 +1181,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @notice Pays off a loan.
     /// @param loan The loan being paid off.
     /// @param revnetId The ID of the revnet the loan is being paid off in.
-    /// @param repaidBorrowAmount The amount being paid off, denominated in the currency of the source's accounting
+    /// @param repaidBorrowAmount The amount being paid off, denominated in the token of the source's accounting
     /// context.
     function _removeFrom(REVLoan memory loan, uint256 revnetId, uint256 repaidBorrowAmount) internal {
         // Decrement the total amount of a token being loaned out by the revnet from its terminal.
