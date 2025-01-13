@@ -192,7 +192,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         _setPermission({operator: address(SUCKER_REGISTRY), revnetId: 0, permissionId: JBPermissionIds.MAP_SUCKER_TOKEN});
     }
 
-
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
