@@ -1163,7 +1163,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
         // Make sure the revnet has at least one split if it has a split percent.
         // Otherwise, the split would go to this contract since its the revnet's owner.
-        if (configuration.splitPercent > 0 && configuration.stageConfigurations.length == 0)
+        if (configuration.stageConfigurations.splitPercent > 0 && configuration.stageConfigurations.length == 0)
             revert REVDeployer_MustHaveSplits();
 
         // Loop through each stage to store its auto-issuance amounts.
