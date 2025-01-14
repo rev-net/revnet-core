@@ -169,6 +169,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @param feeRevnetId The Juicebox project ID of the revnet that will receive fees.
     /// @param hookDeployer The deployer to use for revnet's tiered ERC-721 hooks.
     /// @param publisher The croptop publisher revnets can use to publish ERC-721 posts to their tiered ERC-721 hooks.
+    /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
     constructor(
         IJBController controller,
         IJBSuckerRegistry suckerRegistry,
