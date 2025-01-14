@@ -29,6 +29,7 @@ import {JBCurrencyAmount} from "@bananapus/core/src/structs/JBCurrencyAmount.sol
 import {JBFundAccessLimitGroup} from "@bananapus/core/src/structs/JBFundAccessLimitGroup.sol";
 import {JBPermissionsData} from "@bananapus/core/src/structs/JBPermissionsData.sol";
 import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
+import {JBRuleset} from "@bananapus/core/src/structs/JBRuleset.sol";
 import {JBRulesetConfig} from "@bananapus/core/src/structs/JBRulesetConfig.sol";
 import {JBRulesetMetadata} from "@bananapus/core/src/structs/JBRulesetMetadata.sol";
 import {JBSplit} from "@bananapus/core/src/structs/JBSplit.sol";
@@ -318,9 +319,15 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     }
 
     /// @dev Make sure this contract can only receive project NFTs from `JBProjects`.
-    function onERC721Received(address, address, uint256, bytes calldata) external view returns (bytes4) {
+    function onERC721Received(address, address, uint256 revnetId, bytes calldata) external view returns (bytes4) {
         // Make sure the 721 received is from the `JBProjects` contract.
         if (msg.sender != address(PROJECTS)) revert();
+
+        // Get the stages of the revnet.
+        (JBRuleset memory stage,,) = CONTROLLER.latestQueuedRulesetOf(revnetId);
+
+        // Make sure the ruleset is not the default ruleset.
+        if (stage.id != 0) revert();
 
         return IERC721Receiver.onERC721Received.selector;
     }
