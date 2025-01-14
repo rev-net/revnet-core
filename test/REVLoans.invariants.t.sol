@@ -574,6 +574,24 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         assertEq(actualTotalBorrowed, expectedTotalBorrowed, "Total borrowed amount mismatch");
     }
 
+    function invariant_C_RedemptionEqualsBorrow() public {
+        uint256 amount = 100e18; // 100 Tokens
+        address payable sender = payable(address(11_111));
+
+        // Deal the project token to the sender (to redeem)
+        deal(address(jbTokens().tokenOf(REVNET_ID)), sender, amount, true);
+
+        uint256 borrowAmount =
+            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, amount, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+
+        vm.prank(sender);
+        uint256 redemptionAmount =
+            jbMultiTerminal().cashOutTokensOf(sender, REVNET_ID, amount, JBConstants.NATIVE_TOKEN, 0, sender, "");
+
+        // Assert that a cashout would result in the same amount being returned as a loan (excluding the loan fees).
+        assertEq(borrowAmount, redemptionAmount);
+    }
+
     function _calculateExpectedTotalBorrowed(uint256 _revnetId) internal view returns (uint256 totalBorrowed) {
         // Access loan sources from the Loans contract
         REVLoanSource[] memory sources = LOANS_CONTRACT.loanSourcesOf(_revnetId);
