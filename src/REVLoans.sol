@@ -524,9 +524,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // Get a reference to the loan ID.
         loanId = _generateLoanId({revnetId: revnetId, loanNumber: ++numberOfLoansFor[revnetId]});
 
-        // Mint the loan.
-        _mint({to: _msgSender(), tokenId: loanId});
-
         // Get a reference to the loan being created.
         REVLoan storage loan = _loanOf[loanId];
 
@@ -554,6 +551,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             sourceFeeAmount: sourceFeeAmount,
             beneficiary: beneficiary
         });
+
+        // Mint the loan.
+        _mint({to: _msgSender(), tokenId: loanId});
 
         emit Borrow({
             loanId: loanId,
@@ -1034,7 +1034,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
         // If the loan will carry no more amount or collateral, store its changes directly.
         // slither-disable-next-line incorrect-equality
-        if (repayBorrowAmount - sourceFeeAmount == loan.amount && collateralAmountToReturn == loan.collateral) {
+        if (collateralAmountToReturn == loan.collateral) {
             // Borrow in.
             _adjust({
                 loan: loan,
@@ -1064,9 +1064,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             // Get a reference to the replacement loan ID.
             uint256 paidOffLoanId = _generateLoanId({revnetId: revnetId, loanNumber: ++numberOfLoansFor[revnetId]});
 
-            // Mint the replacement loan.
-            _mint({to: _msgSender(), tokenId: paidOffLoanId});
-
             // Get a reference to the loan being paid off.
             REVLoan storage paidOffLoan = _loanOf[paidOffLoanId];
 
@@ -1087,6 +1084,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
                 sourceFeeAmount: sourceFeeAmount,
                 beneficiary: beneficiary
             });
+
+            // Mint the replacement loan.
+            _mint({to: _msgSender(), tokenId: paidOffLoanId});
 
             emit RepayLoan({
                 loanId: loanId,
