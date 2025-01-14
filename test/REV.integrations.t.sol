@@ -243,14 +243,14 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         });
     }
 
-    function test_Is_Setup() public {
+    function test_Is_Setup() public view {
         assertGt(uint160(address(jbDirectory())), uint160(0));
         assertGt(FEE_PROJECT_ID, 0);
         assertGt(jbProjects().count(), 0);
         assertGt(REVNET_ID, 0);
     }
 
-    function test_preMint() public {
+    function test_preMint() public view {
         assertEq(70_000 * decimalMultiplier, IJBToken(jbTokens().tokenOf(REVNET_ID)).balanceOf(multisig()));
     }
 
