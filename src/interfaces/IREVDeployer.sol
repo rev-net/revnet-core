@@ -24,7 +24,6 @@ interface IREVDeployer {
     event ReplaceSplitOperator(uint256 indexed revnetId, address indexed newSplitOperator, address caller);
     event DeploySuckers(
         uint256 indexed revnetId,
-        address indexed operator,
         bytes32 indexed salt,
         bytes encodedConfiguration,
         REVSuckerDeploymentConfig suckerDeploymentConfiguration,
@@ -65,9 +64,10 @@ interface IREVDeployer {
     function PUBLISHER() external view returns (CTPublisher);
     function HOOK_DEPLOYER() external view returns (IJB721TiersHookDeployer);
 
+    function allowsDeployingSuckersInCurrentRulesetOf(uint256 revnetId) external view returns (bool);
     function buybackHookOf(uint256 revnetId) external view returns (IJBRulesetDataHook);
     function cashOutDelayOf(uint256 revnetId) external view returns (uint256);
-    function allowsDeployingSuckersInCurrentRulesetOf(uint256 revnetId) external view returns (bool);
+    function hashedEncodedConfigurationOf(uint256 revnetId) external view returns (bytes32);
     function isSplitOperatorOf(uint256 revnetId, address addr) external view returns (bool);
     function loansOf(uint256 revnetId) external view returns (address);
     function tiered721HookOf(uint256 revnetId) external view returns (IJB721TiersHook);

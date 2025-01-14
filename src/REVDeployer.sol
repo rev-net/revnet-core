@@ -59,13 +59,16 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     //*********************************************************************//
 
     error REVDeployer_AutoIssuanceBeneficiaryZeroAddress();
-    error REVDeployer_CashOutDelayNotFinished();
-    error REVDeployer_CashOutsCantBeTurnedOffCompletely();
+    error REVDeployer_CashOutDelayNotFinished(uint256 cashOutDelay, uint256 blockTimestamp);
+    error REVDeployer_CashOutsCantBeTurnedOffCompletely(uint256 cashOutTaxRate, uint256 maxCashOutTaxRate);
+    error REVDeployer_EncodedConfigurationDoesntMatch(
+        bytes32 storedHashedEncodedConfiguration, bytes32 proposedHashedEncodedConfiguration
+    );
     error REVDeployer_RulesetDoesNotAllowDeployingSuckers();
-    error REVDeployer_StageNotStarted();
+    error REVDeployer_StageNotStarted(uint256 stageStartTime, uint256 blockTimestamp);
     error REVDeployer_StagesRequired();
     error REVDeployer_StageTimesMustIncrease();
-    error REVDeployer_Unauthorized();
+    error REVDeployer_Unauthorized(uint256 revnetId, address operator);
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -134,6 +137,12 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @dev Only applies to existing revnets which are deploying onto a new network.
     /// @custom:param revnetId The ID of the revnet to get the cash out delay for.
     mapping(uint256 revnetId => uint256 cashOutDelay) public override cashOutDelayOf;
+
+    /// @notice The hashed encoded configuration of each revnet.
+    /// @dev This is used to ensure that the encoded configuration of a revnet is the same when deploying suckers for
+    /// omnichain operations.
+    /// @custom:param revnetId The ID of the revnet to get the hashed encoded configuration for.
+    mapping(uint256 revnetId => bytes32 hashedEncodedConfiguration) public override hashedEncodedConfigurationOf;
 
     /// @notice Each revnet's loan contract.
     /// @dev Revnets can offer loans to their participants, collateralized by their tokens.
@@ -272,9 +281,12 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             return (0, context.cashOutCount, context.totalSupply, hookSpecifications);
         }
 
+        // Keep a reference to the cash out delay of the revnet.
+        uint256 cashOutDelay = cashOutDelayOf[context.projectId];
+
         // Enforce the cash out delay.
-        if (cashOutDelayOf[context.projectId] > block.timestamp) {
-            revert REVDeployer_CashOutDelayNotFinished();
+        if (cashOutDelay > block.timestamp) {
+            revert REVDeployer_CashOutDelayNotFinished(cashOutDelay, block.timestamp);
         }
 
         // Get the terminal that will receive the cash out fee.
@@ -371,7 +383,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @param revnetId The ID of the revnet to check split operator status for.
     /// @param operator The address being checked.
     function _checkIfIsSplitOperatorOf(uint256 revnetId, address operator) internal view {
-        if (!isSplitOperatorOf(revnetId, operator)) revert REVDeployer_Unauthorized();
+        if (!isSplitOperatorOf(revnetId, operator)) revert REVDeployer_Unauthorized(revnetId, operator);
     }
 
     /// @notice Encodes an auto-issuance.
@@ -522,7 +534,9 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
             // Make sure the revnet doesn't prevent cashouts all together.
             if (stageConfiguration.cashOutTaxRate >= JBConstants.MAX_CASH_OUT_TAX_RATE) {
-                revert REVDeployer_CashOutsCantBeTurnedOffCompletely();
+                revert REVDeployer_CashOutsCantBeTurnedOffCompletely(
+                    stageConfiguration.cashOutTaxRate, JBConstants.MAX_CASH_OUT_TAX_RATE
+                );
             }
 
             // Set up the ruleset's metadata.
@@ -600,7 +614,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     function afterCashOutRecordedWith(JBAfterCashOutRecordedContext calldata context) external payable {
         // Only the revnet's payment terminals can access this function.
         if (!DIRECTORY.isTerminalOf(context.projectId, IJBTerminal(msg.sender))) {
-            revert REVDeployer_Unauthorized();
+            revert REVDeployer_Unauthorized(context.projectId, msg.sender);
         }
 
         // Parse the metadata forwarded from the data hook to get the fee terminal.
@@ -639,9 +653,12 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @param stageId The ID of the stage auto-mint tokens are available from.
     /// @param beneficiary The address to auto-mint tokens to.
     function autoIssueFor(uint256 revnetId, uint256 stageId, address beneficiary) external override {
+        // Keep a reference to the stage's start time.
+        uint256 stageStartTime = CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId).start;
+
         // Make sure the stage has started.
-        if (CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId).start > block.timestamp) {
-            revert REVDeployer_StageNotStarted();
+        if (stageStartTime > block.timestamp) {
+            revert REVDeployer_StageNotStarted(stageStartTime, block.timestamp);
         }
 
         // Get a reference to the number of tokens to auto-issue.
@@ -722,10 +739,22 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             revert REVDeployer_RulesetDoesNotAllowDeployingSuckers();
         }
 
+        // Keep a reference to the hashed encoded configuration of the revnet.
+        bytes32 storedHashedEncodedConfiguration = hashedEncodedConfigurationOf[revnetId];
+
+        // Keep a reference to the proposed hashed encoded configuration.
+        bytes32 proposedHashedEncodedConfiguration = keccak256(encodedConfiguration);
+
+        // If the proposed configuration doesn't match the stored configuration, revert.
+        if (storedHashedEncodedConfiguration != proposedHashedEncodedConfiguration) {
+            revert REVDeployer_EncodedConfigurationDoesntMatch(
+                storedHashedEncodedConfiguration, proposedHashedEncodedConfiguration
+            );
+        }
+
         // Deploy the suckers.
         suckers = _deploySuckersFor({
             revnetId: revnetId,
-            operator: _msgSender(),
             encodedConfiguration: encodedConfiguration,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
@@ -1015,11 +1044,13 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
             _deploySuckersFor({
                 revnetId: revnetId,
-                operator: configuration.splitOperator,
                 encodedConfiguration: encodedConfiguration,
                 suckerDeploymentConfiguration: suckerDeploymentConfiguration
             });
         }
+
+        // Store the hashed encoded configuration.
+        hashedEncodedConfigurationOf[revnetId] = keccak256(encodedConfiguration);
 
         emit DeployRevnet({
             revnetId: revnetId,
@@ -1037,14 +1068,12 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
     /// @notice Deploy suckers for a revnet.
     /// @param revnetId The ID of the revnet to deploy suckers for.
-    /// @param operator The address of the operator that can add new suckers in the future.
     /// @param encodedConfiguration A byte-encoded representation of the revnet's configuration.
     /// See `_makeRulesetConfigurations(…)` for encoding details. Clients can read the encoded configuration
     /// from the `DeployRevnet` event emitted by this contract.
     /// @param suckerDeploymentConfiguration The suckers to set up for the revnet.
     function _deploySuckersFor(
         uint256 revnetId,
-        address operator,
         bytes memory encodedConfiguration,
         REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
     )
@@ -1052,11 +1081,10 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         returns (address[] memory suckers)
     {
         // Compose the salt.
-        bytes32 salt = keccak256(abi.encode(operator, encodedConfiguration, suckerDeploymentConfiguration.salt));
+        bytes32 salt = keccak256(abi.encode(encodedConfiguration, suckerDeploymentConfiguration.salt));
 
         emit DeploySuckers({
             revnetId: revnetId,
-            operator: operator,
             salt: salt,
             encodedConfiguration: encodedConfiguration,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration,
