@@ -25,4 +25,4 @@ jobs:
       - name: Run local tests
         run: forge snapshot --fail-fast --summary --detailed
       - name: Check contract sizes
-        run: forge build --sizes --skip SphinxUtils
+        run: FOUNDRY_PROFILE=ci_sizes forge build --sizes --skip SphinxUtils
