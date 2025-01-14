@@ -233,6 +233,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
         // Configure the project.
+        vm.prank(address(multisig()));
         REVNET_ID = REV_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
             configuration: feeProjectConfig.configuration,
@@ -309,5 +310,20 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         // Ensure it's registered
         bool isSucker = SUCKER_REGISTRY.isSuckerOf(REVNET_ID, suckers[0]);
         assertEq(isSucker, true);
+    }
+
+    function test_deployer_not_owner() public {
+        // Build the config.
+        FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
+
+        vm.expectRevert(REVDeployer.REVDeployer_Unauthorized.selector);
+        // Configure the project.
+        REVNET_ID = REV_DEPLOYER.deployFor({
+            revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
+            configuration: feeProjectConfig.configuration,
+            terminalConfigurations: feeProjectConfig.terminalConfigurations,
+            buybackHookConfiguration: feeProjectConfig.buybackHookConfiguration,
+            suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration
+        });
     }
 }

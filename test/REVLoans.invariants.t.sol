@@ -518,6 +518,7 @@ contract InvariantREVLoansTests is StdInvariant, TestBaseWorkflow, JBTest {
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
         // Configure the project.
+        vm.prank(address(multisig()));
         REVNET_ID = REV_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
             configuration: feeProjectConfig.configuration,

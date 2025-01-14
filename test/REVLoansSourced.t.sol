@@ -308,6 +308,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Build the config.
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
+        vm.prank(address(multisig()));
         // Configure the project.
         REV_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
