@@ -876,7 +876,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
             // Pay the fee.
             // slither-disable-next-line unused-return
-            try loan.source.terminal.pay{value: payValue}({
+            loan.source.terminal.pay{value: payValue}({
                 projectId: revnetId,
                 token: loan.source.token,
                 amount: balance,
@@ -884,7 +884,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
                 minReturnedTokens: 0,
                 memo: "Fee from loan",
                 metadata: bytes(abi.encodePacked(REV_ID))
-            }) {} catch (bytes memory) {}
+            });
         }
 
         // Store the loans updated values.
@@ -1138,7 +1138,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @notice Pays off a loan.
     /// @param loan The loan being paid off.
     /// @param revnetId The ID of the revnet the loan is being paid off in.
-
     /// @param borrowAmount The amount being paid off, denominated in the currency of the source's accounting context.
     function _removeFrom(REVLoan memory loan, uint256 revnetId, uint256 borrowAmount) internal {
         // Decrement the total amount of a token being loaned out by the revnet from its terminal.
@@ -1149,14 +1148,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             _beforeTransferTo({to: address(loan.source.terminal), token: loan.source.token, amount: borrowAmount});
 
         // Add the loaned amount back to the revnet.
-        try loan.source.terminal.addToBalanceOf{value: payValue}({
+        loan.source.terminal.addToBalanceOf{value: payValue}({
             projectId: revnetId,
             token: loan.source.token,
             amount: borrowAmount,
             shouldReturnHeldFees: false,
             memo: "Paying off loan",
             metadata: bytes(abi.encodePacked(REV_ID))
-        }) {} catch (bytes memory) {}
+        });
     }
 
     /// @notice Returns collateral from a loan.
