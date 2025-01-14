@@ -927,7 +927,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
             // Pay the fee.
             // slither-disable-next-line unused-return
-            try loan.source.terminal.pay{value: payValue}({
+            loan.source.terminal.pay{value: payValue}({
                 projectId: revnetId,
                 token: loan.source.token,
                 amount: sourceFeeAmount,
@@ -935,7 +935,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
                 minReturnedTokens: 0,
                 memo: "Fee from loan",
                 metadata: bytes(abi.encodePacked(REV_ID))
-            }) {} catch (bytes memory) {}
+            });
         }
 
         // Store the loans updated values.
@@ -1192,14 +1192,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             _beforeTransferTo({to: address(loan.source.terminal), token: loan.source.token, amount: repaidBorrowAmount});
 
         // Add the loaned amount back to the revnet.
-        try loan.source.terminal.addToBalanceOf{value: payValue}({
+        loan.source.terminal.addToBalanceOf{value: payValue}({
             projectId: revnetId,
             token: loan.source.token,
             amount: repaidBorrowAmount,
             shouldReturnHeldFees: false,
             memo: "Paying off loan",
             metadata: bytes(abi.encodePacked(REV_ID))
-        }) {} catch (bytes memory) {}
+        });
     }
 
     /// @notice Returns collateral from a loan.
