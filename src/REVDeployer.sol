@@ -63,6 +63,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
+    error REVDeployer_AutoIssuanceBeneficiaryZeroAddress();
     error REVDeployer_CashOutDelayNotFinished();
     error REVDeployer_CashOutsCantBeTurnedOffCompletely();
     error REVDeployer_RulesetDoesNotAllowDeployingSuckers();
@@ -166,6 +167,39 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     mapping(uint256 revnetId => uint256[]) internal _extraOperatorPermissions;
 
     //*********************************************************************//
+    // -------------------------- constructor ---------------------------- //
+    //*********************************************************************//
+
+    /// @param controller The controller to use for launching and operating the Juicebox projects which will be revnets.
+    /// @param suckerRegistry The registry to use for deploying and tracking each revnet's suckers.
+    /// @param feeRevnetId The Juicebox project ID of the revnet that will receive fees.
+    /// @param hookDeployer The deployer to use for revnet's tiered ERC-721 hooks.
+    /// @param publisher The croptop publisher revnets can use to publish ERC-721 posts to their tiered ERC-721 hooks.
+    /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
+    constructor(
+        IJBController controller,
+        IJBSuckerRegistry suckerRegistry,
+        uint256 feeRevnetId,
+        IJB721TiersHookDeployer hookDeployer,
+        CTPublisher publisher,
+        address trustedForwarder
+    )
+        ERC2771Context(trustedForwarder)
+    {
+        CONTROLLER = controller;
+        DIRECTORY = controller.DIRECTORY();
+        PROJECTS = controller.PROJECTS();
+        PERMISSIONS = IJBPermissioned(address(CONTROLLER)).PERMISSIONS();
+        SUCKER_REGISTRY = suckerRegistry;
+        FEE_REVNET_ID = feeRevnetId;
+        HOOK_DEPLOYER = hookDeployer;
+        PUBLISHER = publisher;
+
+        // Give the sucker registry permission to map tokens for all revnets.
+        _setPermission({operator: address(SUCKER_REGISTRY), revnetId: 0, permissionId: JBPermissionIds.MAP_SUCKER_TOKEN});
+    }
+
+    //*********************************************************************//
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
 
@@ -197,7 +231,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         }
 
         // Is there a buyback hook specification?
-        bool usesBuybackHook = buybackHookSpecifications.length != 0;
+        bool usesBuybackHook = buybackHookSpecifications.length == 1;
 
         // Keep a reference to the revnet's tiered ERC-721 hook.
         IJB721TiersHook tiered721Hook = tiered721HookOf[context.projectId];
@@ -240,7 +274,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     {
         // If the cash out is from a sucker, return the full cash out amount without taxes or fees.
         if (_isSuckerOf({revnetId: context.projectId, addr: context.holder})) {
-            return (JBConstants.MAX_CASH_OUT_TAX_RATE, context.cashOutCount, context.totalSupply, hookSpecifications);
+            return (0, context.cashOutCount, context.totalSupply, hookSpecifications);
         }
 
         // Enforce the cash out delay.
@@ -252,7 +286,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         IJBTerminal feeTerminal = DIRECTORY.primaryTerminalOf(FEE_REVNET_ID, context.surplus.token);
 
         // If there's no cash out tax (100% cash out tax rate), or if there's no fee terminal, do not charge a fee.
-        if (context.cashOutTaxRate == JBConstants.MAX_CASH_OUT_TAX_RATE || address(feeTerminal) == address(0)) {
+        if (context.cashOutTaxRate == 0 || address(feeTerminal) == address(0)) {
             return (context.cashOutTaxRate, context.cashOutCount, context.totalSupply, hookSpecifications);
         }
 
@@ -560,38 +594,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         for (uint256 i; i < array.length; i++) {
             result[i] = uint8(array[i]);
         }
-    }
-
-    //*********************************************************************//
-    // -------------------------- constructor ---------------------------- //
-    //*********************************************************************//
-
-    /// @param controller The controller to use for launching and operating the Juicebox projects which will be revnets.
-    /// @param suckerRegistry The registry to use for deploying and tracking each revnet's suckers.
-    /// @param feeRevnetId The Juicebox project ID of the revnet that will receive fees.
-    /// @param hookDeployer The deployer to use for revnet's tiered ERC-721 hooks.
-    /// @param publisher The croptop publisher revnets can use to publish ERC-721 posts to their tiered ERC-721 hooks.
-    constructor(
-        IJBController controller,
-        IJBSuckerRegistry suckerRegistry,
-        uint256 feeRevnetId,
-        IJB721TiersHookDeployer hookDeployer,
-        CTPublisher publisher,
-        address trustedForwarder
-    )
-        ERC2771Context(trustedForwarder)
-    {
-        CONTROLLER = controller;
-        DIRECTORY = controller.DIRECTORY();
-        PROJECTS = controller.PROJECTS();
-        PERMISSIONS = IJBPermissioned(address(CONTROLLER)).PERMISSIONS();
-        SUCKER_REGISTRY = suckerRegistry;
-        FEE_REVNET_ID = feeRevnetId;
-        HOOK_DEPLOYER = hookDeployer;
-        PUBLISHER = publisher;
-
-        // Give the sucker registry permission to map tokens for all revnets.
-        _setPermission({operator: address(SUCKER_REGISTRY), revnetId: 0, permissionId: JBPermissionIds.MAP_SUCKER_TOKEN});
     }
 
     //*********************************************************************//
@@ -1235,6 +1237,9 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
                 // If there's nothing to auto-mint, continue.
                 if (issuanceConfig.count == 0) continue;
+
+                // Make sure the beneficiary is not the zero address.
+                if (issuanceConfig.beneficiary == address(0)) revert REVDeployer_AutoIssuanceBeneficiaryZeroAddress();
 
                 emit StoreAutoIssuanceAmount({
                     revnetId: revnetId,
