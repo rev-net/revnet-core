@@ -162,6 +162,39 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     mapping(uint256 revnetId => uint256[]) internal _extraOperatorPermissions;
 
     //*********************************************************************//
+    // -------------------------- constructor ---------------------------- //
+    //*********************************************************************//
+
+    /// @param controller The controller to use for launching and operating the Juicebox projects which will be revnets.
+    /// @param suckerRegistry The registry to use for deploying and tracking each revnet's suckers.
+    /// @param feeRevnetId The Juicebox project ID of the revnet that will receive fees.
+    /// @param hookDeployer The deployer to use for revnet's tiered ERC-721 hooks.
+    /// @param publisher The croptop publisher revnets can use to publish ERC-721 posts to their tiered ERC-721 hooks.
+    /// @param trustedForwarder The trusted forwarder for the ERC2771Context.
+    constructor(
+        IJBController controller,
+        IJBSuckerRegistry suckerRegistry,
+        uint256 feeRevnetId,
+        IJB721TiersHookDeployer hookDeployer,
+        CTPublisher publisher,
+        address trustedForwarder
+    )
+        ERC2771Context(trustedForwarder)
+    {
+        CONTROLLER = controller;
+        DIRECTORY = controller.DIRECTORY();
+        PROJECTS = controller.PROJECTS();
+        PERMISSIONS = IJBPermissioned(address(CONTROLLER)).PERMISSIONS();
+        SUCKER_REGISTRY = suckerRegistry;
+        FEE_REVNET_ID = feeRevnetId;
+        HOOK_DEPLOYER = hookDeployer;
+        PUBLISHER = publisher;
+
+        // Give the sucker registry permission to map tokens for all revnets.
+        _setPermission({operator: address(SUCKER_REGISTRY), revnetId: 0, permissionId: JBPermissionIds.MAP_SUCKER_TOKEN});
+    }
+
+    //*********************************************************************//
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
 
@@ -556,38 +589,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         for (uint256 i; i < array.length; i++) {
             result[i] = uint8(array[i]);
         }
-    }
-
-    //*********************************************************************//
-    // -------------------------- constructor ---------------------------- //
-    //*********************************************************************//
-
-    /// @param controller The controller to use for launching and operating the Juicebox projects which will be revnets.
-    /// @param suckerRegistry The registry to use for deploying and tracking each revnet's suckers.
-    /// @param feeRevnetId The Juicebox project ID of the revnet that will receive fees.
-    /// @param hookDeployer The deployer to use for revnet's tiered ERC-721 hooks.
-    /// @param publisher The croptop publisher revnets can use to publish ERC-721 posts to their tiered ERC-721 hooks.
-    constructor(
-        IJBController controller,
-        IJBSuckerRegistry suckerRegistry,
-        uint256 feeRevnetId,
-        IJB721TiersHookDeployer hookDeployer,
-        CTPublisher publisher,
-        address trustedForwarder
-    )
-        ERC2771Context(trustedForwarder)
-    {
-        CONTROLLER = controller;
-        DIRECTORY = controller.DIRECTORY();
-        PROJECTS = controller.PROJECTS();
-        PERMISSIONS = IJBPermissioned(address(CONTROLLER)).PERMISSIONS();
-        SUCKER_REGISTRY = suckerRegistry;
-        FEE_REVNET_ID = feeRevnetId;
-        HOOK_DEPLOYER = hookDeployer;
-        PUBLISHER = publisher;
-
-        // Give the sucker registry permission to map tokens for all revnets.
-        _setPermission({operator: address(SUCKER_REGISTRY), revnetId: 0, permissionId: JBPermissionIds.MAP_SUCKER_TOKEN});
     }
 
     //*********************************************************************//
