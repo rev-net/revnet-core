@@ -1157,16 +1157,17 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         // Keep a reference to the total amount of tokens which can be auto-minted.
         uint256 totalUnrealizedAutoIssuanceAmount;
 
-        // Make sure the revnet has at least one split if it has a split percent.
-        // Otherwise, the split would go to this contract since its the revnet's owner.
-        if (configuration.stageConfigurations.splitPercent > 0 && configuration.stageConfigurations.length == 0) {
-            revert REVDeployer_MustHaveSplits();
-        }
 
         // Loop through each stage to store its auto-issuance amounts.
         for (uint256 i; i < configuration.stageConfigurations.length; i++) {
             // Set the stage configuration being iterated on.
             REVStageConfig calldata stageConfiguration = configuration.stageConfigurations[i];
+
+            // Make sure the revnet has at least one split if it has a split percent.
+            // Otherwise, the split would go to this contract since its the revnet's owner.
+            if (stageConfiguration.splitPercent > 0 && stageConfiguration.splits.length == 0) {
+                revert REVDeployer_MustHaveSplits();
+            }
 
             // Set up the split group for this stage.
             CONTROLLER.setSplitGroupsOf({
