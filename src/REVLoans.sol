@@ -350,6 +350,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         view
         returns (uint256)
     {
+        // If there's no collateral, there's no loan.
+        if (collateralAmount == 0) return 0;
+
         // Get a reference to the accounting context for the source.
         JBAccountingContext memory accountingContext =
             loan.source.terminal.accountingContextForTokenOf({projectId: revnetId, token: loan.source.token});
