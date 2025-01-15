@@ -598,21 +598,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             // Burn the loan.
             _burn(loanId);
 
-            // If the loan has been paid back and there is still leftover collateral, return it to the owner.
-            // slither-disable-next-line incorrect-equality
             if (loan.collateral > 0) {
-                // slither-disable-next-line incorrect-equality
-                if (loan.amount == 0) {
-                    // Return the collateral to the owner.
-                    _returnCollateralFrom({
-                        revnetId: revnetId,
-                        collateralAmount: loan.collateral,
-                        beneficiary: payable(owner)
-                    });
-                } else {
-                    // Decrement the total amount of collateral tokens supporting loans from this revnet.
-                    totalCollateralOf[revnetId] -= loan.collateral;
-                }
+                // Decrement the total amount of collateral tokens supporting loans from this revnet.
+                totalCollateralOf[revnetId] -= loan.collateral;
             }
 
             if (loan.amount > 0) {
