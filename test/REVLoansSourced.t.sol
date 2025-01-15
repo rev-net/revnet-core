@@ -813,12 +813,30 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVNET_ID, collateralToTransfer + tokens2, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
+        uint256 reallocatedLoanValue = LOANS_CONTRACT.borrowableAmountFrom(
+            REVNET_ID, loan.collateral - collateralToTransfer, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+        );
+
+        if (reallocatedLoanValue < loan.amount) {
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    REVLoans.REVLoans_ReallocatingMoreCollateralThanBorrowedAmountAllows.selector,
+                    reallocatedLoanValue,
+                    loan.amount
+                )
+            );
+        }
+
         uint256 userBalanceBefore = USER.balance;
 
         vm.prank(USER);
         LOANS_CONTRACT.reallocateCollateralFromLoan(
             newLoanId, collateralToTransfer, sauce, newAmount, tokens2, payable(USER), 25
         );
+
+        if (reallocatedLoanValue < loan.amount) {
+            return;
+        }
 
         uint256 userBalanceAfter = USER.balance;
 
