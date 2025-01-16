@@ -437,10 +437,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         pure
         returns (JBFundAccessLimitGroup[] memory fundAccessLimitGroups)
     {
-        // Set up an unlimited allowance for the loan contract to use.
-        JBCurrencyAmount[] memory loanAllowances = new JBCurrencyAmount[](1);
-        loanAllowances[0] = JBCurrencyAmount({currency: configuration.baseCurrency, amount: type(uint224).max});
-
         // Initialize the fund access limit groups.
         fundAccessLimitGroups = new JBFundAccessLimitGroup[](configuration.loanSources.length);
 
@@ -448,6 +444,11 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         for (uint256 i; i < configuration.loanSources.length; i++) {
             // Set the loan source being iterated on.
             REVLoanSource calldata loanSource = configuration.loanSources[i];
+
+            // Set up an unlimited allowance for the loan contract to use.
+            JBCurrencyAmount[] memory loanAllowances = new JBCurrencyAmount[](1);
+            loanAllowances[0] =
+                JBCurrencyAmount({currency: uint32(uint160(loanSource.token)), amount: type(uint224).max});
 
             // Set up the fund access limits for the loans.
             fundAccessLimitGroups[i] = JBFundAccessLimitGroup({
