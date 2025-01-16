@@ -24,6 +24,7 @@ import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
 import {JBCashOuts} from "@bananapus/core/src/libraries/JBCashOuts.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBSplitGroupIds} from "@bananapus/core/src/libraries/JBSplitGroupIds.sol";
+import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
 import {JBAfterCashOutRecordedContext} from "@bananapus/core/src/structs/JBAfterCashOutRecordedContext.sol";
 import {JBBeforePayRecordedContext} from "@bananapus/core/src/structs/JBBeforePayRecordedContext.sol";
 import {JBBeforeCashOutRecordedContext} from "@bananapus/core/src/structs/JBBeforeCashOutRecordedContext.sol";
@@ -66,6 +67,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     error REVDeployer_AutoIssuanceBeneficiaryZeroAddress();
     error REVDeployer_CashOutDelayNotFinished();
     error REVDeployer_CashOutsCantBeTurnedOffCompletely();
+    error REVDeployer_CurrencyMisconfigured(address terminal, address token, uint32 currency);
     error REVDeployer_RulesetDoesNotAllowDeployingSuckers();
     error REVDeployer_StageNotStarted();
     error REVDeployer_StagesRequired();
@@ -981,6 +983,20 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         // Normalize and encode the configurations.
         (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration) =
             _makeRulesetConfigurations(configuration);
+
+        // Loop through all terminal configurations and check if the currency is the token being accepted.
+        // This both protects from misconfiguration and ensures the assumption(s) we make in `_makeLoanFundAccessLimits`
+        // are safe.
+        for (uint256 i; i < terminalConfigurations.length; i++) {
+            for (uint256 j; j < terminalConfigurations[i].accountingContextsToAccept.length; j++) {
+                JBAccountingContext calldata accountingContext = terminalConfigurations[i].accountingContextsToAccept[j];
+                if (accountingContext.currency != uint32(uint160(accountingContext.token))) {
+                    revert REVDeployer_CurrencyMisconfigured(
+                        address(terminalConfigurations[i].terminal), accountingContext.token, accountingContext.currency
+                    );
+                }
+            }
+        }
 
         if (revnetId == 0) {
             // If we're deploying a new revnet, launch a Juicebox project for it.
