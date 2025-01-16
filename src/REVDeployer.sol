@@ -64,10 +64,10 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
+    error REVDeployer_AccountingContextCurrencyMisconfigured(address terminal, address token, uint32 currency);
     error REVDeployer_AutoIssuanceBeneficiaryZeroAddress();
     error REVDeployer_CashOutDelayNotFinished();
     error REVDeployer_CashOutsCantBeTurnedOffCompletely();
-    error REVDeployer_CurrencyMisconfigured(address terminal, address token, uint32 currency);
     error REVDeployer_RulesetDoesNotAllowDeployingSuckers();
     error REVDeployer_StageNotStarted();
     error REVDeployer_StagesRequired();
@@ -991,7 +991,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             for (uint256 j; j < terminalConfigurations[i].accountingContextsToAccept.length; j++) {
                 JBAccountingContext calldata accountingContext = terminalConfigurations[i].accountingContextsToAccept[j];
                 if (accountingContext.currency != uint32(uint160(accountingContext.token))) {
-                    revert REVDeployer_CurrencyMisconfigured(
+                    revert REVDeployer_AccountingContextCurrencyMisconfigured(
                         address(terminalConfigurations[i].terminal), accountingContext.token, accountingContext.currency
                     );
                 }
