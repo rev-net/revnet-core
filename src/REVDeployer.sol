@@ -1159,7 +1159,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         // Keep a reference to the total amount of tokens which can be auto-minted.
         uint256 totalUnrealizedAutoIssuanceAmount;
 
-
         // Loop through each stage to store its auto-issuance amounts.
         for (uint256 i; i < configuration.stageConfigurations.length; i++) {
             // Set the stage configuration being iterated on.
