@@ -17,6 +17,7 @@ import "@bananapus/buyback-hook/script/helpers/BuybackDeploymentLib.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
 import {MockPriceFeed} from "@bananapus/core/test/mock/MockPriceFeed.sol";
+import {MockERC20} from "@bananapus/core/test/mock/MockERC20.sol";
 import {REVLoans} from "../src/REVLoans.sol";
 import {REVLoan} from "../src/structs/REVLoan.sol";
 import {REVStageConfig, REVAutoIssuance} from "../src/structs/REVStageConfig.sol";
@@ -53,6 +54,8 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     IJBAddressRegistry ADDRESS_REGISTRY;
 
     IREVLoans LOANS_CONTRACT;
+
+    MockERC20 TOKEN;
 
     /// @notice Deploys and tracks suckers for revnets.
     IJBSuckerRegistry SUCKER_REGISTRY;
@@ -178,7 +181,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 decimalMultiplier = 10 ** decimals;
 
         // The tokens that the project accepts and stores.
-        JBAccountingContext[] memory accountingContextsToAccept = new JBAccountingContext[](1);
+        JBAccountingContext[] memory accountingContextsToAccept = new JBAccountingContext[](2);
 
         // Accept the chain's native currency through the multi terminal.
         accountingContextsToAccept[0] = JBAccountingContext({
@@ -186,6 +189,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             decimals: 18,
             currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
         });
+
+        accountingContextsToAccept[1] =
+            JBAccountingContext({token: address(TOKEN), decimals: 6, currency: uint32(uint160(address(TOKEN)))});
 
         // The terminals that the project will accept funds through.
         JBTerminalConfig[] memory terminalConfigurations = new JBTerminalConfig[](1);
@@ -237,8 +243,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             extraMetadata: 0
         });
 
-        REVLoanSource[] memory _loanSources = new REVLoanSource[](1);
+        REVLoanSource[] memory _loanSources = new REVLoanSource[](2);
         _loanSources[0] = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+        _loanSources[1] = REVLoanSource({token: address(TOKEN), terminal: jbMultiTerminal()});
 
         // The project's revnet configuration
         REVConfig memory revnetConfiguration = REVConfig({
@@ -289,6 +296,19 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         PUBLISHER = new CTPublisher(jbController(), jbPermissions(), FEE_PROJECT_ID, multisig());
 
+        TOKEN = new MockERC20("1/2 ETH", "1/2");
+
+        // Configure a price feed for ETH/TOKEN.
+        // The token is worth 50% of the price of ETH.
+        MockPriceFeed priceFeed = new MockPriceFeed(5e5, 6);
+        vm.label(address(priceFeed), "Token:Eth/PriceFeed");
+
+        // Configure the price feed for the pair.
+        vm.prank(multisig());
+        jbPrices().addPriceFeedFor(
+            0, uint32(uint160(address(TOKEN))), uint32(uint160(JBConstants.NATIVE_TOKEN)), priceFeed
+        );
+
         REV_DEPLOYER = new REVDeployer{salt: REV_DEPLOYER_SALT}(
             jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER, TRUSTED_FORWARDER
         );
@@ -331,6 +351,48 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // Give Eth for the user experience
         vm.deal(USER, 100e18);
+    }
+
+    function test_Pay_ERC20_Borrow_With_Loan_Source() public {
+        // Deal the user some tokens.
+        deal(address(TOKEN), USER, 1e18);
+
+        // Approve the terminal to spend the tokens.
+        vm.prank(USER);
+        TOKEN.approve(address(jbMultiTerminal()), 1e18);
+
+        vm.prank(USER);
+        uint256 tokens = jbMultiTerminal().pay(REVNET_ID, address(TOKEN), 1e6, USER, 0, "", "");
+
+        uint256 loanable = LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 6, uint32(uint160(address(TOKEN))));
+        assertGt(loanable, 0);
+
+        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
+        REVLoanSource memory sauce = REVLoanSource({token: address(TOKEN), terminal: jbMultiTerminal()});
+
+        vm.prank(USER);
+        (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
+
+        REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
+        assertEq(loan.amount, loanable);
+        assertEq(loan.collateral, tokens);
+        assertEq(loan.createdAt, block.timestamp);
+        assertEq(loan.prepaidFeePercent, 500);
+        assertEq(loan.prepaidDuration, mulDiv(500, 3650 days, 500));
+        assertEq(loan.source.token, JBConstants.NATIVE_TOKEN);
+        assertEq(address(loan.source.terminal), address(jbMultiTerminal()));
+
+        // Ensure loans contract isn't hodling
+        assertEq(address(LOANS_CONTRACT).balance, 0);
+
+        // Ensure we actually received ETH from the borrow
+        assertGt(USER.balance, 100e18 - 1e18);
     }
 
     function test_Pay_Borrow_With_Loan_Source() public {
