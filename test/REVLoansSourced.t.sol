@@ -294,7 +294,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         );
 
         LOANS_CONTRACT = new REVLoans({
-            projects: jbProjects(),
+            revnets: REV_DEPLOYER,
             revId: FEE_PROJECT_ID,
             owner: address(this),
             permit2: permit2(),
@@ -308,6 +308,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Build the config.
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
+        vm.prank(address(multisig()));
         // Configure the project.
         REV_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
@@ -427,12 +428,11 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 borrowableFromNewCollateral =
             LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, newCollateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
 
-        // Needed for edge case seeds like 17721, 11407, 334
-        if (borrowableFromNewCollateral > 0) borrowableFromNewCollateral -= 1;
-
+        // TODO nowonder, if borrowableFromNewCollateral > loan.amount, we should expect a revert with
+        // REVLoans_NewBorrowAmountGreaterThanLoanAmount.
         uint256 amountDiff = borrowableFromNewCollateral > loan.amount ? 0 : loan.amount - borrowableFromNewCollateral;
 
-        uint256 amountPaidDown = amountDiff;
+        uint256 maxAmountPaidDown = loan.amount;
 
         // Calculate the fee.
         {
@@ -446,7 +446,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
                 // Calculate the fee as a linear proportion given the amount of time that has passed.
                 // sourceFeeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION) - prepaidAmount;
-                amountPaidDown += JBFees.feeAmountFrom({
+                maxAmountPaidDown += JBFees.feeAmountFrom({
                     amount: amountDiff - prepaidAmount,
                     feePercent: mulDiv(timeSinceLoanCreated, JBConstants.MAX_FEE, 3650 days)
                 });
@@ -454,16 +454,32 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         }
 
         // ensure we have the balance
-        vm.deal(USER, amountPaidDown);
+        vm.deal(USER, maxAmountPaidDown);
 
         // empty allowance data
         JBSingleAllowance memory allowance;
 
+        if (borrowableFromNewCollateral > loan.amount) {
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    REVLoans.REVLoans_NewBorrowAmountGreaterThanLoanAmount.selector,
+                    borrowableFromNewCollateral,
+                    loan.amount
+                )
+            );
+        }
+
         // call to pay-down the loan
         vm.prank(USER);
-        (, REVLoan memory reducedLoan) = LOANS_CONTRACT.repayLoan{value: amountPaidDown}(
-            newLoanId, amountPaidDown, collateralReturned, payable(USER), allowance
+        (, REVLoan memory reducedLoan) = LOANS_CONTRACT.repayLoan{value: maxAmountPaidDown}(
+            newLoanId, maxAmountPaidDown, collateralReturned, payable(USER), allowance
         );
+
+        if (borrowableFromNewCollateral > loan.amount) {
+            // End of the test, its not possible to `repay` a loan with such a small amount that the loan value goes up.
+            // The `collateralReturned` should be increased so the value of the loan goes down.
+            return;
+        }
 
         assertApproxEqAbs(reducedLoan.amount, loan.amount - amountDiff, 1);
         assertEq(reducedLoan.collateral, loan.collateral - collateralReturned);
@@ -677,63 +693,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         );
     }
 
-    function test_Refinance_Unspecified_Amount() public {
-        vm.prank(USER);
-        uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
-
-        uint256 loanable =
-            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
-        assertGt(loanable, 0);
-
-        mockExpect(
-            address(jbPermissions()),
-            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
-            abi.encode(true)
-        );
-
-        REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
-
-        vm.prank(USER);
-        (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
-
-        REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
-
-        // Ensure loans contract isn't hodling
-        assertEq(address(LOANS_CONTRACT).balance, 0);
-
-        // Ensure we actually received ETH from the borrow
-        assertGt(USER.balance, 100e18 - 1e18);
-
-        // warp to after cash out tax rate is lower in the second ruleset
-        vm.warp(block.timestamp + 721 days);
-
-        // get the updated loanableFrom the same amount as earlier
-        uint256 loanableSecondStage = LOANS_CONTRACT.borrowableAmountFrom(
-            REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
-        );
-
-        // loanable amount is higher with the lower tax rate per second stage configuration
-        assertGt(loanableSecondStage, loanable);
-
-        // we should not have to add collateral
-        uint256 collateralToAdd = 0;
-
-        // this should be a 0.5% gain to be reallocated
-        uint256 collateralToTransfer = mulDiv(loan.collateral, 50, 10_000);
-
-        vm.expectRevert(REVLoans.REVLoans_AmountNotSpecified.selector);
-        vm.prank(USER);
-        LOANS_CONTRACT.reallocateCollateralFromLoan(
-            newLoanId,
-            collateralToTransfer,
-            sauce,
-            0, // amount is zero
-            collateralToAdd,
-            payable(USER),
-            0
-        );
-    }
-
     function test_Refinance_Collateral_Required() public {
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
@@ -783,7 +742,11 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVNET_ID, collateralToTransfer, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        vm.expectRevert(REVLoans.REVLoans_CollateralRequired.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                REVLoans.REVLoans_ReallocatingMoreCollateralThanBorrowedAmountAllows.selector, 0, loan.amount
+            )
+        );
         vm.prank(USER);
         LOANS_CONTRACT.reallocateCollateralFromLoan(
             // attempt moving the total collateral
@@ -851,12 +814,30 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVNET_ID, collateralToTransfer + tokens2, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
+        uint256 reallocatedLoanValue = LOANS_CONTRACT.borrowableAmountFrom(
+            REVNET_ID, loan.collateral - collateralToTransfer, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+        );
+
+        if (reallocatedLoanValue < loan.amount) {
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    REVLoans.REVLoans_ReallocatingMoreCollateralThanBorrowedAmountAllows.selector,
+                    reallocatedLoanValue,
+                    loan.amount
+                )
+            );
+        }
+
         uint256 userBalanceBefore = USER.balance;
 
         vm.prank(USER);
         LOANS_CONTRACT.reallocateCollateralFromLoan(
             newLoanId, collateralToTransfer, sauce, newAmount, tokens2, payable(USER), 25
         );
+
+        if (reallocatedLoanValue < loan.amount) {
+            return;
+        }
 
         uint256 userBalanceAfter = USER.balance;
 
@@ -911,7 +892,12 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         LOANS_CONTRACT.determineSourceFeeAmount(loan, loan.amount);
     }
 
-    function test_borrowFromReverts() external {
+    function test_InvalidPrepaidFeePercent(uint16 feePercentage) external {
+        vm.assume(
+            feePercentage < LOANS_CONTRACT.MIN_PREPAID_FEE_PERCENT()
+                || feePercentage > LOANS_CONTRACT.MAX_PREPAID_FEE_PERCENT()
+        );
+
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
 
@@ -922,12 +908,10 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
         vm.prank(USER);
-        vm.expectRevert(REVLoans.REVLoans_AmountNotSpecified.selector);
-        LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, 0, tokens, payable(USER), 100);
-
-        vm.prank(USER);
-        vm.expectRevert(abi.encodeWithSelector(REVLoans.REVLoans_InvalidPrepaidFeePercent.selector, 1_000_000, 25, 500));
-        LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, 1, tokens, payable(USER), 1_000_000);
+        vm.expectRevert(
+            abi.encodeWithSelector(REVLoans.REVLoans_InvalidPrepaidFeePercent.selector, feePercentage, 25, 500)
+        );
+        LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, 1, tokens, payable(USER), feePercentage);
     }
 
     function test_liquidateLoans() external {
@@ -1056,76 +1040,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         );
 
         LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 0, 2);
-    }
-
-    function test_liquidationReturnCollateral() external {
-        vm.prank(USER);
-        uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
-
-        uint256 loanable =
-            LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
-        assertGt(loanable, 0);
-
-        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
-        mockExpect(
-            address(jbPermissions()),
-            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
-            abi.encode(true)
-        );
-
-        REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
-
-        vm.prank(USER);
-        (uint256 loanId, REVLoan memory loan) =
-            LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 100);
-
-        // Repay the loan, adjusting the previous loan.
-        uint256 collateralReturned = 0;
-
-        uint256 amountPaidDown = loan.amount;
-
-        // Calculate the fee.
-        {
-            // Keep a reference to the time since the loan was created.
-            uint256 timeSinceLoanCreated = block.timestamp - loan.createdAt;
-
-            // If the loan period has passed the prepaid time frame, take a fee.
-            if (timeSinceLoanCreated > loan.prepaidDuration) {
-                // Calculate the prepaid fee for the amount being paid back.
-                uint256 prepaidAmount =
-                    JBFees.feeAmountFrom({amount: amountPaidDown, feePercent: loan.prepaidFeePercent});
-
-                // Calculate the fee as a linear proportion given the amount of time that has passed.
-                // sourceFeeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION) - prepaidAmount;
-                amountPaidDown += JBFees.feeAmountFrom({
-                    amount: amountPaidDown - prepaidAmount,
-                    feePercent: mulDiv(timeSinceLoanCreated, JBConstants.MAX_FEE, 3650 days)
-                });
-            }
-        }
-
-        amountPaidDown += 1e18;
-
-        // ensure we have the balance
-        vm.deal(USER, amountPaidDown);
-
-        // empty allowance data
-        JBSingleAllowance memory allowance;
-
-        // call to pay-down the loan
-        vm.prank(USER);
-        LOANS_CONTRACT.repayLoan{value: amountPaidDown}(
-            loanId, amountPaidDown, collateralReturned, payable(USER), allowance
-        );
-
-        // warp forward to where the loan is expired
-        vm.warp(block.timestamp + 10_000 days);
-
-        vm.expectEmit();
-        emit IJBController.MintTokens(
-            USER, REVNET_ID, 8e20, 8e20, "Removing collateral from loan", 0, address(LOANS_CONTRACT)
-        );
-        LOANS_CONTRACT.liquidateExpiredLoansFrom(REVNET_ID, 1, 2);
     }
 
     function test_repay_unauthorized() external {
