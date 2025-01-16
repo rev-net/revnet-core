@@ -718,13 +718,11 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @notice Deploy new suckers for an existing revnet.
     /// @dev Only the revnet's split operator can deploy new suckers.
     /// @param revnetId The ID of the revnet to deploy suckers for.
-    /// @param encodedConfiguration A byte-encoded representation of the revnet's configuration.
     /// See `_makeRulesetConfigurations(…)` for encoding details. Clients can read the encoded configuration
     /// from the `DeployRevnet` event emitted by this contract.
     /// @param suckerDeploymentConfiguration The suckers to set up for the revnet.
     function deploySuckersFor(
         uint256 revnetId,
-        bytes calldata encodedConfiguration,
         REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
     )
         external
@@ -739,23 +737,10 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             revert REVDeployer_RulesetDoesNotAllowDeployingSuckers();
         }
 
-        // Keep a reference to the hashed encoded configuration of the revnet.
-        bytes32 storedHashedEncodedConfiguration = hashedEncodedConfigurationOf[revnetId];
-
-        // Keep a reference to the proposed hashed encoded configuration.
-        bytes32 proposedHashedEncodedConfiguration = keccak256(encodedConfiguration);
-
-        // If the proposed configuration doesn't match the stored configuration, revert.
-        if (storedHashedEncodedConfiguration != proposedHashedEncodedConfiguration) {
-            revert REVDeployer_EncodedConfigurationDoesntMatch(
-                storedHashedEncodedConfiguration, proposedHashedEncodedConfiguration
-            );
-        }
-
         // Deploy the suckers.
         suckers = _deploySuckersFor({
             revnetId: revnetId,
-            encodedConfiguration: encodedConfiguration,
+            encodedConfigurationHash: hashedEncodedConfigurationOf[revnetId],
             suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
     }
@@ -1044,7 +1029,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
             _deploySuckersFor({
                 revnetId: revnetId,
-                encodedConfiguration: encodedConfiguration,
+                encodedConfigurationHash: keccak256(encodedConfiguration),
                 suckerDeploymentConfiguration: suckerDeploymentConfiguration
             });
         }
@@ -1068,25 +1053,25 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
     /// @notice Deploy suckers for a revnet.
     /// @param revnetId The ID of the revnet to deploy suckers for.
-    /// @param encodedConfiguration A byte-encoded representation of the revnet's configuration.
+    /// @param encodedConfigurationHash A hash that represents the revnet's configuration.
     /// See `_makeRulesetConfigurations(…)` for encoding details. Clients can read the encoded configuration
     /// from the `DeployRevnet` event emitted by this contract.
     /// @param suckerDeploymentConfiguration The suckers to set up for the revnet.
     function _deploySuckersFor(
         uint256 revnetId,
-        bytes memory encodedConfiguration,
+        bytes32 encodedConfigurationHash,
         REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
     )
         internal
         returns (address[] memory suckers)
     {
         // Compose the salt.
-        bytes32 salt = keccak256(abi.encode(encodedConfiguration, suckerDeploymentConfiguration.salt));
+        bytes32 salt = keccak256(abi.encode(encodedConfigurationHash, suckerDeploymentConfiguration.salt));
 
         emit DeploySuckers({
             revnetId: revnetId,
             salt: salt,
-            encodedConfiguration: encodedConfiguration,
+            encodedConfigurationHash: encodedConfigurationHash,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration,
             caller: _msgSender()
         });

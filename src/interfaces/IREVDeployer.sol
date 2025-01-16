@@ -25,7 +25,7 @@ interface IREVDeployer {
     event DeploySuckers(
         uint256 indexed revnetId,
         bytes32 indexed salt,
-        bytes encodedConfiguration,
+        bytes32 encodedConfigurationHash,
         REVSuckerDeploymentConfig suckerDeploymentConfiguration,
         address caller
     );
@@ -77,7 +77,6 @@ interface IREVDeployer {
     function cashOutDelayOf(uint256 revnetId) external view returns (uint256);
     function deploySuckersFor(
         uint256 revnetId,
-        bytes calldata encodedConfiguration,
         REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
     )
         external

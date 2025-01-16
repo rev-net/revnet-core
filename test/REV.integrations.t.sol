@@ -304,7 +304,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         // which wil call the balanceOf to check its own balance.
         vm.mockCall(address(token), abi.encodeWithSelector(IERC20.balanceOf.selector), abi.encode(0));
 
-        address[] memory suckers = REV_DEPLOYER.deploySuckersFor(REVNET_ID, ENCODED_CONFIG, revConfig);
+        address[] memory suckers = REV_DEPLOYER.deploySuckersFor(REVNET_ID, revConfig);
 
         // Ensure it's registered
         bool isSucker = SUCKER_REGISTRY.isSuckerOf(REVNET_ID, suckers[0]);
