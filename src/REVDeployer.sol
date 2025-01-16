@@ -324,6 +324,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         if (msg.sender != address(PROJECTS)) revert();
 
         // Get the stages of the revnet.
+        // slither-disable-next-line unused-return
         (JBRuleset memory stage,,) = CONTROLLER.latestQueuedRulesetOf(revnetId);
 
         // Make sure the ruleset is not the default ruleset.
