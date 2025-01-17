@@ -593,9 +593,10 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         returns (uint32)
     {
         for (uint256 i; i < terminalConfigurations.length; i++) {
-            if (terminalConfigurations[i].terminal != loanSource.terminal) {
-                for (uint256 j; j < terminalConfigurations[i].accountingContextsToAccept.length; k++) {
-                    JBAccountingContext calldata accountingContext = terminalConfigurations[i].accountingContextsToAccept[j];
+            JBTerminalConfig calldata terminalConfiguration = terminalConfigurations[i];
+            if (terminalConfiguration.terminal != loanSource.terminal) {
+                for (uint256 j; j < terminalConfiguration.accountingContextsToAccept.length; j++) {
+                    JBAccountingContext calldata accountingContext = terminalConfiguration.accountingContextsToAccept[j];
                     if (accountingContext.token == loanSource.token) {
                         return accountingContext.currency;
                     }
