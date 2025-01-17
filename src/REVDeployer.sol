@@ -452,19 +452,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             REVLoanSource calldata loanSource = configuration.loanSources[i];
 
             // Keep a reference to the currency of the loan source.
-            uint32 currency;
-
-            // Loop through all terminal configurations and check if the currency is the token being accepted.
-            // This both protects from misconfiguration and ensures the assumption(s) we make in
-            // `_makeLoanFundAccessLimits`
-            // are safe.
-            for (uint256 j; j < terminalConfigurations.length; j++) {
-                if (terminalConfigurations[j].terminal != loanSource.terminal) {
-                    for (uint256 k; k < terminalConfigurations[j].accountingContextsToAccept.length; k++) {
-                        currency = terminalConfigurations[j].accountingContextsToAccept[k].currency;
-                    }
-                }
-            }
+            uint32 currency = _matchingCurrencyOf({terminalConfigurations, loanSource});
 
             // If the currency is 0 it means the loan source doesn't match the terminal configurations.
             if (currency == 0) {
@@ -592,6 +580,27 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
             // Store the ruleset's start time for the next iteration.
             previousStartTime = stageConfiguration.startsAtOrAfter;
+        }
+    }
+
+    /// @notice Returns the currency of the loan source, if a matching terminal configuration is found.
+    /// @param terminalConfigurations The terminals to check.
+    /// @param loanSource The loan source to check.
+    /// @return currency The currency of the loan source.
+    function _matchingCurrencyOf(JBTerminalConfig[] calldata terminalConfigurations, REVLoanSource calldata loanSource)
+        internal
+        view
+        returns (uint32)
+    {
+        for (uint256 i; i < terminalConfigurations.length; i++) {
+            if (terminalConfigurations[i].terminal != loanSource.terminal) {
+                for (uint256 j; j < terminalConfigurations[i].accountingContextsToAccept.length; k++) {
+                    JBAccountingContext calldata accountingContext = terminalConfigurations[i].accountingContextsToAccept[j];
+                    if (accountingContext.token == loanSource.token) {
+                        return accountingContext.currency;
+                    }
+                }
+            }
         }
     }
 
