@@ -64,7 +64,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
-    error REVDeployer_AccountingContextCurrencyMisconfigured(address terminal, address token, uint32 currency);
+    error REVDeployer_LoanSourceDoesntMatchTerminalConfigurations(address token, address terminal);
     error REVDeployer_AutoIssuanceBeneficiaryZeroAddress();
     error REVDeployer_CashOutDelayNotFinished();
     error REVDeployer_CashOutsCantBeTurnedOffCompletely();
@@ -433,8 +433,12 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @notice Initialize a fund access limit group for the loan contract to use.
     /// @dev Returns an unlimited surplus allowance for each token which can be loaned out.
     /// @param configuration The revnet's configuration.
+    /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
     /// @return fundAccessLimitGroups The fund access limit groups for the loans.
-    function _makeLoanFundAccessLimits(REVConfig calldata configuration)
+    function _makeLoanFundAccessLimits(
+        REVConfig calldata configuration,
+        JBTerminalConfig[] calldata terminalConfigurations
+    )
         internal
         pure
         returns (JBFundAccessLimitGroup[] memory fundAccessLimitGroups)
@@ -447,10 +451,31 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             // Set the loan source being iterated on.
             REVLoanSource calldata loanSource = configuration.loanSources[i];
 
+            // Keep a reference to the currency of the loan source.
+            uint32 currency;
+
+            // Loop through all terminal configurations and check if the currency is the token being accepted.
+            // This both protects from misconfiguration and ensures the assumption(s) we make in
+            // `_makeLoanFundAccessLimits`
+            // are safe.
+            for (uint256 j; j < terminalConfigurations.length; j++) {
+                if (terminalConfigurations[j].terminal != loanSource.terminal) {
+                    for (uint256 k; k < terminalConfigurations[j].accountingContextsToAccept.length; k++) {
+                        currency = terminalConfigurations[j].accountingContextsToAccept[k].currency;
+                    }
+                }
+            }
+
+            // If the currency is 0 it means the loan source doesn't match the terminal configurations.
+            if (currency == 0) {
+                revert REVDeployer_LoanSourceDoesntMatchTerminalConfigurations(
+                    loanSource.token, address(loanSource.terminal)
+                );
+            }
+
             // Set up an unlimited allowance for the loan contract to use.
             JBCurrencyAmount[] memory loanAllowances = new JBCurrencyAmount[](1);
-            loanAllowances[0] =
-                JBCurrencyAmount({currency: uint32(uint160(loanSource.token)), amount: type(uint224).max});
+            loanAllowances[0] = JBCurrencyAmount({currency: currency, amount: type(uint224).max});
 
             // Set up the fund access limits for the loans.
             fundAccessLimitGroups[i] = JBFundAccessLimitGroup({
@@ -490,9 +515,13 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @notice Convert a revnet's stages into a series of Juicebox project rulesets.
     /// @param configuration The configuration containing the revnet's stages.
     /// @return rulesetConfigurations A list of ruleset configurations defined by the stages.
+    /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
     /// @return encodedConfiguration A byte-encoded representation of the revnet's configuration. Used for sucker
     /// deployment salts.
-    function _makeRulesetConfigurations(REVConfig calldata configuration)
+    function _makeRulesetConfigurations(
+        REVConfig calldata configuration,
+        JBTerminalConfig[] calldata terminalConfigurations
+    )
         internal
         view
         returns (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration)
@@ -513,7 +542,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         );
 
         // Initialize fund access limit groups for the loan contract to use.
-        JBFundAccessLimitGroup[] memory fundAccessLimitGroups = _makeLoanFundAccessLimits(configuration);
+        JBFundAccessLimitGroup[] memory fundAccessLimitGroups =
+            _makeLoanFundAccessLimits({configuration: configuration, terminalConfigurations: terminalConfigurations});
 
         // Keep a reference to the previous ruleset's start time.
         uint256 previousStartTime;
@@ -982,21 +1012,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     {
         // Normalize and encode the configurations.
         (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration) =
-            _makeRulesetConfigurations(configuration);
-
-        // Loop through all terminal configurations and check if the currency is the token being accepted.
-        // This both protects from misconfiguration and ensures the assumption(s) we make in `_makeLoanFundAccessLimits`
-        // are safe.
-        for (uint256 i; i < terminalConfigurations.length; i++) {
-            for (uint256 j; j < terminalConfigurations[i].accountingContextsToAccept.length; j++) {
-                JBAccountingContext calldata accountingContext = terminalConfigurations[i].accountingContextsToAccept[j];
-                if (accountingContext.currency != uint32(uint160(accountingContext.token))) {
-                    revert REVDeployer_AccountingContextCurrencyMisconfigured(
-                        address(terminalConfigurations[i].terminal), accountingContext.token, accountingContext.currency
-                    );
-                }
-            }
-        }
+            _makeRulesetConfigurations({configuration: configuration, terminalConfigurations: terminalConfigurations});
 
         if (revnetId == 0) {
             // If we're deploying a new revnet, launch a Juicebox project for it.
