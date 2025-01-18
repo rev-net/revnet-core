@@ -207,12 +207,12 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         REVStageConfig[] memory stageConfigurations = new REVStageConfig[](3);
 
         {
-            REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](1);
-            issuanceConfs[0] = REVAutoIssuance({
-                chainId: uint32(block.chainid),
-                count: uint104(70_000 * decimalMultiplier),
-                beneficiary: multisig()
-            });
+            REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](0);
+            // issuanceConfs[0] = REVAutoIssuance({
+            //     chainId: uint32(block.chainid),
+            //     count: uint104(70_000 * decimalMultiplier),
+            //     beneficiary: multisig()
+            // });
 
             stageConfigurations[0] = REVStageConfig({
                 startsAtOrAfter: uint40(block.timestamp),
@@ -305,7 +305,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // Configure a price feed for ETH/TOKEN.
         // The token is worth 50% of the price of ETH.
-        MockPriceFeed priceFeed = new MockPriceFeed(5e5, 6);
+        MockPriceFeed priceFeed = new MockPriceFeed(1e21, 6);
         vm.label(address(priceFeed), "Token:Eth/PriceFeed");
 
         // Configure the price feed for the pair.
@@ -359,8 +359,15 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         vm.deal(USER, 100e18);
     }
 
-    function test_Pay_ERC20_Borrow_With_Loan_Source() public {
-        uint256 payableAmount = 1e18;
+    function test_Pay_ERC20_Borrow_With_Loan_Source(uint256 payableAmount, uint32 prepaidFee) public {
+        vm.assume(payableAmount > 0 && payableAmount <= type(uint112).max);
+        vm.assume(
+            LOANS_CONTRACT.MIN_PREPAID_FEE_PERCENT() <= prepaidFee
+                && prepaidFee <= LOANS_CONTRACT.MAX_PREPAID_FEE_PERCENT()
+        );
+
+        // Calculate the duration based upon the prepaidFee.
+        uint32 duration = uint32(mulDiv(3650 days, prepaidFee, LOANS_CONTRACT.MAX_PREPAID_FEE_PERCENT()));
 
         // Deal the user some tokens.
         deal(address(TOKEN), USER, payableAmount);
@@ -373,7 +380,8 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 tokens = jbMultiTerminal().pay(REVNET_ID, address(TOKEN), payableAmount, USER, 0, "", "");
 
         uint256 loanable = LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 6, uint32(uint160(address(TOKEN))));
-        assertGt(loanable, 0);
+        // If there is no loanable amount, we can't continue.
+        vm.assume(loanable > 0);
 
         // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
         mockExpect(
@@ -385,22 +393,32 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         REVLoanSource memory sauce = REVLoanSource({token: address(TOKEN), terminal: jbMultiTerminal()});
 
         vm.prank(USER);
-        (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
+        (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), prepaidFee);
 
         REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
         assertEq(loan.amount, loanable);
         assertEq(loan.collateral, tokens);
         assertEq(loan.createdAt, block.timestamp);
-        assertEq(loan.prepaidFeePercent, 500);
-        assertEq(loan.prepaidDuration, 3650 days);
+        assertEq(loan.prepaidFeePercent, prepaidFee);
+        assertEq(loan.prepaidDuration, duration);
         assertEq(loan.source.token, address(TOKEN));
         assertEq(address(loan.source.terminal), address(jbMultiTerminal()));
 
         // Ensure loans contract isn't hodling
         assertEq(TOKEN.balanceOf(address(LOANS_CONTRACT)), 0);
 
+        // The fees to be paid to NANA.
+        uint256 allowance_fees = JBFees.feeAmountIn({amount: loanable, feePercent: jbMultiTerminal().FEE()});
+        // The fees to be paid to REV.
+        uint256 rev_fees =
+            JBFees.feeAmountFrom({amount: loanable, feePercent: LOANS_CONTRACT.REV_PREPAID_FEE_PERCENT()});
+        // The fees to be paid to the Project we are taking a loan from.
+        uint256 source_fees = JBFees.feeAmountFrom({amount: loanable, feePercent: prepaidFee});
+        uint256 fees = allowance_fees + rev_fees + source_fees;
+
         // Ensure we actually received the token from the borrow
-        assertEq(TOKEN.balanceOf(address(USER)), 0);
+        // Subtract the fee for REV and for the source revnet.
+        assertEq(TOKEN.balanceOf(address(USER)), loanable - fees);
     }
 
     function test_Pay_Borrow_With_Loan_Source() public {
