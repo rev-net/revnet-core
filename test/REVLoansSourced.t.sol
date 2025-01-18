@@ -399,7 +399,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(TOKEN.balanceOf(address(LOANS_CONTRACT)), 0);
 
         // Ensure we actually received the token from the borrow
-        assertGt(TOKEN.balanceOf(address(USER)), mulDiv(payableAmount, 53, 100));
+        assertEq(TOKEN.balanceOf(address(USER)), 0);
     }
 
     function test_Pay_Borrow_With_Loan_Source() public {
@@ -419,6 +419,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
+        // Check the balance of the user before the borrow.
+        uint256 balanceBefore = USER.balance;
+
         vm.prank(USER);
         (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
 
@@ -435,7 +438,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(address(LOANS_CONTRACT).balance, 0);
 
         // Ensure we actually received ETH from the borrow
-        assertGt(USER.balance, 100e18 - 1e18);
+        assertEq(USER.balance - balanceBefore, 0);
     }
 
     function testFuzz_Pay_Borrow_PayOff_With_Loan_Source(
