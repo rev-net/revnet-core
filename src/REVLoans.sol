@@ -69,6 +69,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     error REVLoans_RevnetsMismatch(address revnetOwner, address revnets);
     error REVLoans_Unauthorized(address caller, address owner);
     error REVLoans_UnderMinBorrowAmount(uint256 minBorrowAmount, uint256 borrowAmount);
+    error REVLoans_ZeroCollateralLoanIsInvalid();
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -517,6 +518,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
         // Make sure the revnet was deployed with the deployer this loan expects.
         if (revnetOwner != address(REVNETS)) revert REVLoans_RevnetsMismatch(revnetOwner, address(REVNETS));
+
+        // A loan needs to have collateral.
+        if (collateralAmount == 0) revert REVLoans_ZeroCollateralLoanIsInvalid();
 
         // Make sure the prepaid fee percent is between 0 and 20%. Meaning an 16 year loan can be paid upfront with a
         // payment of 50% of the borrowed assets, the cheapest possible rate.
