@@ -79,7 +79,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 decimalMultiplier = 10 ** decimals;
 
         // The tokens that the project accepts and stores.
-        JBAccountingContext[] memory accountingContextsToAccept = new JBAccountingContext[](1);
+        JBAccountingContext[] memory accountingContextsToAccept = new JBAccountingContext[](2);
 
         // Accept the chain's native currency through the multi terminal.
         accountingContextsToAccept[0] = JBAccountingContext({
@@ -87,6 +87,11 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             decimals: 18,
             currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
         });
+
+        // For the tests we need to allow these payments, otherwise other revnets can't pay a fee.
+        // IRL, this would be handled by a swap terminal.
+        accountingContextsToAccept[1] =
+            JBAccountingContext({token: address(TOKEN), decimals: 6, currency: uint32(uint160(address(TOKEN)))});
 
         // The terminals that the project will accept funds through.
         JBTerminalConfig[] memory terminalConfigurations = new JBTerminalConfig[](1);
@@ -354,15 +359,17 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     }
 
     function test_Pay_ERC20_Borrow_With_Loan_Source() public {
+        uint256 payableAmount = 1e18;
+
         // Deal the user some tokens.
-        deal(address(TOKEN), USER, 1e18);
+        deal(address(TOKEN), USER, payableAmount);
 
         // Approve the terminal to spend the tokens.
         vm.prank(USER);
-        TOKEN.approve(address(jbMultiTerminal()), 1e18);
+        TOKEN.approve(address(jbMultiTerminal()), payableAmount);
 
         vm.prank(USER);
-        uint256 tokens = jbMultiTerminal().pay(REVNET_ID, address(TOKEN), 1e6, USER, 0, "", "");
+        uint256 tokens = jbMultiTerminal().pay(REVNET_ID, address(TOKEN), payableAmount, USER, 0, "", "");
 
         uint256 loanable = LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 6, uint32(uint160(address(TOKEN))));
         assertGt(loanable, 0);
@@ -384,15 +391,15 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(loan.collateral, tokens);
         assertEq(loan.createdAt, block.timestamp);
         assertEq(loan.prepaidFeePercent, 500);
-        assertEq(loan.prepaidDuration, mulDiv(500, 3650 days, 500));
-        assertEq(loan.source.token, JBConstants.NATIVE_TOKEN);
+        assertEq(loan.prepaidDuration, 3650 days);
+        assertEq(loan.source.token, address(TOKEN));
         assertEq(address(loan.source.terminal), address(jbMultiTerminal()));
 
         // Ensure loans contract isn't hodling
-        assertEq(address(LOANS_CONTRACT).balance, 0);
+        assertEq(TOKEN.balanceOf(address(LOANS_CONTRACT)), 0);
 
-        // Ensure we actually received ETH from the borrow
-        assertGt(USER.balance, 100e18 - 1e18);
+        // Ensure we actually received the token from the borrow
+        assertGt(TOKEN.balanceOf(address(USER)), mulDiv(payableAmount, 53, 100));
     }
 
     function test_Pay_Borrow_With_Loan_Source() public {
