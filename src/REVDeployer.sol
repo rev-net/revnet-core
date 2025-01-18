@@ -452,7 +452,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             REVLoanSource calldata loanSource = configuration.loanSources[i];
 
             // Keep a reference to the currency of the loan source.
-            uint32 currency = _matchingCurrencyOf({terminalConfigurations, loanSource});
+            uint32 currency =
+                _matchingCurrencyOf({terminalConfigurations: terminalConfigurations, loanSource: loanSource});
 
             // If the currency is 0 it means the loan source doesn't match the terminal configurations.
             if (currency == 0) {
@@ -587,14 +588,17 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @param terminalConfigurations The terminals to check.
     /// @param loanSource The loan source to check.
     /// @return currency The currency of the loan source.
-    function _matchingCurrencyOf(JBTerminalConfig[] calldata terminalConfigurations, REVLoanSource calldata loanSource)
+    function _matchingCurrencyOf(
+        JBTerminalConfig[] calldata terminalConfigurations,
+        REVLoanSource calldata loanSource
+    )
         internal
-        view
+        pure
         returns (uint32)
     {
         for (uint256 i; i < terminalConfigurations.length; i++) {
             JBTerminalConfig calldata terminalConfiguration = terminalConfigurations[i];
-            if (terminalConfiguration.terminal != loanSource.terminal) {
+            if (terminalConfiguration.terminal == loanSource.terminal) {
                 for (uint256 j; j < terminalConfiguration.accountingContextsToAccept.length; j++) {
                     JBAccountingContext calldata accountingContext = terminalConfiguration.accountingContextsToAccept[j];
                     if (accountingContext.token == loanSource.token) {
@@ -603,6 +607,9 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
                 }
             }
         }
+
+        // No currency found for the terminal and token combination.
+        return 0;
     }
 
     /// @notice Returns the permissions that the split operator should be granted for a revnet.
