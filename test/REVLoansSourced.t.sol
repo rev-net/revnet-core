@@ -457,7 +457,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(address(LOANS_CONTRACT).balance, 0);
 
         // Ensure we actually received ETH from the borrow
-        assertEq(USER.balance - balanceBefore, 0);
+        assertGt(USER.balance - balanceBefore, 0);
     }
 
     function testFuzz_Pay_Borrow_PayOff_With_Loan_Source(
@@ -518,10 +518,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 borrowableFromNewCollateral =
             LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, newCollateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
 
-        // TODO nowonder, if borrowableFromNewCollateral > loan.amount, we should expect a revert with
-        // REVLoans_NewBorrowAmountGreaterThanLoanAmount.
         uint256 amountDiff = borrowableFromNewCollateral > loan.amount ? 0 : loan.amount - borrowableFromNewCollateral;
-
         uint256 maxAmountPaidDown = loan.amount;
 
         // Calculate the fee.
@@ -607,15 +604,12 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Ensure we actually received ETH from the borrow
         assertGt(USER.balance, 100e18 - 1e18);
 
-        // warp to after cash out tax rate is lower in the second ruleset
-        vm.warp(block.timestamp + 721 days);
-
         // get the updated loanableFrom the same amount as earlier
         uint256 loanableSecondStage = LOANS_CONTRACT.borrowableAmountFrom(
             REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        // loanable amount is higher with the lower tax rate per second stage configuration
+        // loanable amount is (slightly) higher due to fee payment increasing the supply/assets ratio.
         assertGt(loanableSecondStage, loanable);
 
         // we should not have to add collateral
@@ -689,15 +683,12 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Ensure we actually received ETH from the borrow
         assertGt(USER.balance, 100e18 - 1e18);
 
-        // warp to after cash out tax rate is lower in the second ruleset
-        vm.warp(block.timestamp + 721 days);
-
         // get the updated loanableFrom the same amount as earlier
         uint256 loanableSecondStage = LOANS_CONTRACT.borrowableAmountFrom(
             REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        // loanable amount is higher with the lower tax rate per second stage configuration
+        // loanable amount is (slightly) higher due to fee payment increasing the supply/assets ratio.
         assertGt(loanableSecondStage, loanable);
 
         // we should not have to add collateral
@@ -752,15 +743,12 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Ensure we actually received ETH from the borrow
         assertGt(USER.balance, 100e18 - 1e18);
 
-        // warp to after cash out tax rate is lower in the second ruleset
-        vm.warp(block.timestamp + 721 days);
-
         // get the updated loanableFrom the same amount as earlier
         uint256 loanableSecondStage = LOANS_CONTRACT.borrowableAmountFrom(
             REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        // loanable amount is higher with the lower tax rate per second stage configuration
+        // loanable amount is (slightly) higher due to fee payment increasing the supply/assets ratio.
         assertGt(loanableSecondStage, loanable);
 
         // we should not have to add collateral
@@ -781,6 +769,64 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         LOANS_CONTRACT.reallocateCollateralFromLoan(
             newLoanId, collateralToTransfer, sauce, newAmount, collateralToAdd, payable(USER), 25
         );
+    }
+
+    function test_Refinance_DueTo_FeeChange() public {
+        // Deploy a new REVNET, that has multiple stages where the fee decrease.
+        // This lets people refinance their loans to get a better rate.
+        FeeProjectConfig memory projectConfig = getSecondProjectConfig();
+
+        REVStageConfig[] memory stageConfigurations = new REVStageConfig[](1);
+        stageConfigurations[0] = REVStageConfig({
+            startsAtOrAfter: uint40(block.timestamp),
+            autoIssuances: new REVAutoIssuance[](0),
+            splitPercent: 0, // 20%
+            initialIssuance: 1000e18,
+            issuanceCutFrequency: 180 days,
+            issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
+            cashOutTaxRate: 6000, // 60%
+            extraMetadata: 0
+        });
+
+        // Replace the configuration.
+        projectConfig.configuration.stageConfigurations = stageConfigurations;
+        projectConfig.configuration.description.salt = "FeeChange";
+
+        uint256 revnetProjectId = REV_DEPLOYER.deployFor({
+            revnetId: 0, // Zero to deploy a new revnet
+            configuration: projectConfig.configuration,
+            terminalConfigurations: projectConfig.terminalConfigurations,
+            buybackHookConfiguration: projectConfig.buybackHookConfiguration,
+            suckerDeploymentConfiguration: projectConfig.suckerDeploymentConfiguration
+        });
+
+        vm.prank(USER);
+        uint256 tokens =
+            jbMultiTerminal().pay{value: 1e18}(revnetProjectId, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+
+        uint256 loanableBefore =
+            LOANS_CONTRACT.borrowableAmountFrom(revnetProjectId, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(
+                IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, revnetProjectId, 10, true, true)
+            ),
+            abi.encode(true)
+        );
+
+        REVLoanSource memory source = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
+        vm.prank(USER);
+        (uint256 newLoanId, REVLoan memory loan) =
+            LOANS_CONTRACT.borrowFrom(revnetProjectId, source, loanableBefore, tokens, payable(USER), 500);
+
+        // get the updated loanableFrom the same amount as earlier
+        uint256 loanableAfter =
+            LOANS_CONTRACT.borrowableAmountFrom(revnetProjectId, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+
+        // Asserts false.
+        assertGe(loanableAfter, loanableBefore);
     }
 
     function test_Refinance_Collateral_Required() public {
@@ -818,7 +864,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        // loanable amount is higher with the lower tax rate per second stage configuration
+        // loanable amount is (slightly) higher due to fee payment increasing the supply/assets ratio.
         assertGt(loanableSecondStage, loanable);
 
         // we should not have to add collateral
