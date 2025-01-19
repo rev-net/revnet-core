@@ -216,17 +216,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         view
         returns (uint256)
     {
-        // Keep a reference to the current stage.
-        // slither-disable-next-line unused-return
-        (JBRuleset memory currentStage,) = CONTROLLER.currentRulesetOf(revnetId);
-
         return _borrowableAmountFrom({
             revnetId: revnetId,
             collateralAmount: collateralAmount,
-            pendingAutoIssuanceTokens: REVNETS.unrealizedAutoIssuanceAmountOf(revnetId),
             decimals: decimals,
             currency: currency,
-            currentStage: currentStage,
             terminals: DIRECTORY.terminalsOf(revnetId)
         });
     }
@@ -291,8 +285,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @dev The amount that can be borrowed from a revnet given a certain amount of collateral.
     /// @param revnetId The ID of the revnet to check for borrowable assets from.
     /// @param collateralAmount The amount of collateral that the loan will be collateralized with.
-    /// @param currentStage The current stage of the revnet.
-    /// @param pendingAutoIssuanceTokens The amount of tokens pending auto issuance from the revnet.
     /// @param decimals The decimals the resulting fixed point value will include.
     /// @param currency The currency that the resulting amount should be in terms of.
     /// @param terminals The terminals that the funds are being borrowed from.
@@ -300,16 +292,21 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     function _borrowableAmountFrom(
         uint256 revnetId,
         uint256 collateralAmount,
-        uint256 pendingAutoIssuanceTokens,
         uint256 decimals,
         uint256 currency,
-        JBRuleset memory currentStage,
         IJBTerminal[] memory terminals
     )
         internal
         view
         returns (uint256)
     {
+        // Keep a reference to the current stage.
+        // slither-disable-next-line unused-return
+        (JBRuleset memory currentStage,) = CONTROLLER.currentRulesetOf(revnetId);
+
+        // Keep a reference to the pending auto issuance tokens.
+        uint256 pendingAutoIssuanceTokens = REVNETS.unrealizedAutoIssuanceAmountOf(revnetId);
+
         // Get the surplus of all the revnet's terminals in terms of the native currency.
         uint256 totalSurplus = JBSurplus.currentSurplusOf({
             projectId: revnetId,
@@ -372,10 +369,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         return _borrowableAmountFrom({
             revnetId: revnetId,
             collateralAmount: collateralAmount,
-            pendingAutoIssuanceTokens: pendingAutoIssuanceTokens,
             decimals: accountingContext.decimals,
             currency: accountingContext.currency,
-            currentStage: currentStage,
             terminals: terminals
         });
     }
