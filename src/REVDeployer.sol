@@ -530,6 +530,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             metadata.reservedPercent = stageConfiguration.splitPercent;
             metadata.cashOutTaxRate = stageConfiguration.cashOutTaxRate;
             metadata.baseCurrency = configuration.baseCurrency;
+            metadata.useTotalSurplusForCashOuts = true; // Use surplus from all terminals for cash outs.
             metadata.allowOwnerMinting = true; // Allow this contract to auto-mint tokens as the revnet's owner.
             metadata.useDataHookForPay = true; // Call this contract's `beforePayRecordedWith(…)` callback on payments.
             metadata.dataHook = address(this); // This contract is the data hook.
