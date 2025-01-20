@@ -328,8 +328,8 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         splitsB[0].beneficiary = beneficiaryB;
         splitsB[0].percent = 10_000;
 
-        // Deploy a new REVNET, that has multiple stages where the fee decrease.
-        // This lets people refinance their loans to get a better rate.
+        // Deploy a new REVNET, it has two configurations, we give each its own split and then check if the splits were
+        // set correctly for each of the stages.
         FeeProjectConfig memory projectConfig = getFeeProjectConfig();
 
         REVStageConfig[] memory stageConfigurations = new REVStageConfig[](2);
