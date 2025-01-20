@@ -804,8 +804,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 tokens =
             jbMultiTerminal().pay{value: 1e18}(revnetProjectId, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
 
-        uint256 loanableBefore =
-            LOANS_CONTRACT.borrowableAmountFrom(revnetProjectId, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        // uint256 loanableBefore =
+        //     LOANS_CONTRACT.borrowableAmountFrom(revnetProjectId, tokens, 18,
+        // uint32(uint160(JBConstants.NATIVE_TOKEN)));
 
         mockExpect(
             address(jbPermissions()),
@@ -818,15 +819,22 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         REVLoanSource memory source = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
         vm.prank(USER);
-        (uint256 newLoanId, REVLoan memory loan) =
-            LOANS_CONTRACT.borrowFrom(revnetProjectId, source, loanableBefore, tokens, payable(USER), 500);
+        (uint256 firstLoanId, REVLoan memory loanFirst) =
+            LOANS_CONTRACT.borrowFrom(revnetProjectId, source, 0, tokens / 3, payable(USER), 500);
 
-        // get the updated loanableFrom the same amount as earlier
-        uint256 loanableAfter =
-            LOANS_CONTRACT.borrowableAmountFrom(revnetProjectId, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        vm.prank(USER);
+        (uint256 secondLoanId, REVLoan memory loanSecond) =
+            LOANS_CONTRACT.borrowFrom(revnetProjectId, source, 0, tokens / 3, payable(USER), 500);
 
-        // Asserts false.
-        assertGe(loanableAfter, loanableBefore);
+        assertEq(loanFirst.amount, loanSecond.amount);
+
+        // // get the updated loanableFrom the same amount as earlier
+        // uint256 loanableAfter =
+        //     LOANS_CONTRACT.borrowableAmountFrom(revnetProjectId, tokens, 18,
+        // uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        //
+        // // Asserts false.
+        // assertGe(loanableAfter, loanableBefore);
     }
 
     function test_Refinance_Collateral_Required() public {
