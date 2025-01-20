@@ -240,6 +240,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
         // Configure the project.
+        vm.prank(address(multisig()));
         REVNET_ID = REV_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
             configuration: feeProjectConfig.configuration,
@@ -382,5 +383,20 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
             );
             assertEq(keccak256(abi.encode(configuredSplits)), keccak256(abi.encode(splitsB)));
         }
+    }
+
+    function test_deployer_not_owner() public {
+        // Build the config.
+        FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
+
+        vm.expectRevert(REVDeployer.REVDeployer_Unauthorized.selector);
+        // Configure the project.
+        REVNET_ID = REV_DEPLOYER.deployFor({
+            revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
+            configuration: feeProjectConfig.configuration,
+            terminalConfigurations: feeProjectConfig.terminalConfigurations,
+            buybackHookConfiguration: feeProjectConfig.buybackHookConfiguration,
+            suckerDeploymentConfiguration: feeProjectConfig.suckerDeploymentConfiguration
+        });
     }
 }
