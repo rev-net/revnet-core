@@ -17,6 +17,7 @@ import "@bananapus/buyback-hook/script/helpers/BuybackDeploymentLib.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
 import {MockPriceFeed} from "@bananapus/core/test/mock/MockPriceFeed.sol";
+import {MockERC20} from "@bananapus/core/test/mock/MockERC20.sol";
 import {REVLoans} from "../src/REVLoans.sol";
 import {REVLoan} from "../src/structs/REVLoan.sol";
 import {REVStageConfig, REVAutoIssuance} from "../src/structs/REVStageConfig.sol";
@@ -54,6 +55,8 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
     IREVLoans LOANS_CONTRACT;
 
+    MockERC20 TOKEN;
+
     /// @notice Deploys and tracks suckers for revnets.
     IJBSuckerRegistry SUCKER_REGISTRY;
 
@@ -76,7 +79,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 decimalMultiplier = 10 ** decimals;
 
         // The tokens that the project accepts and stores.
-        JBAccountingContext[] memory accountingContextsToAccept = new JBAccountingContext[](1);
+        JBAccountingContext[] memory accountingContextsToAccept = new JBAccountingContext[](2);
 
         // Accept the chain's native currency through the multi terminal.
         accountingContextsToAccept[0] = JBAccountingContext({
@@ -84,6 +87,11 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             decimals: 18,
             currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
         });
+
+        // For the tests we need to allow these payments, otherwise other revnets can't pay a fee.
+        // IRL, this would be handled by a swap terminal.
+        accountingContextsToAccept[1] =
+            JBAccountingContext({token: address(TOKEN), decimals: 6, currency: uint32(uint160(address(TOKEN)))});
 
         // The terminals that the project will accept funds through.
         JBTerminalConfig[] memory terminalConfigurations = new JBTerminalConfig[](1);
@@ -178,7 +186,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 decimalMultiplier = 10 ** decimals;
 
         // The tokens that the project accepts and stores.
-        JBAccountingContext[] memory accountingContextsToAccept = new JBAccountingContext[](1);
+        JBAccountingContext[] memory accountingContextsToAccept = new JBAccountingContext[](2);
 
         // Accept the chain's native currency through the multi terminal.
         accountingContextsToAccept[0] = JBAccountingContext({
@@ -186,6 +194,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             decimals: 18,
             currency: uint32(uint160(JBConstants.NATIVE_TOKEN))
         });
+
+        accountingContextsToAccept[1] =
+            JBAccountingContext({token: address(TOKEN), decimals: 6, currency: uint32(uint160(address(TOKEN)))});
 
         // The terminals that the project will accept funds through.
         JBTerminalConfig[] memory terminalConfigurations = new JBTerminalConfig[](1);
@@ -237,8 +248,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             extraMetadata: 0
         });
 
-        REVLoanSource[] memory _loanSources = new REVLoanSource[](1);
+        REVLoanSource[] memory _loanSources = new REVLoanSource[](2);
         _loanSources[0] = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+        _loanSources[1] = REVLoanSource({token: address(TOKEN), terminal: jbMultiTerminal()});
 
         // The project's revnet configuration
         REVConfig memory revnetConfiguration = REVConfig({
@@ -289,6 +301,19 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         PUBLISHER = new CTPublisher(jbController(), jbPermissions(), FEE_PROJECT_ID, multisig());
 
+        TOKEN = new MockERC20("1/2 ETH", "1/2");
+
+        // Configure a price feed for ETH/TOKEN.
+        // The token is worth 50% of the price of ETH.
+        MockPriceFeed priceFeed = new MockPriceFeed(1e21, 6);
+        vm.label(address(priceFeed), "Token:Eth/PriceFeed");
+
+        // Configure the price feed for the pair.
+        vm.prank(multisig());
+        jbPrices().addPriceFeedFor(
+            0, uint32(uint160(address(TOKEN))), uint32(uint160(JBConstants.NATIVE_TOKEN)), priceFeed
+        );
+
         REV_DEPLOYER = new REVDeployer{salt: REV_DEPLOYER_SALT}(
             jbController(), SUCKER_REGISTRY, FEE_PROJECT_ID, HOOK_DEPLOYER, PUBLISHER, TRUSTED_FORWARDER
         );
@@ -334,6 +359,68 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         vm.deal(USER, 100e18);
     }
 
+    function test_Pay_ERC20_Borrow_With_Loan_Source(uint256 payableAmount, uint32 prepaidFee) public {
+        vm.assume(payableAmount > 0 && payableAmount <= type(uint112).max);
+        vm.assume(
+            LOANS_CONTRACT.MIN_PREPAID_FEE_PERCENT() <= prepaidFee
+                && prepaidFee <= LOANS_CONTRACT.MAX_PREPAID_FEE_PERCENT()
+        );
+
+        // Calculate the duration based upon the prepaidFee.
+        uint32 duration = uint32(mulDiv(3650 days, prepaidFee, LOANS_CONTRACT.MAX_PREPAID_FEE_PERCENT()));
+
+        // Deal the user some tokens.
+        deal(address(TOKEN), USER, payableAmount);
+
+        // Approve the terminal to spend the tokens.
+        vm.prank(USER);
+        TOKEN.approve(address(jbMultiTerminal()), payableAmount);
+
+        vm.prank(USER);
+        uint256 tokens = jbMultiTerminal().pay(REVNET_ID, address(TOKEN), payableAmount, USER, 0, "", "");
+
+        uint256 loanable = LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 6, uint32(uint160(address(TOKEN))));
+        // If there is no loanable amount, we can't continue.
+        vm.assume(loanable > 0);
+
+        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
+        REVLoanSource memory sauce = REVLoanSource({token: address(TOKEN), terminal: jbMultiTerminal()});
+
+        vm.prank(USER);
+        (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), prepaidFee);
+
+        REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
+        assertEq(loan.amount, loanable);
+        assertEq(loan.collateral, tokens);
+        assertEq(loan.createdAt, block.timestamp);
+        assertEq(loan.prepaidFeePercent, prepaidFee);
+        assertEq(loan.prepaidDuration, duration);
+        assertEq(loan.source.token, address(TOKEN));
+        assertEq(address(loan.source.terminal), address(jbMultiTerminal()));
+
+        // Ensure loans contract isn't hodling
+        assertEq(TOKEN.balanceOf(address(LOANS_CONTRACT)), 0);
+
+        // The fees to be paid to NANA.
+        uint256 allowance_fees = JBFees.feeAmountIn({amount: loanable, feePercent: jbMultiTerminal().FEE()});
+        // The fees to be paid to REV.
+        uint256 rev_fees =
+            JBFees.feeAmountFrom({amount: loanable, feePercent: LOANS_CONTRACT.REV_PREPAID_FEE_PERCENT()});
+        // The fees to be paid to the Project we are taking a loan from.
+        uint256 source_fees = JBFees.feeAmountFrom({amount: loanable, feePercent: prepaidFee});
+        uint256 fees = allowance_fees + rev_fees + source_fees;
+
+        // Ensure we actually received the token from the borrow
+        // Subtract the fee for REV and for the source revnet.
+        assertEq(TOKEN.balanceOf(address(USER)), loanable - fees);
+    }
+
     function test_Pay_Borrow_With_Loan_Source() public {
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
@@ -351,6 +438,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
 
+        // Check the balance of the user before the borrow.
+        uint256 balanceBefore = USER.balance;
+
         vm.prank(USER);
         (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), 500);
 
@@ -367,7 +457,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(address(LOANS_CONTRACT).balance, 0);
 
         // Ensure we actually received ETH from the borrow
-        assertGt(USER.balance, 100e18 - 1e18);
+        assertGt(USER.balance - balanceBefore, 0);
     }
 
     function testFuzz_Pay_Borrow_PayOff_With_Loan_Source(
@@ -428,10 +518,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 borrowableFromNewCollateral =
             LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, newCollateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
 
-        // TODO nowonder, if borrowableFromNewCollateral > loan.amount, we should expect a revert with
-        // REVLoans_NewBorrowAmountGreaterThanLoanAmount.
         uint256 amountDiff = borrowableFromNewCollateral > loan.amount ? 0 : loan.amount - borrowableFromNewCollateral;
-
         uint256 maxAmountPaidDown = loan.amount;
 
         // Calculate the fee.
@@ -517,15 +604,12 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Ensure we actually received ETH from the borrow
         assertGt(USER.balance, 100e18 - 1e18);
 
-        // warp to after cash out tax rate is lower in the second ruleset
-        vm.warp(block.timestamp + 721 days);
-
         // get the updated loanableFrom the same amount as earlier
         uint256 loanableSecondStage = LOANS_CONTRACT.borrowableAmountFrom(
             REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        // loanable amount is higher with the lower tax rate per second stage configuration
+        // loanable amount is (slightly) higher due to fee payment increasing the supply/assets ratio.
         assertGt(loanableSecondStage, loanable);
 
         // we should not have to add collateral
@@ -599,15 +683,12 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Ensure we actually received ETH from the borrow
         assertGt(USER.balance, 100e18 - 1e18);
 
-        // warp to after cash out tax rate is lower in the second ruleset
-        vm.warp(block.timestamp + 721 days);
-
         // get the updated loanableFrom the same amount as earlier
         uint256 loanableSecondStage = LOANS_CONTRACT.borrowableAmountFrom(
             REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        // loanable amount is higher with the lower tax rate per second stage configuration
+        // loanable amount is (slightly) higher due to fee payment increasing the supply/assets ratio.
         assertGt(loanableSecondStage, loanable);
 
         // we should not have to add collateral
@@ -662,15 +743,12 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Ensure we actually received ETH from the borrow
         assertGt(USER.balance, 100e18 - 1e18);
 
-        // warp to after cash out tax rate is lower in the second ruleset
-        vm.warp(block.timestamp + 721 days);
-
         // get the updated loanableFrom the same amount as earlier
         uint256 loanableSecondStage = LOANS_CONTRACT.borrowableAmountFrom(
             REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        // loanable amount is higher with the lower tax rate per second stage configuration
+        // loanable amount is (slightly) higher due to fee payment increasing the supply/assets ratio.
         assertGt(loanableSecondStage, loanable);
 
         // we should not have to add collateral
@@ -691,6 +769,206 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         LOANS_CONTRACT.reallocateCollateralFromLoan(
             newLoanId, collateralToTransfer, sauce, newAmount, collateralToAdd, payable(USER), 25
         );
+    }
+
+    function test_BorrowWithFeeConverges() public {
+        vm.skip(true);
+
+        // Config
+        uint256 paymentPerBorrow = 0.2 ether;
+        uint16 cashOutTaxRate = 6000;
+        uint256 premint = 0;
+        uint256 amountPaidBeforeFirstBorrow = 0.5 ether;
+
+        // Deploy a new REVNET, that has multiple stages where the fee decrease.
+        // This lets people refinance their loans to get a better rate.
+        uint256 revnetProjectId;
+        {
+            FeeProjectConfig memory projectConfig = getSecondProjectConfig();
+            REVAutoIssuance[] memory issuanceConfs;
+            if (premint > 0) {
+                issuanceConfs = new REVAutoIssuance[](1);
+                issuanceConfs[0] =
+                    REVAutoIssuance({chainId: uint32(block.chainid), count: uint104(premint), beneficiary: multisig()});
+            }
+
+            REVStageConfig[] memory stageConfigurations = new REVStageConfig[](1);
+            stageConfigurations[0] = REVStageConfig({
+                startsAtOrAfter: uint40(block.timestamp),
+                autoIssuances: new REVAutoIssuance[](0),
+                splitPercent: 0, // 20%
+                initialIssuance: 1000e18,
+                issuanceCutFrequency: 180 days,
+                issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
+                cashOutTaxRate: cashOutTaxRate, // 20%
+                extraMetadata: 0
+            });
+
+            // Replace the configuration.
+            projectConfig.configuration.stageConfigurations = stageConfigurations;
+            projectConfig.configuration.description.salt = "FeeChange";
+
+            revnetProjectId = REV_DEPLOYER.deployFor({
+                revnetId: 0, // Zero to deploy a new revnet
+                configuration: projectConfig.configuration,
+                terminalConfigurations: projectConfig.terminalConfigurations,
+                buybackHookConfiguration: projectConfig.buybackHookConfiguration,
+                suckerDeploymentConfiguration: projectConfig.suckerDeploymentConfiguration
+            });
+        }
+
+        if (amountPaidBeforeFirstBorrow > 0) {
+            vm.deal(USER, amountPaidBeforeFirstBorrow);
+
+            jbMultiTerminal().pay{value: amountPaidBeforeFirstBorrow}(
+                revnetProjectId, JBConstants.NATIVE_TOKEN, amountPaidBeforeFirstBorrow, USER, 0, "", ""
+            );
+        }
+
+        // Pay the project, minting us tokens.
+        vm.startPrank(USER);
+
+        {
+            uint8[] memory permissionIds = new uint8[](1);
+            permissionIds[0] = JBPermissionIds.BURN_TOKENS;
+
+            JBPermissionsData memory permissionsData = JBPermissionsData({
+                operator: address(LOANS_CONTRACT),
+                projectId: uint56(revnetProjectId),
+                permissionIds: permissionIds
+            });
+
+            // Give the loans contract permission to our tokens.
+            jbPermissions().setPermissionsFor(address(USER), permissionsData);
+        }
+
+        REVLoanSource memory source = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+
+        uint256 initialBorrow = 0;
+        uint256 prevBorrow = 0;
+        uint256 i;
+        while (prevBorrow != (paymentPerBorrow * (10_000 - cashOutTaxRate) / 10_000)) {
+            vm.deal(USER, paymentPerBorrow);
+
+            uint256 tokens = jbMultiTerminal().pay{value: paymentPerBorrow}(
+                revnetProjectId, JBConstants.NATIVE_TOKEN, paymentPerBorrow, USER, 0, "", ""
+            );
+
+            (, REVLoan memory loan) = LOANS_CONTRACT.borrowFrom(revnetProjectId, source, 0, tokens, payable(USER), 500);
+
+            if (i == 0) {
+                initialBorrow = loan.amount;
+            }
+
+            console.log("Loan %s: %s", i, loan.amount);
+            prevBorrow = loan.amount;
+            i++;
+        }
+
+        console.log("Initial Borrow: %s", initialBorrow);
+        console.log("Final Borrow: %s", prevBorrow);
+    }
+
+    function test_Refinance_DueTo_FeeChange() public {
+        // Deploy a new REVNET, that has multiple stages where the fee decrease.
+        // This lets people refinance their loans to get a better rate.
+        FeeProjectConfig memory projectConfig = getSecondProjectConfig();
+
+        REVStageConfig[] memory stageConfigurations = new REVStageConfig[](2);
+        stageConfigurations[0] = REVStageConfig({
+            startsAtOrAfter: uint40(block.timestamp),
+            autoIssuances: new REVAutoIssuance[](0),
+            splitPercent: 2000, // 20%
+            initialIssuance: 1000e18,
+            issuanceCutFrequency: 180 days,
+            issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
+            cashOutTaxRate: 2000, // 20%
+            extraMetadata: 0
+        });
+
+        stageConfigurations[1] = REVStageConfig({
+            startsAtOrAfter: uint40(block.timestamp + 720 days),
+            autoIssuances: new REVAutoIssuance[](0),
+            splitPercent: 2000, // 20%
+            initialIssuance: 0, // inherit from previous cycle.
+            issuanceCutFrequency: 180 days,
+            issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
+            cashOutTaxRate: 0, // 40%
+            extraMetadata: 0
+        });
+
+        // Replace the configuration.
+        projectConfig.configuration.stageConfigurations = stageConfigurations;
+        projectConfig.configuration.description.salt = "FeeChange";
+
+        uint256 revnetProjectId = REV_DEPLOYER.deployFor({
+            revnetId: 0, // Zero to deploy a new revnet
+            configuration: projectConfig.configuration,
+            terminalConfigurations: projectConfig.terminalConfigurations,
+            buybackHookConfiguration: projectConfig.buybackHookConfiguration,
+            suckerDeploymentConfiguration: projectConfig.suckerDeploymentConfiguration
+        });
+
+        vm.startPrank(USER);
+        uint256 tokens =
+            jbMultiTerminal().pay{value: 1e18}(revnetProjectId, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+
+        // Makes it so the borrow is closer to the cashoutTaxRate.
+        // Without this the borrow would be (near) feeless.
+        jbMultiTerminal().pay{value: 99e18}(revnetProjectId, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
+
+        uint256 loanable =
+            LOANS_CONTRACT.borrowableAmountFrom(revnetProjectId, tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN)));
+        assertGt(loanable, 0);
+
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(
+                IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, revnetProjectId, 10, true, true)
+            ),
+            abi.encode(true)
+        );
+
+        uint256 balanceBefore = USER.balance;
+        REVLoanSource memory source = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+        (uint256 newLoanId, REVLoan memory loan) =
+            LOANS_CONTRACT.borrowFrom(revnetProjectId, source, loanable, tokens, payable(USER), 500);
+
+        // Ensure loans contract isn't hodling
+        assertEq(address(LOANS_CONTRACT).balance, 0);
+
+        // Ensure we actually received ETH from the borrow
+        uint256 balanceAfterIntitialBorrow = USER.balance;
+        assertGt(balanceAfterIntitialBorrow, balanceBefore);
+
+        // Warp to after the cash out tax rate is lower in the second ruleset.
+        vm.warp(stageConfigurations[1].startsAtOrAfter);
+
+        // get the updated loanableFrom the same amount as earlier
+        uint256 loanableSecondStage = LOANS_CONTRACT.borrowableAmountFrom(
+            revnetProjectId, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+        );
+
+        // loanable amount is (slightly) higher due to fee payment increasing the supply/assets ratio.
+        assertGt(loanableSecondStage, loanable);
+
+        // we should not have to add collateral
+        uint256 collateralToAdd = 0;
+
+        // this should be a 0.5% gain to be reallocated
+        uint256 collateralToTransfer = mulDiv(loan.collateral, 50, 10_000);
+
+        // get the new amount to borrow
+        uint256 newAmount = LOANS_CONTRACT.borrowableAmountFrom(
+            revnetProjectId, collateralToTransfer, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+        );
+
+        LOANS_CONTRACT.reallocateCollateralFromLoan(
+            newLoanId, collateralToTransfer, source, newAmount, collateralToAdd, payable(USER), 25
+        );
+
+        // Since we refinanced we should have received additional funds, as the tokens are now worth more.
+        assertGt(USER.balance, balanceAfterIntitialBorrow);
     }
 
     function test_Refinance_Collateral_Required() public {
@@ -728,7 +1006,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        // loanable amount is higher with the lower tax rate per second stage configuration
+        // loanable amount is (slightly) higher due to fee payment increasing the supply/assets ratio.
         assertGt(loanableSecondStage, loanable);
 
         // we should not have to add collateral

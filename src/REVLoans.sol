@@ -69,6 +69,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     error REVLoans_RevnetsMismatch(address revnetOwner, address revnets);
     error REVLoans_Unauthorized(address caller, address owner);
     error REVLoans_UnderMinBorrowAmount(uint256 minBorrowAmount, uint256 borrowAmount);
+    error REVLoans_ZeroCollateralLoanIsInvalid();
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -215,17 +216,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         view
         returns (uint256)
     {
-        // Keep a reference to the current stage.
-        // slither-disable-next-line unused-return
-        (JBRuleset memory currentStage,) = CONTROLLER.currentRulesetOf(revnetId);
-
         return _borrowableAmountFrom({
             revnetId: revnetId,
             collateralAmount: collateralAmount,
-            pendingAutoIssuanceTokens: REVNETS.unrealizedAutoIssuanceAmountOf(revnetId),
             decimals: decimals,
             currency: currency,
-            currentStage: currentStage,
             terminals: DIRECTORY.terminalsOf(revnetId)
         });
     }
@@ -290,8 +285,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @dev The amount that can be borrowed from a revnet given a certain amount of collateral.
     /// @param revnetId The ID of the revnet to check for borrowable assets from.
     /// @param collateralAmount The amount of collateral that the loan will be collateralized with.
-    /// @param currentStage The current stage of the revnet.
-    /// @param pendingAutoIssuanceTokens The amount of tokens pending auto issuance from the revnet.
     /// @param decimals The decimals the resulting fixed point value will include.
     /// @param currency The currency that the resulting amount should be in terms of.
     /// @param terminals The terminals that the funds are being borrowed from.
@@ -299,16 +292,21 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     function _borrowableAmountFrom(
         uint256 revnetId,
         uint256 collateralAmount,
-        uint256 pendingAutoIssuanceTokens,
         uint256 decimals,
         uint256 currency,
-        JBRuleset memory currentStage,
         IJBTerminal[] memory terminals
     )
         internal
         view
         returns (uint256)
     {
+        // Keep a reference to the current stage.
+        // slither-disable-next-line unused-return
+        (JBRuleset memory currentStage,) = CONTROLLER.currentRulesetOf(revnetId);
+
+        // Keep a reference to the pending auto issuance tokens.
+        uint256 pendingAutoIssuanceTokens = REVNETS.unrealizedAutoIssuanceAmountOf(revnetId);
+
         // Get the surplus of all the revnet's terminals in terms of the native currency.
         uint256 totalSurplus = JBSurplus.currentSurplusOf({
             projectId: revnetId,
@@ -361,20 +359,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // Keep a reference to the pending auto issuance tokens.
         uint256 pendingAutoIssuanceTokens = REVNETS.unrealizedAutoIssuanceAmountOf(revnetId);
 
-        // Keep a reference to the current stage.
-        // slither-disable-next-line unused-return
-        (JBRuleset memory currentStage,) = CONTROLLER.currentRulesetOf(revnetId);
-
         // Keep a reference to the revnet's terminals.
         IJBTerminal[] memory terminals = DIRECTORY.terminalsOf(revnetId);
 
         return _borrowableAmountFrom({
             revnetId: revnetId,
             collateralAmount: collateralAmount,
-            pendingAutoIssuanceTokens: pendingAutoIssuanceTokens,
             decimals: accountingContext.decimals,
             currency: accountingContext.currency,
-            currentStage: currentStage,
             terminals: terminals
         });
     }
@@ -517,6 +509,9 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
         // Make sure the revnet was deployed with the deployer this loan expects.
         if (revnetOwner != address(REVNETS)) revert REVLoans_RevnetsMismatch(revnetOwner, address(REVNETS));
+
+        // A loan needs to have collateral.
+        if (collateralAmount == 0) revert REVLoans_ZeroCollateralLoanIsInvalid();
 
         // Make sure the prepaid fee percent is between 0 and 20%. Meaning an 16 year loan can be paid upfront with a
         // payment of 50% of the borrowed assets, the cheapest possible rate.
