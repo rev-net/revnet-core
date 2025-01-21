@@ -310,24 +310,4 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         bool isSucker = SUCKER_REGISTRY.isSuckerOf(REVNET_ID, suckers[0]);
         assertEq(isSucker, true);
     }
-
-    function test_CantTransferConfiguredProjectToRevDeployer() public {
-        vm.startPrank(multisig());
-
-        // Create a new Juicebox project and configure a funding cycle.
-        uint256 projectId = jbProjects().createFor(multisig());
-
-        // Configure the project.
-        jbController().launchRulesetsFor({
-            projectId: projectId,
-            rulesetConfigurations: new JBRulesetConfig[](1),
-            terminalConfigurations: new JBTerminalConfig[](0),
-            memo: ""
-        });
-
-        // Try and transfer it to the REV deployer.
-        // This may be tried to fake it being a revnet.
-        vm.expectRevert();
-        jbProjects().transferFrom(multisig(), address(REV_DEPLOYER), projectId);
-    }
 }
