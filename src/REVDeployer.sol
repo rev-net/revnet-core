@@ -1066,7 +1066,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         returns (address[] memory suckers)
     {
         // Compose the salt.
-        bytes32 salt = keccak256(abi.encode(encodedConfigurationHash, suckerDeploymentConfiguration.salt));
+        bytes32 salt = keccak256(abi.encode(encodedConfigurationHash, suckerDeploymentConfiguration.salt, _msgSender()));
 
         emit DeploySuckers({
             revnetId: revnetId,
