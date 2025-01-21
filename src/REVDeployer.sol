@@ -756,8 +756,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @param revnetId The ID of the revnet to set the split operator of.
     /// @param newSplitOperator The new split operator's address.
     function setSplitOperatorOf(uint256 revnetId, address newSplitOperator) external override {
-        address msgSender = _msgSender();
-
         // Enforce permissions.
         _checkIfIsSplitOperatorOf({revnetId: revnetId, operator: _msgSender()});
 
