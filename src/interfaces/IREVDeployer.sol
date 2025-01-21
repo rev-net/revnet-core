@@ -37,7 +37,7 @@ interface IREVDeployer {
         REVBuybackHookConfig buybackHookConfiguration,
         REVSuckerDeploymentConfig suckerDeploymentConfiguration,
         JBRulesetConfig[] rulesetConfigurations,
-        bytes encodedConfiguration,
+        bytes32 encodedConfigurationHash,
         address caller
     );
 

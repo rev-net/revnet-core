@@ -494,12 +494,12 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @notice Convert a revnet's stages into a series of Juicebox project rulesets.
     /// @param configuration The configuration containing the revnet's stages.
     /// @return rulesetConfigurations A list of ruleset configurations defined by the stages.
-    /// @return encodedConfiguration A byte-encoded representation of the revnet's configuration. Used for sucker
+    /// @return encodedConfigurationHash A hash that represents the revnet's configuration. Used for sucker
     /// deployment salts.
     function _makeRulesetConfigurations(REVConfig calldata configuration)
         internal
         view
-        returns (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration)
+        returns (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash)
     {
         // If there are no stages, revert.
         if (configuration.stageConfigurations.length == 0) revert REVDeployer_StagesRequired();
@@ -508,7 +508,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         rulesetConfigurations = new JBRulesetConfig[](configuration.stageConfigurations.length);
 
         // Add the base configuration to the byte-encoded configuration.
-        encodedConfiguration = abi.encode(
+        bytes memory encodedConfiguration = abi.encode(
             configuration.baseCurrency,
             configuration.loans,
             configuration.description.name,
@@ -569,6 +569,9 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             // Store the ruleset's start time for the next iteration.
             previousStartTime = stageConfiguration.startsAtOrAfter;
         }
+
+        // Hash the encoded configuration.
+        encodedConfigurationHash = keccak256(encodedConfiguration);
     }
 
     /// @notice Returns the permissions that the split operator should be granted for a revnet.
@@ -953,7 +956,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         returns (uint256)
     {
         // Normalize and encode the configurations.
-        (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration) =
+        (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash) =
             _makeRulesetConfigurations(configuration);
 
         if (revnetId == 0) {
@@ -1029,13 +1032,13 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
             _deploySuckersFor({
                 revnetId: revnetId,
-                encodedConfigurationHash: keccak256(encodedConfiguration),
+                encodedConfigurationHash: encodedConfigurationHash,
                 suckerDeploymentConfiguration: suckerDeploymentConfiguration
             });
         }
 
         // Store the hashed encoded configuration.
-        hashedEncodedConfigurationOf[revnetId] = keccak256(encodedConfiguration);
+        hashedEncodedConfigurationOf[revnetId] = encodedConfigurationHash;
 
         emit DeployRevnet({
             revnetId: revnetId,
@@ -1044,7 +1047,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             buybackHookConfiguration: buybackHookConfiguration,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration,
             rulesetConfigurations: rulesetConfigurations,
-            encodedConfiguration: encodedConfiguration,
+            encodedConfigurationHash: encodedConfigurationHash,
             caller: _msgSender()
         });
 
