@@ -940,7 +940,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
         // If the caller is deploying a new revnet, calculate its ID
         // (which will be 1 greater than the current count).
-        if (revnetId == 0) revnetId = PROJECTS.count() + 1;
+        if (originalRevnetId == 0) revnetId = PROJECTS.count() + 1;
 
         // Deploy the tiered ERC-721 hook contract.
         // slither-disable-next-line reentrancy-benign
