@@ -318,7 +318,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     }
 
     /// @dev Make sure this contract can only receive project NFTs from `JBProjects`.
-    function onERC721Received(address, address, uint256 revnetId, bytes calldata) external view returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external view returns (bytes4) {
         // Make sure the 721 received is from the `JBProjects` contract.
         if (msg.sender != address(PROJECTS)) revert();
 
