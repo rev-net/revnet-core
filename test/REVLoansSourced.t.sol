@@ -421,6 +421,54 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(TOKEN.balanceOf(address(USER)), loanable - fees);
     }
 
+    function test_Cashout(
+        uint256 totalSupplyExcludingAutoMint,
+        uint256 nativeSurplus,
+        uint256 tokensToCashout
+    )
+        public
+    {
+        vm.assume(totalSupplyExcludingAutoMint > 0 && totalSupplyExcludingAutoMint <= type(uint112).max);
+        vm.assume(totalSupplyExcludingAutoMint > tokensToCashout);
+
+        // Add the surplus into the project.
+        vm.deal(USER, nativeSurplus);
+        vm.prank(USER);
+        jbMultiTerminal().addToBalanceOf{value: nativeSurplus}(
+            REVNET_ID, JBConstants.NATIVE_TOKEN, nativeSurplus, false, string(""), bytes("")
+        );
+
+        // Mint the entire supply excluding automint to the user.
+        vm.prank(address(jbController()));
+        jbTokens().mintFor(USER, REVNET_ID, totalSupplyExcludingAutoMint);
+
+        // Check what a borrow would result in more.
+        uint256 loanable = LOANS_CONTRACT.borrowableAmountFrom(
+            REVNET_ID, tokensToCashout, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+        );
+
+        uint256 balanceBefore = USER.balance;
+
+        // Ensure that the hook was called.
+        vm.expectCall(address(REV_DEPLOYER), abi.encode(REVDeployer.beforeCashOutRecordedWith.selector));
+
+        // It only adds itself as a `after` cashoutHook if there is a cashout tax rate.
+        // NOTICE: This test does not hold if there is a fee, as a borrow in that case might return more assets than a
+        // cashout.
+        if (getSecondProjectConfig().configuration.stageConfigurations[0].cashOutTaxRate != 0) {
+            vm.expectCall(address(REV_DEPLOYER), abi.encode(REVDeployer.afterCashOutRecordedWith.selector));
+        }
+
+        // Perform a cashout.
+        vm.prank(USER);
+        jbMultiTerminal().cashOutTokensOf(
+            USER, REVNET_ID, tokensToCashout, JBConstants.NATIVE_TOKEN, 0, payable(USER), bytes("")
+        );
+
+        assertGe(USER.balance, balanceBefore);
+        assertGe(USER.balance - balanceBefore, loanable);
+    }
+
     function test_Pay_Borrow_With_Loan_Source() public {
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
