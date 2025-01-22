@@ -221,7 +221,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceCutFrequency: 90 days,
                 issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
-                cashOutTaxRate: 6000, //6000, // 0.6
+                cashOutTaxRate: 0,
                 extraMetadata: 0
             });
         }
@@ -233,7 +233,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             initialIssuance: 0, // inherit from previous cycle.
             issuanceCutFrequency: 180 days,
             issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
-            cashOutTaxRate: 0, //6000, // 0.6
+            cashOutTaxRate: 0,
             extraMetadata: 0
         });
 
@@ -244,7 +244,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
             issuanceCutFrequency: 0,
             issuanceCutPercent: 0,
-            cashOutTaxRate: 0, //6000, // 0.6
+            cashOutTaxRate: 0,
             extraMetadata: 0
         });
 
