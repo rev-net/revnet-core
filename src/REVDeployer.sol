@@ -295,11 +295,21 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
         // Get a reference to the number of tokens being used to pay the fee (out of the total being cashed out).
         uint256 feeCashOutCount = mulDiv(context.cashOutCount, FEE, JBConstants.MAX_FEE);
+        uint256 nonFeeCashOutCount = context.cashOutCount - feeCashOutCount;
 
-        uint256 forwardedAmount = JBCashOuts.cashOutFrom({
+        // Keep a reference to the amount claimable with non-fee tokens.
+        uint256 postFeeReclaimedAmount = JBCashOuts.cashOutFrom({
             surplus: context.surplus.value,
-            cashOutCount: feeCashOutCount,
+            cashOutCount: nonFeeCashOutCount,
             totalSupply: context.totalSupply,
+            cashOutTaxRate: context.cashOutTaxRate
+        });
+
+        // Keep a reference to the fee amount after the reclaimed amount is subtracted.
+        uint256 feeAmount = JBCashOuts.cashOutFrom({
+            surplus: context.surplus.value - postFeeReclaimedAmount,
+            cashOutCount: feeCashOutCount,
+            totalSupply: context.totalSupply - nonFeeCashOutCount,
             cashOutTaxRate: context.cashOutTaxRate
         });
 
@@ -307,13 +317,13 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         hookSpecifications = new JBCashOutHookSpecification[](1);
         hookSpecifications[0] = JBCashOutHookSpecification({
             hook: IJBCashOutHook(address(this)),
-            amount: forwardedAmount,
+            amount: feeAmount,
             metadata: abi.encode(feeTerminal)
         });
 
         // Return the cash out rate and the number of revnet tokens to cash out, minus the tokens being used to pay the
         // fee.
-        return (context.cashOutTaxRate, context.cashOutCount - feeCashOutCount, context.totalSupply, hookSpecifications);
+        return (context.cashOutTaxRate, nonFeeCashOutCount, context.totalSupply, hookSpecifications);
     }
 
     /// @notice A flag indicating whether an address has permission to mint a revnet's tokens on-demand.
