@@ -106,6 +106,10 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
             beneficiary: multisig()
         });
 
+        JBSplit[] memory splits = new JBSplit[](1);
+        splits[0].beneficiary = payable(multisig());
+        splits[0].percent = 10_000;
+
         {
             firstStageId = block.timestamp;
 
@@ -113,6 +117,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
                 startsAtOrAfter: uint40(block.timestamp),
                 autoIssuances: issuanceConfs,
                 splitPercent: 2000, // 20%
+                splits: splits,
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceCutFrequency: 90 days,
                 issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
@@ -125,6 +130,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
             startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 720 days),
             autoIssuances: issuanceConfs,
             splitPercent: 2000, // 20%
+            splits: splits,
             initialIssuance: 0, // inherit from previous cycle.
             issuanceCutFrequency: 180 days,
             issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
@@ -136,6 +142,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
             startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (20 * 365 days)),
             autoIssuances: new REVAutoIssuance[](0),
             splitPercent: 0,
+            splits: splits,
             initialIssuance: 1,
             issuanceCutFrequency: 0,
             issuanceCutPercent: 0,
@@ -310,6 +317,72 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         // Ensure it's registered
         bool isSucker = SUCKER_REGISTRY.isSuckerOf(REVNET_ID, suckers[0]);
         assertEq(isSucker, true);
+    }
+
+    /// Test that ensures that the splits are being configured for the new project.
+    function test_configure_split(address payable beneficiaryA, address payable beneficiaryB) public {
+        JBSplit[] memory splitsA = new JBSplit[](1);
+        splitsA[0].beneficiary = beneficiaryA;
+        splitsA[0].percent = 10_000;
+
+        JBSplit[] memory splitsB = new JBSplit[](1);
+        splitsB[0].beneficiary = beneficiaryB;
+        splitsB[0].percent = 10_000;
+
+        // Deploy a new REVNET, it has two configurations, we give each its own split and then check if the splits were
+        // set correctly for each of the stages.
+        FeeProjectConfig memory projectConfig = getFeeProjectConfig();
+
+        REVStageConfig[] memory stageConfigurations = new REVStageConfig[](2);
+        stageConfigurations[0] = REVStageConfig({
+            startsAtOrAfter: uint40(block.timestamp),
+            autoIssuances: new REVAutoIssuance[](0),
+            splitPercent: 2000, // 20%
+            splits: splitsA,
+            initialIssuance: 1000e18,
+            issuanceCutFrequency: 180 days,
+            issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
+            cashOutTaxRate: 2000, // 20%
+            extraMetadata: 0
+        });
+
+        stageConfigurations[1] = REVStageConfig({
+            startsAtOrAfter: uint40(block.timestamp + 720 days),
+            autoIssuances: new REVAutoIssuance[](0),
+            splitPercent: 2000, // 20%
+            splits: splitsB,
+            initialIssuance: 0, // inherit from previous cycle.
+            issuanceCutFrequency: 180 days,
+            issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
+            cashOutTaxRate: 0, // 40%
+            extraMetadata: 0
+        });
+
+        // Replace the configuration.
+        projectConfig.configuration.stageConfigurations = stageConfigurations;
+        projectConfig.configuration.description.salt = "FeeChange";
+
+        uint256 revnetProjectId = REV_DEPLOYER.deployFor({
+            revnetId: 0, // Zero to deploy a new revnet
+            configuration: projectConfig.configuration,
+            terminalConfigurations: projectConfig.terminalConfigurations,
+            buybackHookConfiguration: projectConfig.buybackHookConfiguration,
+            suckerDeploymentConfiguration: projectConfig.suckerDeploymentConfiguration
+        });
+
+        {
+            JBSplit[] memory configuredSplits = jbSplits().splitsOf(
+                revnetProjectId, jbRulesets().currentOf(revnetProjectId).id, JBSplitGroupIds.RESERVED_TOKENS
+            );
+            assertEq(keccak256(abi.encode(configuredSplits)), keccak256(abi.encode(splitsA)));
+        }
+
+        {
+            JBSplit[] memory configuredSplits = jbSplits().splitsOf(
+                revnetProjectId, jbRulesets().latestRulesetIdOf(revnetProjectId), JBSplitGroupIds.RESERVED_TOKENS
+            );
+            assertEq(keccak256(abi.encode(configuredSplits)), keccak256(abi.encode(splitsB)));
+        }
     }
 
     function test_deployer_not_owner() public {
