@@ -460,11 +460,16 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             issuanceConfs[0] =
                 REVAutoIssuance({chainId: uint32(block.chainid), count: uint104(autoIssuance), beneficiary: multisig()});
 
+            JBSplit[] memory splits = new JBSplit[](1);
+            splits[0].beneficiary = payable(multisig());
+            splits[0].percent = 10_000;
+
             REVStageConfig[] memory stageConfigurations = new REVStageConfig[](1);
             stageConfigurations[0] = REVStageConfig({
                 startsAtOrAfter: uint40(block.timestamp),
                 autoIssuances: issuanceConfs,
                 splitPercent: 2000, // 20%
+                splits: splits,
                 initialIssuance: 1000e18,
                 issuanceCutFrequency: 90 days,
                 issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
