@@ -466,7 +466,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         );
 
         assertGe(USER.balance, balanceBefore);
-        assertGe(USER.balance - balanceBefore, loanable * 940 / 1000);
+        assertGe(USER.balance - balanceBefore, loanable);
     }
 
     function test_Pay_Borrow_With_Loan_Source() public {
