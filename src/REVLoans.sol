@@ -1120,8 +1120,7 @@ contract REVLoans is ERC721, ERC2771Context, Ownable, IREVLoans {
         uint256 newCollateralCount = loan.collateral - collateralCountToRemove;
 
         // Keep a reference to the new borrow amount.
-        uint256 borrowAmount =
-            _borrowAmountFrom({loan: loan, revnetId: revnetId, collateralCount: newCollateralCount});
+        uint256 borrowAmount = _borrowAmountFrom({loan: loan, revnetId: revnetId, collateralCount: newCollateralCount});
 
         // Make sure the borrow amount is not less than the original loan's amount.
         if (borrowAmount < loan.amount) {
