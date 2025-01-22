@@ -477,16 +477,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         }
     }
 
-    /// @notice Creates a reserved token split group that goes entirely to the specified split operator.
-    /// @dev The operator can add other beneficiaries to the split group later, if they wish.
-    /// @param splits The splits to create.
-    /// @return splitGroups The split group, entirely assigned to the operator.
-    function _makeSplitGroupWith(JBSplit[] memory splits) internal pure returns (JBSplitGroup[] memory splitGroups) {
-        // Package the reserved token splits.
-        splitGroups = new JBSplitGroup[](1);
-        splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: splits});
-    }
-
     /// @notice Convert a revnet's stages into a series of Juicebox project rulesets.
     /// @param configuration The configuration containing the revnet's stages.
     /// @return rulesetConfigurations A list of ruleset configurations defined by the stages.
@@ -528,6 +518,12 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             // Set the stage being iterated on.
             REVStageConfig calldata stageConfiguration = configuration.stageConfigurations[i];
 
+            // Make sure the revnet has at least one split if it has a split percent.
+            // Otherwise, the split would go to this contract since its the revnet's owner.
+            if (stageConfiguration.splitPercent > 0 && stageConfiguration.splits.length == 0) {
+                revert REVDeployer_MustHaveSplits();
+            }
+
             // If the stage's start time is not after the previous stage's start time, revert.
             if (stageConfiguration.startsAtOrAfter <= previousStartTime) {
                 revert REVDeployer_StageTimesMustIncrease();
@@ -546,9 +542,13 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             metadata.useTotalSurplusForCashOuts = true; // Use surplus from all terminals for cash outs.
             metadata.allowOwnerMinting = true; // Allow this contract to auto-mint tokens as the revnet's owner.
             metadata.useDataHookForPay = true; // Call this contract's `beforePayRecordedWith(…)` callback on payments.
-            metadata.useDataHookForCashOut = true;
+            metadata.useDataHookForCashOut = true; // Call this contract's `beforeCashOutRecordedWith(…)` callback on cash outs.
             metadata.dataHook = address(this); // This contract is the data hook.
             metadata.metadata = stageConfiguration.extraMetadata;
+
+            // Package the reserved token splits.
+            JBSplitGroup[] memory splitGroups = new JBSplitGroup[](1);
+            splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: stageConfiguration.splits});
 
             // Set up the ruleset.
             rulesetConfigurations[i] = JBRulesetConfig({
@@ -558,7 +558,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
                 weightCutPercent: stageConfiguration.issuanceCutPercent,
                 approvalHook: IJBRulesetApprovalHook(address(0)),
                 metadata: metadata,
-                splitGroups: new JBSplitGroup[](0),
+                splitGroups: splitGroups,
                 fundAccessLimitGroups: fundAccessLimitGroups
             });
 
@@ -1081,7 +1081,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         }
 
         // Store the auto-issuance amounts.
-        _storeSplitsAndAutoIssuanceAmounts({revnetId: revnetId, configuration: configuration});
+        _storeAutoIssuanceAmounts({revnetId: revnetId, configuration: configuration});
 
         // Give the split operator their permissions.
         _setSplitOperatorOf({revnetId: revnetId, operator: configuration.splitOperator});
@@ -1176,7 +1176,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
         emit SetCashOutDelay({revnetId: revnetId, cashOutDelay: cashOutDelay, caller: _msgSender()});
     }
-
+    
     /// @notice Grants a permission to an address (an "operator").
     /// @param operator The address to give the permission to.
     /// @param revnetId The ID of the revnet to scope the permission for.
@@ -1254,7 +1254,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @notice Stores the auto-issuance amounts for each of a revnet's stages.
     /// @param revnetId The ID of the revnet to store the auto-mint amounts for.
     /// @param configuration The revnet's configuration. See `REVConfig`.
-    function _storeSplitsAndAutoIssuanceAmounts(uint256 revnetId, REVConfig calldata configuration) internal {
+    function _storeAutoIssuanceAmounts(uint256 revnetId, REVConfig calldata configuration) internal {
         // Keep a reference to the total amount of tokens which can be auto-minted.
         uint256 totalUnrealizedAutoIssuanceAmount;
 
@@ -1262,19 +1262,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         for (uint256 i; i < configuration.stageConfigurations.length; i++) {
             // Set the stage configuration being iterated on.
             REVStageConfig calldata stageConfiguration = configuration.stageConfigurations[i];
-
-            // Make sure the revnet has at least one split if it has a split percent.
-            // Otherwise, the split would go to this contract since its the revnet's owner.
-            if (stageConfiguration.splitPercent > 0 && stageConfiguration.splits.length == 0) {
-                revert REVDeployer_MustHaveSplits();
-            }
-
-            // Set up the split group for this stage.
-            CONTROLLER.setSplitGroupsOf({
-                projectId: revnetId,
-                rulesetId: block.timestamp + i,
-                splitGroups: _makeSplitGroupWith(stageConfiguration.splits)
-            });
 
             // Loop through each mint to store its amount.
             for (uint256 j; j < stageConfiguration.autoIssuances.length; j++) {
