@@ -45,7 +45,7 @@ import {REVLoanSource} from "./structs/REVLoanSource.sol";
 /// cannot be
 /// recouped.
 /// @dev The loaned amounts include the fees taken, meaning the amount paid back is the amount borrowed plus the fees.
-contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
+contract REVLoans is ERC721, ERC2771Context, Ownable, IREVLoans {
     // A library that parses the packed ruleset metadata into a friendlier format.
     using JBRulesetMetadataResolver for JBRuleset;
 
@@ -202,13 +202,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
     /// @notice The amount that can be borrowed from a revnet.
     /// @param revnetId The ID of the revnet to check for borrowable assets from.
-    /// @param collateralAmount The amount of collateral used to secure the loan.
+    /// @param collateralCount The amount of collateral used to secure the loan.
     /// @param decimals The decimals the resulting fixed point value will include.
     /// @param currency The currency that the resulting amount should be in terms of.
     /// @return borrowableAmount The amount that can be borrowed from the revnet.
     function borrowableAmountFrom(
         uint256 revnetId,
-        uint256 collateralAmount,
+        uint256 collateralCount,
         uint256 decimals,
         uint256 currency
     )
@@ -218,7 +218,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     {
         return _borrowableAmountFrom({
             revnetId: revnetId,
-            collateralAmount: collateralAmount,
+            collateralCount: collateralCount,
             decimals: decimals,
             currency: currency,
             terminals: DIRECTORY.terminalsOf(revnetId)
@@ -284,14 +284,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
     /// @dev The amount that can be borrowed from a revnet given a certain amount of collateral.
     /// @param revnetId The ID of the revnet to check for borrowable assets from.
-    /// @param collateralAmount The amount of collateral that the loan will be collateralized with.
+    /// @param collateralCount The amount of collateral that the loan will be collateralized with.
     /// @param decimals The decimals the resulting fixed point value will include.
     /// @param currency The currency that the resulting amount should be in terms of.
     /// @param terminals The terminals that the funds are being borrowed from.
     /// @return borrowableAmount The amount that can be borrowed from the revnet.
     function _borrowableAmountFrom(
         uint256 revnetId,
-        uint256 collateralAmount,
+        uint256 collateralCount,
         uint256 decimals,
         uint256 currency,
         IJBTerminal[] memory terminals
@@ -329,7 +329,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // Proportional.
         return JBCashOuts.cashOutFrom({
             surplus: totalSurplus + totalBorrowed,
-            cashOutCount: collateralAmount,
+            cashOutCount: collateralCount,
             totalSupply: totalSupply + totalCollateral + pendingAutoIssuanceTokens,
             cashOutTaxRate: currentStage.cashOutTaxRate()
         });
@@ -338,19 +338,19 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @notice The amount of the loan that should be borrowed for the given collateral amount.
     /// @param loan The loan having its borrow amount determined.
     /// @param revnetId The ID of the revnet to check for borrowable assets from.
-    /// @param collateralAmount The amount of collateral that the loan will be collateralized with.
+    /// @param collateralCount The amount of collateral that the loan will be collateralized with.
     /// @return borrowAmount The amount of the loan that should be borrowed.
     function _borrowAmountFrom(
         REVLoan storage loan,
         uint256 revnetId,
-        uint256 collateralAmount
+        uint256 collateralCount
     )
         internal
         view
         returns (uint256)
     {
         // If there's no collateral, there's no loan.
-        if (collateralAmount == 0) return 0;
+        if (collateralCount == 0) return 0;
 
         // Get a reference to the accounting context for the source.
         JBAccountingContext memory accountingContext =
@@ -361,7 +361,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
         return _borrowableAmountFrom({
             revnetId: revnetId,
-            collateralAmount: collateralAmount,
+            collateralCount: collateralCount,
             decimals: accountingContext.decimals,
             currency: accountingContext.currency,
             terminals: terminals
@@ -483,7 +483,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @param source The source of the loan being borrowed.
     /// @param minBorrowAmount The minimum amount being borrowed, denominated in the token of the source's accounting
     /// context.
-    /// @param collateralAmount The amount of tokens to use as collateral for the loan.
+    /// @param collateralCount The amount of tokens to use as collateral for the loan.
     /// @param beneficiary The address that'll receive the borrowed funds and the tokens resulting from fee payments.
     /// @param prepaidFeePercent The fee percent that will be charged upfront from the revnet being borrowed from.
     /// Prepaying a fee is cheaper than paying later.
@@ -493,7 +493,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         uint256 revnetId,
         REVLoanSource calldata source,
         uint256 minBorrowAmount,
-        uint256 collateralAmount,
+        uint256 collateralCount,
         address payable beneficiary,
         uint256 prepaidFeePercent
     )
@@ -508,7 +508,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         if (revnetOwner != address(REVNETS)) revert REVLoans_RevnetsMismatch(revnetOwner, address(REVNETS));
 
         // A loan needs to have collateral.
-        if (collateralAmount == 0) revert REVLoans_ZeroCollateralLoanIsInvalid();
+        if (collateralCount == 0) revert REVLoans_ZeroCollateralLoanIsInvalid();
 
         // Make sure the prepaid fee percent is between 0 and 20%. Meaning an 16 year loan can be paid upfront with a
         // payment of 50% of the borrowed assets, the cheapest possible rate.
@@ -531,7 +531,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         loan.prepaidDuration = uint32(mulDiv(prepaidFeePercent, LOAN_LIQUIDATION_DURATION, MAX_PREPAID_FEE_PERCENT));
 
         // Get the amount of the loan.
-        uint256 borrowAmount = _borrowAmountFrom({loan: loan, revnetId: revnetId, collateralAmount: collateralAmount});
+        uint256 borrowAmount = _borrowAmountFrom({loan: loan, revnetId: revnetId, collateralCount: collateralCount});
 
         // Make sure the minimum borrow amount is met.
         if (borrowAmount < minBorrowAmount) revert REVLoans_UnderMinBorrowAmount(minBorrowAmount, borrowAmount);
@@ -544,7 +544,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             loan: loan,
             revnetId: revnetId,
             newBorrowAmount: borrowAmount,
-            newCollateralAmount: collateralAmount,
+            newCollateralCount: collateralCount,
             sourceFeeAmount: sourceFeeAmount,
             beneficiary: beneficiary
         });
@@ -558,7 +558,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             loan: loan,
             source: source,
             borrowAmount: borrowAmount,
-            collateralAmount: collateralAmount,
+            collateralCount: collateralCount,
             sourceFeeAmount: sourceFeeAmount,
             beneficiary: beneficiary,
             caller: _msgSender()
@@ -613,11 +613,11 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @dev Useful if a loan's collateral has gone up in value since the loan was created.
     /// @dev Refinancing a loan will burn the original and create two new loans.
     /// @param loanId The ID of the loan to reallocate collateral from.
-    /// @param collateralAmountToTransfer The amount of collateral to transfer from the original loan.
+    /// @param collateralCountToTransfer The amount of collateral to transfer from the original loan.
     /// @param source The source of the loan to create.
     /// @param minBorrowAmount The minimum amount being borrowed, denominated in the token of the source's accounting
     /// context.
-    /// @param collateralAmountToAdd The amount of collateral to add to the loan.
+    /// @param collateralCountToAdd The amount of collateral to add to the loan.
     /// @param beneficiary The address that'll receive the borrowed funds and the tokens resulting from fee payments.
     /// @param prepaidFeePercent The fee percent that will be charged upfront from the revnet being borrowed from.
     /// @return reallocatedLoanId The ID of the loan being reallocated.
@@ -626,10 +626,10 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @return newLoan The new loan created from reallocating collateral.
     function reallocateCollateralFromLoan(
         uint256 loanId,
-        uint256 collateralAmountToTransfer,
+        uint256 collateralCountToTransfer,
         REVLoanSource calldata source,
         uint256 minBorrowAmount,
-        uint256 collateralAmountToAdd,
+        uint256 collateralCountToAdd,
         address payable beneficiary,
         uint256 prepaidFeePercent
     )
@@ -648,7 +648,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         (reallocatedLoanId, reallocatedLoan) = _reallocateCollateralFromLoan({
             loanId: loanId,
             revnetId: revnetId,
-            collateralAmountToRemove: collateralAmountToTransfer
+            collateralCountToRemove: collateralCountToTransfer
         });
 
         // Make a new loan with the leftover collateral from reallocating.
@@ -656,7 +656,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             revnetId: revnetId,
             source: source,
             minBorrowAmount: minBorrowAmount,
-            collateralAmount: collateralAmountToTransfer + collateralAmountToAdd,
+            collateralCount: collateralCountToTransfer + collateralCountToAdd,
             beneficiary: beneficiary,
             prepaidFeePercent: prepaidFeePercent
         });
@@ -667,7 +667,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @param loanId The ID of the loan being adjusted.
     /// @param maxRepayBorrowAmount The maximum amount being paid off, denominated in the token of the source's
     /// accounting context.
-    /// @param collateralAmountToReturn The amount of collateral to return being returned from the loan.
+    /// @param collateralCountToReturn The amount of collateral to return being returned from the loan.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     /// @param allowance An allowance to faciliate permit2 interactions.
     /// @return paidOffLoanId The ID of the loan after it's been paid off.
@@ -675,7 +675,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     function repayLoan(
         uint256 loanId,
         uint256 maxRepayBorrowAmount,
-        uint256 collateralAmountToReturn,
+        uint256 collateralCountToReturn,
         address payable beneficiary,
         JBSingleAllowance calldata allowance
     )
@@ -690,8 +690,8 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         // Keep a reference to the fee being iterated on.
         REVLoan storage loan = _loanOf[loanId];
 
-        if (collateralAmountToReturn > loan.collateral) {
-            revert REVLoans_CollateralExceedsLoan(collateralAmountToReturn, loan.collateral);
+        if (collateralCountToReturn > loan.collateral) {
+            revert REVLoans_CollateralExceedsLoan(collateralCountToReturn, loan.collateral);
         }
 
         // Get a reference to the revnet ID of the loan being repaid.
@@ -701,7 +701,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         uint256 newBorrowAmount = _borrowAmountFrom({
             loan: loan,
             revnetId: revnetId,
-            collateralAmount: loan.collateral - collateralAmountToReturn
+            collateralCount: loan.collateral - collateralCountToReturn
         });
 
         // Make sure the new borrow amount is less than the loan's amount.
@@ -733,7 +733,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             revnetId: revnetId,
             repayBorrowAmount: repayBorrowAmount,
             sourceFeeAmount: sourceFeeAmount,
-            collateralAmountToReturn: collateralAmountToReturn,
+            collateralCountToReturn: collateralCountToReturn,
             beneficiary: beneficiary
         });
 
@@ -857,14 +857,14 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @param revnetId The ID of the revnet the loan is being adjusted in.
     /// @param newBorrowAmount The new amount of the loan, denominated in the token of the source's accounting
     /// context.
-    /// @param newCollateralAmount The new amount of collateral backing the loan.
+    /// @param newCollateralCount The new amount of collateral backing the loan.
     /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     function _adjust(
         REVLoan storage loan,
         uint256 revnetId,
         uint256 newBorrowAmount,
-        uint256 newCollateralAmount,
+        uint256 newCollateralCount,
         uint256 sourceFeeAmount,
         address payable beneficiary
     )
@@ -890,13 +890,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         }
 
         // Add collateral if needed...
-        if (newCollateralAmount > loan.collateral) {
-            _addCollateralTo({revnetId: revnetId, amount: newCollateralAmount - loan.collateral});
+        if (newCollateralCount > loan.collateral) {
+            _addCollateralTo({revnetId: revnetId, amount: newCollateralCount - loan.collateral});
             // ... or return collateral if needed.
-        } else if (loan.collateral > newCollateralAmount) {
+        } else if (loan.collateral > newCollateralCount) {
             _returnCollateralFrom({
                 revnetId: revnetId,
-                collateralAmount: loan.collateral - newCollateralAmount,
+                collateralCount: loan.collateral - newCollateralCount,
                 beneficiary: beneficiary
             });
         }
@@ -925,7 +925,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
         // Store the loans updated values.
         loan.amount = uint112(newBorrowAmount);
-        loan.collateral = uint112(newCollateralAmount);
+        loan.collateral = uint112(newCollateralCount);
     }
 
     /// @notice Accepts an incoming token.
@@ -1000,7 +1000,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @param repayBorrowAmount The amount being paid down from the loan, denominated in the token of the source's
     /// accounting context.
     /// @param sourceFeeAmount The amount of the fee being taken from the revnet acting as the source of the loan.
-    /// @param collateralAmountToReturn The amount of collateral being returned that the loan no longer requires.
+    /// @param collateralCountToReturn The amount of collateral being returned that the loan no longer requires.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     function _repayLoan(
         uint256 loanId,
@@ -1008,7 +1008,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         uint256 revnetId,
         uint256 repayBorrowAmount,
         uint256 sourceFeeAmount,
-        uint256 collateralAmountToReturn,
+        uint256 collateralCountToReturn,
         address payable beneficiary
     )
         internal
@@ -1019,13 +1019,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
         // If the loan will carry no more amount or collateral, store its changes directly.
         // slither-disable-next-line incorrect-equality
-        if (collateralAmountToReturn == loan.collateral) {
+        if (collateralCountToReturn == loan.collateral) {
             // Borrow in.
             _adjust({
                 loan: loan,
                 revnetId: revnetId,
                 newBorrowAmount: 0,
-                newCollateralAmount: 0,
+                newCollateralCount: 0,
                 sourceFeeAmount: sourceFeeAmount,
                 beneficiary: beneficiary
             });
@@ -1038,7 +1038,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
                 paidOffLoan: loan,
                 repayBorrowAmount: repayBorrowAmount,
                 sourceFeeAmount: sourceFeeAmount,
-                collateralAmountToReturn: collateralAmountToReturn,
+                collateralCountToReturn: collateralCountToReturn,
                 beneficiary: beneficiary,
                 caller: _msgSender()
             });
@@ -1065,7 +1065,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
                 loan: paidOffLoan,
                 revnetId: revnetId,
                 newBorrowAmount: paidOffLoan.amount - (repayBorrowAmount - sourceFeeAmount),
-                newCollateralAmount: paidOffLoan.collateral - collateralAmountToReturn,
+                newCollateralCount: paidOffLoan.collateral - collateralCountToReturn,
                 sourceFeeAmount: sourceFeeAmount,
                 beneficiary: beneficiary
             });
@@ -1081,7 +1081,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
                 paidOffLoan: paidOffLoan,
                 repayBorrowAmount: repayBorrowAmount,
                 sourceFeeAmount: sourceFeeAmount,
-                collateralAmountToReturn: collateralAmountToReturn,
+                collateralCountToReturn: collateralCountToReturn,
                 beneficiary: beneficiary,
                 caller: _msgSender()
             });
@@ -1093,13 +1093,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
     /// @notice Reallocates collateral from a loan by making a new loan based on the original, with reduced collateral.
     /// @param loanId The ID of the loan to reallocate collateral from.
     /// @param revnetId The ID of the revnet the loan is from.
-    /// @param collateralAmountToRemove The amount of collateral to remove from the loan.
+    /// @param collateralCountToRemove The amount of collateral to remove from the loan.
     /// @return reallocatedLoanId The ID of the loan.
     /// @return reallocatedLoan The reallocated loan.
     function _reallocateCollateralFromLoan(
         uint256 loanId,
         uint256 revnetId,
-        uint256 collateralAmountToRemove
+        uint256 collateralCountToRemove
     )
         internal
         returns (uint256 reallocatedLoanId, REVLoan storage reallocatedLoan)
@@ -1111,14 +1111,13 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         REVLoan storage loan = _loanOf[loanId];
 
         // Make sure there is enough collateral to transfer.
-        if (collateralAmountToRemove > loan.collateral) revert REVLoans_NotEnoughCollateral();
+        if (collateralCountToRemove > loan.collateral) revert REVLoans_NotEnoughCollateral();
 
         // Keep a reference to the new collateral amount.
-        uint256 newCollateralAmount = loan.collateral - collateralAmountToRemove;
+        uint256 newCollateralCount = loan.collateral - collateralCountToRemove;
 
         // Keep a reference to the new borrow amount.
-        uint256 borrowAmount =
-            _borrowAmountFrom({loan: loan, revnetId: revnetId, collateralAmount: newCollateralAmount});
+        uint256 borrowAmount = _borrowAmountFrom({loan: loan, revnetId: revnetId, collateralCount: newCollateralCount});
 
         // Make sure the borrow amount is not less than the original loan's amount.
         if (borrowAmount < loan.amount) {
@@ -1147,7 +1146,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             loan: reallocatedLoan,
             revnetId: revnetId,
             newBorrowAmount: reallocatedLoan.amount, // Don't change the borrow amount.
-            newCollateralAmount: newCollateralAmount,
+            newCollateralCount: newCollateralCount,
             sourceFeeAmount: 0,
             beneficiary: payable(_msgSender()) // use the msgSender as the beneficiary, who will have the returned
                 // collateral tokens debited from their balance for the new loan.
@@ -1158,7 +1157,7 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
             revnetId: revnetId,
             reallocatedLoanId: reallocatedLoanId,
             reallocatedLoan: reallocatedLoan,
-            removedCollateralAmount: collateralAmountToRemove,
+            removedcollateralCount: collateralCountToRemove,
             caller: _msgSender()
         });
     }
@@ -1189,17 +1188,17 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
 
     /// @notice Returns collateral from a loan.
     /// @param revnetId The ID of the revnet the loan is being returned in.
-    /// @param collateralAmount The amount of collateral being returned from the loan.
+    /// @param collateralCount The amount of collateral being returned from the loan.
     /// @param beneficiary The address receiving the returned collateral.
-    function _returnCollateralFrom(uint256 revnetId, uint256 collateralAmount, address payable beneficiary) internal {
+    function _returnCollateralFrom(uint256 revnetId, uint256 collateralCount, address payable beneficiary) internal {
         // Decrement the total amount of collateral tokens.
-        totalCollateralOf[revnetId] -= collateralAmount;
+        totalCollateralOf[revnetId] -= collateralCount;
 
         // Mint the collateral tokens back to the loan payer.
         // slither-disable-next-line unused-return,calls-loop
         CONTROLLER.mintTokensOf({
             projectId: revnetId,
-            tokenCount: collateralAmount,
+            tokenCount: collateralCount,
             beneficiary: beneficiary,
             memo: "Removing collateral from loan",
             useReservedPercent: false

@@ -68,6 +68,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     error REVDeployer_AutoIssuanceBeneficiaryZeroAddress();
     error REVDeployer_CashOutDelayNotFinished();
     error REVDeployer_CashOutsCantBeTurnedOffCompletely();
+    error REVDeployer_MustHaveSplits();
     error REVDeployer_RulesetDoesNotAllowDeployingSuckers();
     error REVDeployer_StageNotStarted();
     error REVDeployer_StagesRequired();
@@ -348,17 +349,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     // -------------------------- public views --------------------------- //
     //*********************************************************************//
 
-    /// @notice A flag indicating if the current ruleset allows deploying new suckers.
-    /// @param revnetId The ID of the revnet to check the ruleset of.
-    /// @return flag A flag indicating if the current ruleset allows deploying new suckers.
-    function allowsDeployingSuckersInCurrentRulesetOf(uint256 revnetId) public view returns (bool) {
-        // Check if the current ruleset allows deploying new suckers.
-        // slither-disable-next-line unused-return
-        (, JBRulesetMetadata memory metadata) = CONTROLLER.currentRulesetOf(revnetId);
-        // Check the third bit, it indicates if the ruleset allows new suckers to be deployed.
-        return ((metadata.metadata >> 2) & 1) == 1;
-    }
-
     /// @notice A flag indicating whether an address is a revnet's split operator.
     /// @param revnetId The ID of the revnet.
     /// @param addr The address to check.
@@ -488,35 +478,10 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         }
     }
 
-    /// @notice Creates a reserved token split group that goes entirely to the specified split operator.
-    /// @dev The operator can add other beneficiaries to the split group later, if they wish.
-    /// @param splitOperator The address to send the entire split amount to.
-    /// @return splitGroups The split group, entirely assigned to the operator.
-    function _makeOperatorSplitGroupWith(address splitOperator)
-        internal
-        pure
-        returns (JBSplitGroup[] memory splitGroups)
-    {
-        // Create a split group that assigns all of the splits to the operator.
-        JBSplit[] memory splits = new JBSplit[](1);
-        splits[0] = JBSplit({
-            preferAddToBalance: false,
-            percent: JBConstants.SPLITS_TOTAL_PERCENT,
-            projectId: 0,
-            beneficiary: payable(splitOperator),
-            lockedUntil: 0,
-            hook: IJBSplitHook(address(0))
-        });
-
-        // Package the reserved token splits.
-        splitGroups = new JBSplitGroup[](1);
-        splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: splits});
-    }
-
     /// @notice Convert a revnet's stages into a series of Juicebox project rulesets.
     /// @param configuration The configuration containing the revnet's stages.
-    /// @return rulesetConfigurations A list of ruleset configurations defined by the stages.
     /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
+    /// @return rulesetConfigurations A list of ruleset configurations defined by the stages.
     /// @return encodedConfiguration A byte-encoded representation of the revnet's configuration. Used for sucker
     /// deployment salts.
     function _makeRulesetConfigurations(
@@ -554,6 +519,12 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             // Set the stage being iterated on.
             REVStageConfig calldata stageConfiguration = configuration.stageConfigurations[i];
 
+            // Make sure the revnet has at least one split if it has a split percent.
+            // Otherwise, the split would go to this contract since its the revnet's owner.
+            if (stageConfiguration.splitPercent > 0 && stageConfiguration.splits.length == 0) {
+                revert REVDeployer_MustHaveSplits();
+            }
+
             // If the stage's start time is not after the previous stage's start time, revert.
             if (stageConfiguration.startsAtOrAfter <= previousStartTime) {
                 revert REVDeployer_StageTimesMustIncrease();
@@ -572,9 +543,14 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             metadata.useTotalSurplusForCashOuts = true; // Use surplus from all terminals for cash outs.
             metadata.allowOwnerMinting = true; // Allow this contract to auto-mint tokens as the revnet's owner.
             metadata.useDataHookForPay = true; // Call this contract's `beforePayRecordedWith(…)` callback on payments.
-            metadata.useDataHookForCashOut = true;
+            metadata.useDataHookForCashOut = true; // Call this contract's `beforeCashOutRecordedWith(…)` callback on
+                // cash outs.
             metadata.dataHook = address(this); // This contract is the data hook.
             metadata.metadata = stageConfiguration.extraMetadata;
+
+            // Package the reserved token splits.
+            JBSplitGroup[] memory splitGroups = new JBSplitGroup[](1);
+            splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: stageConfiguration.splits});
 
             // Set up the ruleset.
             rulesetConfigurations[i] = JBRulesetConfig({
@@ -584,7 +560,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
                 weightCutPercent: stageConfiguration.issuanceCutPercent,
                 approvalHook: IJBRulesetApprovalHook(address(0)),
                 metadata: metadata,
-                splitGroups: new JBSplitGroup[](0),
+                splitGroups: splitGroups,
                 fundAccessLimitGroups: fundAccessLimitGroups
             });
 
@@ -810,7 +786,13 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         _checkIfIsSplitOperatorOf({revnetId: revnetId, operator: _msgSender()});
 
         // Check if the current ruleset allows deploying new suckers.
-        if (!allowsDeployingSuckersInCurrentRulesetOf(revnetId)) {
+        // slither-disable-next-line unused-return
+        (, JBRulesetMetadata memory metadata) = CONTROLLER.currentRulesetOf(revnetId);
+
+        // Check the third bit, it indicates if the ruleset allows new suckers to be deployed.
+        bool allowsDeployingSuckers = ((metadata.metadata >> 2) & 1) == 1;
+
+        if (!allowsDeployingSuckers) {
             revert REVDeployer_RulesetDoesNotAllowDeployingSuckers();
         }
 
@@ -1105,15 +1087,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             });
             loansOf[revnetId] = configuration.loans;
         }
-
-        // Set up the reserved token split group under the default ruleset (0).
-        // This split group sends the revnet's reserved tokens to the split operator,
-        // who can allocate splits to other recipients later on.
-        CONTROLLER.setSplitGroupsOf({
-            projectId: revnetId,
-            rulesetId: 0,
-            splitGroups: _makeOperatorSplitGroupWith(configuration.splitOperator)
-        });
 
         // Store the auto-issuance amounts.
         _storeAutoIssuanceAmounts({revnetId: revnetId, configuration: configuration});
