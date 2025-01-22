@@ -459,19 +459,20 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 feeTokenCount = mulDiv(tokensToCashout, jbMultiTerminal().FEE(), JBConstants.MAX_FEE);
         uint256 reclaimableSurplus = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
             projectId: REVNET_ID,
-            tokenCount: tokensToCashout - feeTokenCount, 
+            tokenCount: tokensToCashout - feeTokenCount,
             totalSupply: (70_000 * 10 ** 18) + totalSupplyExcludingAutoMint,
             surplus: nativeSurplus
         });
 
         uint256 revFee = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
             projectId: REVNET_ID,
-            tokenCount: feeTokenCount, 
+            tokenCount: feeTokenCount,
             totalSupply: (70_000 * 10 ** 18) + totalSupplyExcludingAutoMint - (tokensToCashout - feeTokenCount),
             surplus: nativeSurplus - reclaimableSurplus
         });
 
-        assertGe(fullReclaimableSurplus, 995*(reclaimableSurplus + revFee)/1000); // small marging for curve rounding.
+        assertGe(fullReclaimableSurplus, 995 * (reclaimableSurplus + revFee) / 1000); // small marging for curve
+            // rounding.
 
         uint256 balanceBefore = USER.balance;
 
@@ -491,15 +492,14 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             USER, REVNET_ID, tokensToCashout, JBConstants.NATIVE_TOKEN, 0, payable(USER), bytes("")
         );
 
-
         assertGe(USER.balance, balanceBefore);
-        
+
         uint256 balance = USER.balance - balanceBefore;
         uint256 nanaFee = JBFees.feeAmountFrom({amount: balance, feePercent: jbMultiTerminal().FEE()});
 
         assertApproxEqAbs(balance, reclaimableSurplus - nanaFee, 1);
 
-        assertGe(reclaimableSurplus + revFee, 995*loanable/1000); // small marging for curve rounding.
+        assertGe(reclaimableSurplus + revFee, 995 * loanable / 1000); // small marging for curve rounding.
     }
 
     function test_Pay_Borrow_With_Loan_Source() public {
