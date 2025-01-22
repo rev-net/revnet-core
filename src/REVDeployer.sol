@@ -322,7 +322,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
         // Return the cash out rate and the number of revnet tokens to cash out, minus the tokens being used to pay the
         // fee.
-        return (context.cashOutTaxRate, context.cashOutCount - feeCashOutCount, context.totalSupply, hookSpecifications);
+        return (context.cashOutTaxRate, nonFeeCashOutCount, context.totalSupply, hookSpecifications);
     }
 
     /// @notice A flag indicating whether an address has permission to mint a revnet's tokens on-demand.
