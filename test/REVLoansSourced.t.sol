@@ -422,56 +422,100 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     }
 
     function test_Cashout(
+        uint104 autoIssuance,
         uint256 totalSupplyExcludingAutoMint,
         uint256 nativeSurplus,
-        uint256 tokensToCashout
+        uint256 tokensToCashout,
+        uint16 cashOutTaxRate
     )
         public
     {
-        vm.assume(totalSupplyExcludingAutoMint > 0 && totalSupplyExcludingAutoMint <= type(uint112).max);
+        // Since we don't actually mint the autoIssuance tokens, we don't have to worry about it exceeding the
+        // `SafeSupply`.
+        vm.assume(cashOutTaxRate <= JBConstants.MAX_FEE);
+        vm.assume(totalSupplyExcludingAutoMint > 0 && totalSupplyExcludingAutoMint <= type(uint208).max);
         vm.assume(totalSupplyExcludingAutoMint > tokensToCashout);
+
+        // Deploy a new REVNET, that has multiple stages where the fee decrease.
+        // This lets people refinance their loans to get a better rate.
+        uint256 revnetProjectId;
+        {
+            FeeProjectConfig memory projectConfig = getSecondProjectConfig();
+            REVAutoIssuance[] memory issuanceConfs;
+            issuanceConfs = new REVAutoIssuance[](1);
+            issuanceConfs[0] =
+                REVAutoIssuance({chainId: uint32(block.chainid), count: uint104(autoIssuance), beneficiary: multisig()});
+
+            REVStageConfig[] memory stageConfigurations = new REVStageConfig[](1);
+            stageConfigurations[0] = REVStageConfig({
+                startsAtOrAfter: uint40(block.timestamp),
+                autoIssuances: issuanceConfs,
+                splitPercent: 2000, // 20%
+                initialIssuance: 1000e18,
+                issuanceCutFrequency: 90 days,
+                issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
+                cashOutTaxRate: cashOutTaxRate, // 20%
+                extraMetadata: 0
+            });
+
+            // Replace the configuration.
+            projectConfig.configuration.stageConfigurations = stageConfigurations;
+            projectConfig.configuration.description.salt = "FeeChange";
+
+            revnetProjectId = REV_DEPLOYER.deployFor({
+                revnetId: 0, // Zero to deploy a new revnet
+                configuration: projectConfig.configuration,
+                terminalConfigurations: projectConfig.terminalConfigurations,
+                buybackHookConfiguration: projectConfig.buybackHookConfiguration,
+                suckerDeploymentConfiguration: projectConfig.suckerDeploymentConfiguration
+            });
+        }
 
         // Add the surplus into the project.
         vm.deal(USER, nativeSurplus);
         vm.prank(USER);
         jbMultiTerminal().addToBalanceOf{value: nativeSurplus}(
-            REVNET_ID, JBConstants.NATIVE_TOKEN, nativeSurplus, false, string(""), bytes("")
+            revnetProjectId, JBConstants.NATIVE_TOKEN, nativeSurplus, false, string(""), bytes("")
         );
 
         // Mint the entire supply excluding automint to the user.
         vm.prank(address(jbController()));
-        jbTokens().mintFor(USER, REVNET_ID, totalSupplyExcludingAutoMint);
+        jbTokens().mintFor(USER, revnetProjectId, totalSupplyExcludingAutoMint);
 
         // Check what a borrow would result in more.
         uint256 loanable = LOANS_CONTRACT.borrowableAmountFrom(
-            REVNET_ID, tokensToCashout, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+            revnetProjectId, tokensToCashout, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
         uint256 fullReclaimableSurplus = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
-            projectId: REVNET_ID,
+            projectId: revnetProjectId,
             tokenCount: tokensToCashout,
-            totalSupply: (70_000 * 10 ** 18) + totalSupplyExcludingAutoMint,
+            totalSupply: autoIssuance + totalSupplyExcludingAutoMint,
             surplus: nativeSurplus
         });
 
         assertGe(fullReclaimableSurplus, loanable);
 
-        uint256 feeTokenCount = mulDiv(tokensToCashout, jbMultiTerminal().FEE(), JBConstants.MAX_FEE);
+        uint256 feeTokenCount =
+            cashOutTaxRate == 0 ? 0 : mulDiv(tokensToCashout, jbMultiTerminal().FEE(), JBConstants.MAX_FEE);
+
+        uint256 totalSupply = autoIssuance + totalSupplyExcludingAutoMint;
         uint256 reclaimableSurplus = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
-            projectId: REVNET_ID,
+            projectId: revnetProjectId,
             tokenCount: tokensToCashout - feeTokenCount,
-            totalSupply: (70_000 * 10 ** 18) + totalSupplyExcludingAutoMint,
+            totalSupply: totalSupply,
             surplus: nativeSurplus
         });
 
         uint256 revFee = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
-            projectId: REVNET_ID,
+            projectId: revnetProjectId,
             tokenCount: feeTokenCount,
-            totalSupply: (70_000 * 10 ** 18) + totalSupplyExcludingAutoMint - (tokensToCashout - feeTokenCount),
+            totalSupply: totalSupply - (tokensToCashout - feeTokenCount),
             surplus: nativeSurplus - reclaimableSurplus
         });
 
-        assertGe(fullReclaimableSurplus, mulDiv((reclaimableSurplus + revFee), 995, 1000)); // small marging for curve rounding.
+        assertGe(fullReclaimableSurplus, mulDiv((reclaimableSurplus + revFee), 995, 1000)); // small marging for curve
+            // rounding.
 
         uint256 balanceBefore = USER.balance;
 
@@ -479,26 +523,25 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         vm.expectCall(address(REV_DEPLOYER), abi.encode(REVDeployer.beforeCashOutRecordedWith.selector));
 
         // It only adds itself as a `after` cashoutHook if there is a cashout tax rate.
-        // NOTICE: This test does not hold if there is a fee, as a borrow in that case might return more assets than a
-        // cashout.
-        if (getSecondProjectConfig().configuration.stageConfigurations[0].cashOutTaxRate != 0) {
+        if (cashOutTaxRate > 0) {
             vm.expectCall(address(REV_DEPLOYER), abi.encode(REVDeployer.afterCashOutRecordedWith.selector));
         }
 
         // Perform a cashout.
         vm.prank(USER);
         jbMultiTerminal().cashOutTokensOf(
-            USER, REVNET_ID, tokensToCashout, JBConstants.NATIVE_TOKEN, 0, payable(USER), bytes("")
+            USER, revnetProjectId, tokensToCashout, JBConstants.NATIVE_TOKEN, 0, payable(USER), bytes("")
         );
 
         assertGe(USER.balance, balanceBefore);
 
         uint256 balance = USER.balance - balanceBefore;
-        uint256 nanaFee = JBFees.feeAmountFrom({amount: balance, feePercent: jbMultiTerminal().FEE()});
+        uint256 nanaFee =
+            cashOutTaxRate == 0 ? 0 : JBFees.feeAmountFrom({amount: balance, feePercent: jbMultiTerminal().FEE()});
 
         assertApproxEqAbs(balance, reclaimableSurplus - nanaFee, 1);
 
-        assertGe(reclaimableSurplus + revFee, mulDiv(loanable, 99, 100)); // small marging for curve rounding.
+        assertGe(reclaimableSurplus + revFee, mulDiv(loanable, 98, 100)); // small marging for curve rounding.
     }
 
     function test_Pay_Borrow_With_Loan_Source() public {
