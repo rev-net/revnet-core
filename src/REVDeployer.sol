@@ -296,16 +296,18 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         // Get a reference to the number of tokens being used to pay the fee (out of the total being cashed out).
         uint256 feeCashOutCount = mulDiv(context.cashOutCount, FEE, JBConstants.MAX_FEE);
 
+        uint256 forwardedAmount = JBCashOuts.cashOutFrom({
+            surplus: context.surplus.value,
+            cashOutCount: feeCashOutCount,
+            totalSupply: context.totalSupply,
+            cashOutTaxRate: context.cashOutTaxRate
+        });
+
         // Assemble a cash out hook specification to invoke `afterCashOutRecordedWith(…)` with, to process the fee.
         hookSpecifications = new JBCashOutHookSpecification[](1);
         hookSpecifications[0] = JBCashOutHookSpecification({
             hook: IJBCashOutHook(address(this)),
-            amount: JBCashOuts.cashOutFrom({
-                surplus: context.surplus.value,
-                cashOutCount: feeCashOutCount,
-                totalSupply: context.totalSupply,
-                cashOutTaxRate: context.cashOutTaxRate
-            }),
+            amount: forwardedAmount,
             metadata: abi.encode(feeTerminal)
         });
 
@@ -336,17 +338,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     //*********************************************************************//
     // -------------------------- public views --------------------------- //
     //*********************************************************************//
-
-    /// @notice A flag indicating if the current ruleset allows deploying new suckers.
-    /// @param revnetId The ID of the revnet to check the ruleset of.
-    /// @return flag A flag indicating if the current ruleset allows deploying new suckers.
-    function allowsDeployingSuckersInCurrentRulesetOf(uint256 revnetId) public view returns (bool) {
-        // Check if the current ruleset allows deploying new suckers.
-        // slither-disable-next-line unused-return
-        (, JBRulesetMetadata memory metadata) = CONTROLLER.currentRulesetOf(revnetId);
-        // Check the third bit, it indicates if the ruleset allows new suckers to be deployed.
-        return ((metadata.metadata >> 2) & 1) == 1;
-    }
 
     /// @notice A flag indicating whether an address is a revnet's split operator.
     /// @param revnetId The ID of the revnet.
@@ -479,8 +470,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
     /// @notice Convert a revnet's stages into a series of Juicebox project rulesets.
     /// @param configuration The configuration containing the revnet's stages.
-    /// @return rulesetConfigurations A list of ruleset configurations defined by the stages.
     /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
+    /// @return rulesetConfigurations A list of ruleset configurations defined by the stages.
     /// @return encodedConfiguration A byte-encoded representation of the revnet's configuration. Used for sucker
     /// deployment salts.
     function _makeRulesetConfigurations(
@@ -784,7 +775,13 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         _checkIfIsSplitOperatorOf({revnetId: revnetId, operator: _msgSender()});
 
         // Check if the current ruleset allows deploying new suckers.
-        if (!allowsDeployingSuckersInCurrentRulesetOf(revnetId)) {
+        // slither-disable-next-line unused-return
+        (, JBRulesetMetadata memory metadata) = CONTROLLER.currentRulesetOf(revnetId);
+
+        // Check the third bit, it indicates if the ruleset allows new suckers to be deployed.
+        bool allowsDeployingSuckers = ((metadata.metadata >> 2) & 1) == 1;
+
+        if (!allowsDeployingSuckers) {
             revert REVDeployer_RulesetDoesNotAllowDeployingSuckers();
         }
 
@@ -1250,7 +1247,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             });
         }
     }
-
     /// @notice Stores the auto-issuance amounts for each of a revnet's stages.
     /// @param revnetId The ID of the revnet to store the auto-mint amounts for.
     /// @param configuration The revnet's configuration. See `REVConfig`.
