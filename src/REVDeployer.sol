@@ -675,7 +675,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     function afterCashOutRecordedWith(JBAfterCashOutRecordedContext calldata context) external payable {
         // If there's sufficient approval, transfer normally.
         if (context.forwardedAmount.token != JBConstants.NATIVE_TOKEN) {
-            return IERC20(context.forwardedAmount.token).safeTransferFrom({
+            IERC20(context.forwardedAmount.token).safeTransferFrom({
                 from: msg.sender,
                 to: address(this),
                 value: context.forwardedAmount.value
