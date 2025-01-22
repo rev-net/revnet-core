@@ -560,7 +560,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         assertApproxEqAbs(balance, reclaimableSurplus - nanaFee, 1);
 
-        assertGe(reclaimableSurplus + revFee, mulDiv(loanable, 98, 100)); // small marging for curve rounding.
+        assertGe(reclaimableSurplus + revFee, mulDiv(loanable, 99, 100)); // small marging for curve rounding.
     }
 
     function test_Pay_Borrow_With_Loan_Source() public {
