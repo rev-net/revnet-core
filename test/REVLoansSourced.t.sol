@@ -471,8 +471,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             surplus: nativeSurplus - reclaimableSurplus
         });
 
-        assertGe(fullReclaimableSurplus, 995 * (reclaimableSurplus + revFee) / 1000); // small marging for curve
-            // rounding.
+        assertGe(fullReclaimableSurplus, mulDiv((reclaimableSurplus + revFee), 995, 1000)); // small marging for curve rounding.
 
         uint256 balanceBefore = USER.balance;
 
@@ -499,7 +498,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         assertApproxEqAbs(balance, reclaimableSurplus - nanaFee, 1);
 
-        assertGe(reclaimableSurplus + revFee, 995 * loanable / 1000); // small marging for curve rounding.
+        assertGe(reclaimableSurplus + revFee, mulDiv(loanable, 99, 100)); // small marging for curve rounding.
     }
 
     function test_Pay_Borrow_With_Loan_Source() public {
@@ -690,7 +689,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        // loanable amount is (slightly) higher due to fee payment increasing the supply/assets ratio.
         assertGt(loanableSecondStage, loanable);
 
         // we should not have to add collateral

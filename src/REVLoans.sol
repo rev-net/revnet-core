@@ -356,9 +356,6 @@ contract REVLoans is ERC721, ERC2771Context, IREVLoans, Ownable {
         JBAccountingContext memory accountingContext =
             loan.source.terminal.accountingContextForTokenOf({projectId: revnetId, token: loan.source.token});
 
-        // Keep a reference to the pending auto issuance tokens.
-        uint256 pendingAutoIssuanceTokens = REVNETS.unrealizedAutoIssuanceAmountOf(revnetId);
-
         // Keep a reference to the revnet's terminals.
         IJBTerminal[] memory terminals = DIRECTORY.terminalsOf(revnetId);
 
