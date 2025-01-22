@@ -294,17 +294,29 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
         // Get a reference to the number of tokens being used to pay the fee (out of the total being cashed out).
         uint256 feeCashOutCount = mulDiv(context.cashOutCount, FEE, JBConstants.MAX_FEE);
+        uint256 nonFeeCashOutCount = context.cashOutCount - feeCashOutCount;
+
+        // Keep a reference to the amount claimable with non-fee tokens.
+        uint256 postFeeReclaimedAmount = JBCashOuts.cashOutFrom({
+            surplus: context.surplus.value,
+            cashOutCount: nonFeeCashOutCount,
+            totalSupply: context.totalSupply,
+            cashOutTaxRate: context.cashOutTaxRate
+        });
+
+        // Keep a reference to the fee amount after the reclaimed amount is subtracted.
+        uint256 feeAmount = JBCashOuts.cashOutFrom({
+            surplus: context.surplus.value - postFeeReclaimedAmount,
+            cashOutCount: feeCashOutCount,
+            totalSupply: context.totalSupply - nonFeeCashOutCount,
+            cashOutTaxRate: context.cashOutTaxRate
+        });
 
         // Assemble a cash out hook specification to invoke `afterCashOutRecordedWith(…)` with, to process the fee.
         hookSpecifications = new JBCashOutHookSpecification[](1);
         hookSpecifications[0] = JBCashOutHookSpecification({
             hook: IJBCashOutHook(address(this)),
-            amount: JBCashOuts.cashOutFrom({
-                surplus: context.surplus.value,
-                cashOutCount: feeCashOutCount,
-                totalSupply: context.totalSupply,
-                cashOutTaxRate: context.cashOutTaxRate
-            }),
+            amount: feeAmount,
             metadata: abi.encode(feeTerminal)
         });
 

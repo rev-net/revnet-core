@@ -221,7 +221,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceCutFrequency: 90 days,
                 issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
-                cashOutTaxRate: 0, //6000, // 0.6
+                cashOutTaxRate: 6000, //6000, // 0.6
                 extraMetadata: 0
             });
         }
@@ -466,7 +466,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         );
 
         assertGe(USER.balance, balanceBefore);
-        assertGe(USER.balance - balanceBefore, loanable);
+        assertGe(USER.balance - balanceBefore, loanable * 940 / 1000);
     }
 
     function test_Pay_Borrow_With_Loan_Source() public {
