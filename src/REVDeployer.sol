@@ -708,13 +708,19 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         override
         returns (uint256)
     {
+        // Normalize and encode the configurations.
+        (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash) =
+            _makeRulesetConfigurations(configuration);
+
         // Deploy the revnet.
         return _deployRevnetFor({
             revnetId: revnetId,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
-            suckerDeploymentConfiguration: suckerDeploymentConfiguration
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration,
+            rulesetConfigurations: rulesetConfigurations,
+            encodedConfigurationHash: encodedConfigurationHash
         });
     }
 
@@ -883,13 +889,29 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         // (which will be 1 greater than the current count).
         if (originalRevnetId == 0) revnetId = PROJECTS.count() + 1;
 
-        // Deploy the tiered ERC-721 hook contract.
-        // slither-disable-next-line reentrancy-benign
-        hook = HOOK_DEPLOYER.deployHookFor({
-            projectId: revnetId,
-            deployTiersHookConfig: tiered721HookConfiguration.baseline721HookConfiguration,
-            salt: keccak256(abi.encode(tiered721HookConfiguration.salt, _msgSender()))
-        });
+        {
+            // Normalize and encode the configurations.
+            (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash) =
+                _makeRulesetConfigurations(configuration);
+
+            // Deploy the tiered ERC-721 hook contract.
+            // slither-disable-next-line reentrancy-benign
+            hook = HOOK_DEPLOYER.deployHookFor({
+                projectId: revnetId,
+                deployTiersHookConfig: tiered721HookConfiguration.baseline721HookConfiguration,
+                salt: keccak256(abi.encode(tiered721HookConfiguration.salt, encodedConfigurationHash, _msgSender()))
+            });
+
+            _deployRevnetFor({
+                revnetId: originalRevnetId,
+                configuration: configuration,
+                terminalConfigurations: terminalConfigurations,
+                buybackHookConfiguration: buybackHookConfiguration,
+                suckerDeploymentConfiguration: suckerDeploymentConfiguration,
+                rulesetConfigurations: rulesetConfigurations,
+                encodedConfigurationHash: encodedConfigurationHash
+            });
+        }
 
         // Store the tiered ERC-721 hook.
         tiered721HookOf[revnetId] = hook;
@@ -925,14 +947,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             });
         }
 
-        _deployRevnetFor({
-            revnetId: originalRevnetId,
-            configuration: configuration,
-            terminalConfigurations: terminalConfigurations,
-            buybackHookConfiguration: buybackHookConfiguration,
-            suckerDeploymentConfiguration: suckerDeploymentConfiguration
-        });
-
         return (revnetId, hook);
     }
 
@@ -950,15 +964,13 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         REVConfig calldata configuration,
         JBTerminalConfig[] calldata terminalConfigurations,
         REVBuybackHookConfig calldata buybackHookConfiguration,
-        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
+        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration,
+        JBRulesetConfig[] memory rulesetConfigurations,
+        bytes32 encodedConfigurationHash
     )
         internal
         returns (uint256)
     {
-        // Normalize and encode the configurations.
-        (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash) =
-            _makeRulesetConfigurations(configuration);
-
         if (revnetId == 0) {
             // If we're deploying a new revnet, launch a Juicebox project for it.
             // slither-disable-next-line reentrancy-benign,reentrancy-events
@@ -995,7 +1007,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             projectId: revnetId,
             name: configuration.description.name,
             symbol: configuration.description.ticker,
-            salt: keccak256(abi.encode(configuration.description.salt, _msgSender()))
+            salt: keccak256(abi.encode(configuration.description.salt, encodedConfigurationHash, _msgSender()))
         });
 
         // If specified, set up the buyback hook.
