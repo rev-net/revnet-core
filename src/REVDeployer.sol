@@ -532,10 +532,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             metadata.baseCurrency = configuration.baseCurrency;
             metadata.useTotalSurplusForCashOuts = true; // Use surplus from all terminals for cash outs.
             metadata.allowOwnerMinting = true; // Allow this contract to auto-mint tokens as the revnet's owner.
-            metadata.useDataHookForPay = true; // Call this contract's `beforePayRecordedWith(…)` callback on
-                // payments.
-            metadata.useDataHookForCashOut = true; // Call this contract's `beforeCashOutRecordedWith(…)` callback
-                // on cash outs.
+            metadata.useDataHookForPay = true; // Call this contract's `beforePayRecordedWith(…)` callback on payments.
+            metadata.useDataHookForCashOut = true; // Call this contract's `beforeCashOutRecordedWith(…)` callback on cash outs.
             metadata.dataHook = address(this); // This contract is the data hook.
             metadata.metadata = stageConfiguration.extraMetadata;
 
@@ -543,6 +541,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             JBSplitGroup[] memory splitGroups = new JBSplitGroup[](1);
             splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: stageConfiguration.splits});
 
+            // Set up the ruleset.
             rulesetConfigurations[i] = JBRulesetConfig({
                 mustStartAtOrAfter: stageConfiguration.startsAtOrAfter,
                 duration: stageConfiguration.issuanceCutFrequency,
@@ -1174,7 +1173,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
         emit SetCashOutDelay({revnetId: revnetId, cashOutDelay: cashOutDelay, caller: _msgSender()});
     }
-
+    
     /// @notice Grants a permission to an address (an "operator").
     /// @param operator The address to give the permission to.
     /// @param revnetId The ID of the revnet to scope the permission for.
@@ -1251,7 +1250,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @notice Stores the auto-issuance amounts for each of a revnet's stages.
     /// @param revnetId The ID of the revnet to store the auto-mint amounts for.
     /// @param configuration The revnet's configuration. See `REVConfig`.
-
     function _storeAutoIssuanceAmounts(uint256 revnetId, REVConfig calldata configuration) internal {
         // Keep a reference to the total amount of tokens which can be auto-minted.
         uint256 totalUnrealizedAutoIssuanceAmount;
