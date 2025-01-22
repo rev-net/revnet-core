@@ -985,7 +985,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         {
             // Normalize and encode the configurations.
             (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash) =
-                _makeRulesetConfigurations({ configuration: configuration, terminalConfigurations: terminalConfigurations });
+            _makeRulesetConfigurations({configuration: configuration, terminalConfigurations: terminalConfigurations});
 
             // Deploy the tiered ERC-721 hook contract.
             // slither-disable-next-line reentrancy-benign
