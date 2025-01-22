@@ -292,7 +292,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
         );
 
         LOANS_CONTRACT = new REVLoans({
-            projects: jbProjects(),
+            revnets: REV_DEPLOYER,
             revId: FEE_PROJECT_ID,
             owner: address(this),
             permit2: permit2(),
@@ -306,6 +306,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
         // Build the config.
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
+        vm.prank(address(multisig()));
         // Configure the project.
         REVNET_ID = REV_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet

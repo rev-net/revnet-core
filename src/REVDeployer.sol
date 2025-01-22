@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {mulDiv} from "@prb/math/src/Common.sol";
 import {IJB721TiersHook} from "@bananapus/721-hook/src/interfaces/IJB721TiersHook.sol";
 import {IJB721TiersHookDeployer} from "@bananapus/721-hook/src/interfaces/IJB721TiersHookDeployer.sol";
@@ -22,6 +24,7 @@ import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
 import {JBCashOuts} from "@bananapus/core/src/libraries/JBCashOuts.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 import {JBSplitGroupIds} from "@bananapus/core/src/libraries/JBSplitGroupIds.sol";
+import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
 import {JBAfterCashOutRecordedContext} from "@bananapus/core/src/structs/JBAfterCashOutRecordedContext.sol";
 import {JBBeforePayRecordedContext} from "@bananapus/core/src/structs/JBBeforePayRecordedContext.sol";
 import {JBBeforeCashOutRecordedContext} from "@bananapus/core/src/structs/JBBeforeCashOutRecordedContext.sol";
@@ -54,10 +57,14 @@ import {REVSuckerDeploymentConfig} from "./structs/REVSuckerDeploymentConfig.sol
 /// @notice `REVDeployer` deploys, manages, and operates Revnets.
 /// @dev Revnets are unowned Juicebox projects which operate autonomously after deployment.
 contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCashOutHook, IERC721Receiver {
+    // A library that adds default safety checks to ERC20 functionality.
+    using SafeERC20 for IERC20;
+
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
+    error REVDeployer_LoanSourceDoesntMatchTerminalConfigurations(address token, address terminal);
     error REVDeployer_AutoIssuanceBeneficiaryZeroAddress();
     error REVDeployer_CashOutDelayNotFinished(uint256 cashOutDelay, uint256 blockTimestamp);
     error REVDeployer_CashOutsCantBeTurnedOffCompletely(uint256 cashOutTaxRate, uint256 maxCashOutTaxRate);
@@ -68,7 +75,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     error REVDeployer_StageNotStarted(uint256 stageStartTime, uint256 blockTimestamp);
     error REVDeployer_StagesRequired();
     error REVDeployer_StageTimesMustIncrease();
-    error REVDeployer_Unauthorized(uint256 revnetId, address operator);
+    error REVDeployer_Unauthorized(uint256 revnetId, address caller);
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -438,16 +445,16 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @notice Initialize a fund access limit group for the loan contract to use.
     /// @dev Returns an unlimited surplus allowance for each token which can be loaned out.
     /// @param configuration The revnet's configuration.
+    /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
     /// @return fundAccessLimitGroups The fund access limit groups for the loans.
-    function _makeLoanFundAccessLimits(REVConfig calldata configuration)
+    function _makeLoanFundAccessLimits(
+        REVConfig calldata configuration,
+        JBTerminalConfig[] calldata terminalConfigurations
+    )
         internal
         pure
         returns (JBFundAccessLimitGroup[] memory fundAccessLimitGroups)
     {
-        // Set up an unlimited allowance for the loan contract to use.
-        JBCurrencyAmount[] memory loanAllowances = new JBCurrencyAmount[](1);
-        loanAllowances[0] = JBCurrencyAmount({currency: configuration.baseCurrency, amount: type(uint224).max});
-
         // Initialize the fund access limit groups.
         fundAccessLimitGroups = new JBFundAccessLimitGroup[](configuration.loanSources.length);
 
@@ -455,6 +462,21 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         for (uint256 i; i < configuration.loanSources.length; i++) {
             // Set the loan source being iterated on.
             REVLoanSource calldata loanSource = configuration.loanSources[i];
+
+            // Keep a reference to the currency of the loan source.
+            uint32 currency =
+                _matchingCurrencyOf({terminalConfigurations: terminalConfigurations, loanSource: loanSource});
+
+            // If the currency is 0 it means the loan source doesn't match the terminal configurations.
+            if (currency == 0) {
+                revert REVDeployer_LoanSourceDoesntMatchTerminalConfigurations(
+                    loanSource.token, address(loanSource.terminal)
+                );
+            }
+
+            // Set up an unlimited allowance for the loan contract to use.
+            JBCurrencyAmount[] memory loanAllowances = new JBCurrencyAmount[](1);
+            loanAllowances[0] = JBCurrencyAmount({currency: currency, amount: type(uint224).max});
 
             // Set up the fund access limits for the loans.
             fundAccessLimitGroups[i] = JBFundAccessLimitGroup({
@@ -494,9 +516,13 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @notice Convert a revnet's stages into a series of Juicebox project rulesets.
     /// @param configuration The configuration containing the revnet's stages.
     /// @return rulesetConfigurations A list of ruleset configurations defined by the stages.
+    /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
     /// @return encodedConfigurationHash A hash that represents the revnet's configuration. Used for sucker
     /// deployment salts.
-    function _makeRulesetConfigurations(REVConfig calldata configuration)
+    function _makeRulesetConfigurations(
+        REVConfig calldata configuration,
+        JBTerminalConfig[] calldata terminalConfigurations
+    )
         internal
         view
         returns (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash)
@@ -517,7 +543,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         );
 
         // Initialize fund access limit groups for the loan contract to use.
-        JBFundAccessLimitGroup[] memory fundAccessLimitGroups = _makeLoanFundAccessLimits(configuration);
+        JBFundAccessLimitGroup[] memory fundAccessLimitGroups =
+            _makeLoanFundAccessLimits({configuration: configuration, terminalConfigurations: terminalConfigurations});
 
         // Keep a reference to the previous ruleset's start time.
         uint256 previousStartTime;
@@ -544,8 +571,10 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             metadata.reservedPercent = stageConfiguration.splitPercent;
             metadata.cashOutTaxRate = stageConfiguration.cashOutTaxRate;
             metadata.baseCurrency = configuration.baseCurrency;
+            metadata.useTotalSurplusForCashOuts = true; // Use surplus from all terminals for cash outs.
             metadata.allowOwnerMinting = true; // Allow this contract to auto-mint tokens as the revnet's owner.
             metadata.useDataHookForPay = true; // Call this contract's `beforePayRecordedWith(…)` callback on payments.
+            metadata.useDataHookForCashOut = true;
             metadata.dataHook = address(this); // This contract is the data hook.
             metadata.metadata = stageConfiguration.extraMetadata;
 
@@ -574,6 +603,34 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         encodedConfigurationHash = keccak256(encodedConfiguration);
     }
 
+    /// @notice Returns the currency of the loan source, if a matching terminal configuration is found.
+    /// @param terminalConfigurations The terminals to check.
+    /// @param loanSource The loan source to check.
+    /// @return currency The currency of the loan source.
+    function _matchingCurrencyOf(
+        JBTerminalConfig[] calldata terminalConfigurations,
+        REVLoanSource calldata loanSource
+    )
+        internal
+        pure
+        returns (uint32)
+    {
+        for (uint256 i; i < terminalConfigurations.length; i++) {
+            JBTerminalConfig calldata terminalConfiguration = terminalConfigurations[i];
+            if (terminalConfiguration.terminal == loanSource.terminal) {
+                for (uint256 j; j < terminalConfiguration.accountingContextsToAccept.length; j++) {
+                    JBAccountingContext calldata accountingContext = terminalConfiguration.accountingContextsToAccept[j];
+                    if (accountingContext.token == loanSource.token) {
+                        return accountingContext.currency;
+                    }
+                }
+            }
+        }
+
+        // No currency found for the terminal and token combination.
+        return 0;
+    }
+
     /// @notice Returns the permissions that the split operator should be granted for a revnet.
     /// @param revnetId The ID of the revnet to get split operator permissions for.
     /// @return allOperatorPermissions The permissions that the split operator should be granted for the revnet,
@@ -587,10 +644,11 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         uint256[] memory customSplitOperatorPermissionIndexes = _extraOperatorPermissions[revnetId];
 
         // Make the array that merges the default and custom operator permissions.
-        allOperatorPermissions = new uint256[](3 + customSplitOperatorPermissionIndexes.length);
+        allOperatorPermissions = new uint256[](4 + customSplitOperatorPermissionIndexes.length);
         allOperatorPermissions[0] = JBPermissionIds.SET_SPLIT_GROUPS;
         allOperatorPermissions[1] = JBPermissionIds.SET_BUYBACK_POOL;
         allOperatorPermissions[2] = JBPermissionIds.SET_PROJECT_URI;
+        allOperatorPermissions[3] = JBPermissionIds.ADD_PRICE_FEED;
 
         // Copy the custom permissions into the array.
         for (uint256 i; i < customSplitOperatorPermissionIndexes.length; i++) {
@@ -615,9 +673,13 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @notice Processes the fee from a cash out.
     /// @param context Cash out context passed in by the terminal.
     function afterCashOutRecordedWith(JBAfterCashOutRecordedContext calldata context) external payable {
-        // Only the revnet's payment terminals can access this function.
-        if (!DIRECTORY.isTerminalOf(context.projectId, IJBTerminal(msg.sender))) {
-            revert REVDeployer_Unauthorized(context.projectId, msg.sender);
+        // If there's sufficient approval, transfer normally.
+        if (context.forwardedAmount.token != JBConstants.NATIVE_TOKEN) {
+            return IERC20(context.forwardedAmount.token).safeTransferFrom({
+                from: msg.sender,
+                to: address(this),
+                value: context.forwardedAmount.value
+            });
         }
 
         // Parse the metadata forwarded from the data hook to get the fee terminal.
@@ -625,7 +687,11 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         (IJBTerminal feeTerminal) = abi.decode(context.hookMetadata, (IJBTerminal));
 
         // Determine how much to pay in `msg.value` (in the native currency).
-        uint256 payValue = context.forwardedAmount.token == JBConstants.NATIVE_TOKEN ? context.forwardedAmount.value : 0;
+        uint256 payValue = _beforeTransferTo({
+            to: address(feeTerminal),
+            token: context.forwardedAmount.token,
+            amount: context.forwardedAmount.value
+        });
 
         // Pay the fee.
         // slither-disable-next-line arbitrary-send-eth,unused-return
@@ -638,7 +704,21 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             memo: "",
             metadata: bytes(abi.encodePacked(context.projectId))
         }) {} catch (bytes memory) {
+            // Decrease the allowance for the fee terminal if the token is not the native token.
+            if (context.forwardedAmount.token != JBConstants.NATIVE_TOKEN) {
+                IERC20(context.forwardedAmount.token).safeDecreaseAllowance({
+                    spender: address(feeTerminal),
+                    requestedDecrease: context.forwardedAmount.value
+                });
+            }
+
             // If the fee can't be processed, return the funds to the project.
+            payValue = _beforeTransferTo({
+                to: msg.sender,
+                token: context.forwardedAmount.token,
+                amount: context.forwardedAmount.value
+            });
+
             // slither-disable-next-line arbitrary-send-eth
             IJBTerminal(msg.sender).addToBalanceOf{value: payValue}({
                 projectId: context.projectId,
@@ -710,7 +790,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     {
         // Normalize and encode the configurations.
         (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash) =
-            _makeRulesetConfigurations(configuration);
+            _makeRulesetConfigurations({configuration: configuration, terminalConfigurations: terminalConfigurations});
 
         // Deploy the revnet.
         return _deployRevnetFor({
@@ -819,6 +899,19 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     // --------------------- internal transactions ----------------------- //
     //*********************************************************************//
 
+    /// @notice Logic to be triggered before transferring tokens from this contract.
+    /// @param to The address the transfer is going to.
+    /// @param token The token being transferred.
+    /// @param amount The number of tokens being transferred, as a fixed point number with the same number of decimals
+    /// as the token specifies.
+    /// @return payValue The value to attach to the transaction being sent.
+    function _beforeTransferTo(address to, address token, uint256 amount) internal returns (uint256) {
+        // If the token is the native token, no allowance needed.
+        if (token == JBConstants.NATIVE_TOKEN) return amount;
+        IERC20(token).safeIncreaseAllowance(to, amount);
+        return 0;
+    }
+
     /// @notice Configure croptop posting.
     /// @param hook The hook that will be posted to.
     /// @param allowedPosts The type of posts that the revent should allow.
@@ -892,7 +985,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         {
             // Normalize and encode the configurations.
             (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash) =
-                _makeRulesetConfigurations(configuration);
+                _makeRulesetConfigurations({ configuration: configuration, terminalConfigurations: terminalConfigurations });
 
             // Deploy the tiered ERC-721 hook contract.
             // slither-disable-next-line reentrancy-benign
@@ -982,9 +1075,15 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
                 memo: ""
             });
         } else {
+            // Keep a reference to the Juicebox project's owner.
+            address owner = PROJECTS.ownerOf(revnetId);
+
+            // Make sure the caller is the owner of the Juicebox project.
+            if (_msgSender() != owner) revert REVDeployer_Unauthorized(revnetId, _msgSender());
+
             // If we're converting an existing Juicebox project into a revnet,
             // transfer the `JBProjects` NFT to this deployer.
-            IERC721(PROJECTS).safeTransferFrom({from: PROJECTS.ownerOf(revnetId), to: address(this), tokenId: revnetId});
+            IERC721(PROJECTS).safeTransferFrom({from: owner, to: address(this), tokenId: revnetId});
 
             // Launch the revnet rulesets for the pre-existing project.
             // slither-disable-next-line unused-return
