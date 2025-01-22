@@ -1248,10 +1248,10 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             });
         }
     }
+
     /// @notice Stores the auto-issuance amounts for each of a revnet's stages.
     /// @param revnetId The ID of the revnet to store the auto-mint amounts for.
     /// @param configuration The revnet's configuration. See `REVConfig`.
-
     function _storeAutoIssuanceAmounts(uint256 revnetId, REVConfig calldata configuration) internal {
         // Keep a reference to the total amount of tokens which can be auto-minted.
         uint256 totalUnrealizedAutoIssuanceAmount;
