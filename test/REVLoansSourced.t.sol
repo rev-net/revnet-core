@@ -522,7 +522,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 fullReclaimableSurplus = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
             projectId: revnetProjectId,
             tokenCount: tokensToCashout,
-            totalSupply: autoIssuance + totalSupplyExcludingAutoMint,
+            totalSupply: totalSupplyExcludingAutoMint,
             surplus: nativeSurplus
         });
 
@@ -531,11 +531,10 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 feeTokenCount =
             cashOutTaxRate == 0 ? 0 : mulDiv(tokensToCashout, jbMultiTerminal().FEE(), JBConstants.MAX_FEE);
 
-        uint256 totalSupply = autoIssuance + totalSupplyExcludingAutoMint;
         uint256 reclaimableSurplus = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
             projectId: revnetProjectId,
             tokenCount: tokensToCashout - feeTokenCount,
-            totalSupply: totalSupply,
+            totalSupply: totalSupplyExcludingAutoMint,
             surplus: nativeSurplus
         });
 

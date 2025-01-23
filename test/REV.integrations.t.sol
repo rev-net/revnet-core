@@ -257,12 +257,21 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         assertGt(REVNET_ID, 0);
     }
 
-    function test_preMint() public view {
+    function test_preMint() public {
+        uint256 perStageMintAmount = 70_000 * decimalMultiplier;
+        vm.expectEmit();
+        emit IREVDeployer.AutoIssue(REVNET_ID, firstStageId, multisig(), perStageMintAmount, address(this));
+        REV_DEPLOYER.autoIssueFor(REVNET_ID, firstStageId, multisig());
+
         assertEq(70_000 * decimalMultiplier, IJBToken(jbTokens().tokenOf(REVNET_ID)).balanceOf(multisig()));
     }
 
     function test_realize_autoissuance() public {
         uint256 perStageMintAmount = 70_000 * decimalMultiplier;
+
+        vm.expectEmit();
+        emit IREVDeployer.AutoIssue(REVNET_ID, firstStageId, multisig(), perStageMintAmount, address(this));
+        REV_DEPLOYER.autoIssueFor(REVNET_ID, firstStageId, multisig());
 
         assertEq(perStageMintAmount, IJBToken(jbTokens().tokenOf(REVNET_ID)).balanceOf(multisig()));
 
