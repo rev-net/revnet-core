@@ -546,7 +546,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 revFee = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
             projectId: revnetProjectId,
             tokenCount: feeTokenCount,
-            totalSupply: totalSupply - (tokensToCashout - feeTokenCount),
+            totalSupply: totalSupplyExcludingAutoMint - (tokensToCashout - feeTokenCount),
             surplus: nativeSurplus
         });
 
