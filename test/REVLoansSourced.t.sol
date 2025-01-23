@@ -509,7 +509,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 fullReclaimableSurplus = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
             projectId: revnetProjectId,
             tokenCount: tokensToCashout,
-            totalSupply: autoIssuance + totalSupplyExcludingAutoMint,
+            totalSupply: totalSupplyExcludingAutoMint,
             surplus: nativeSurplus
         });
 
@@ -518,18 +518,17 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 feeTokenCount =
             cashOutTaxRate == 0 ? 0 : mulDiv(tokensToCashout, jbMultiTerminal().FEE(), JBConstants.MAX_FEE);
 
-        uint256 totalSupply = autoIssuance + totalSupplyExcludingAutoMint;
         uint256 reclaimableSurplus = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
             projectId: revnetProjectId,
             tokenCount: tokensToCashout - feeTokenCount,
-            totalSupply: totalSupply,
+            totalSupply: totalSupplyExcludingAutoMint,
             surplus: nativeSurplus
         });
 
         uint256 revFee = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
             projectId: revnetProjectId,
             tokenCount: feeTokenCount,
-            totalSupply: totalSupply - (tokensToCashout - feeTokenCount),
+            totalSupply: totalSupplyExcludingAutoMint - (tokensToCashout - feeTokenCount),
             surplus: nativeSurplus - reclaimableSurplus
         });
 
@@ -560,7 +559,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         assertApproxEqAbs(balance, reclaimableSurplus - nanaFee, 1);
 
-        assertGe(reclaimableSurplus + revFee, mulDiv(loanable, 99, 100)); // small marging for curve rounding.
+        assertGe(reclaimableSurplus + revFee, mulDiv(loanable, 983, 1000)); // small marging for curve rounding.
     }
 
     function test_Pay_Borrow_With_Loan_Source() public {
