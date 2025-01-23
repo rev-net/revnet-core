@@ -66,8 +66,8 @@ contract DeployScript is Script, Sphinx {
     bytes32 SUCKER_SALT = "_REV_SUCKER_SALT_";
     bytes32 DEPLOYER_SALT = "_REV_DEPLOYER_SALT_";
     bytes32 REVLOANS_SALT = "_REV_LOANS_SALT_";
-    address LOANS_OWNER = 0x961d4191965C49537c88F764D88318872CE405bE;
-    address OPERATOR = 0x961d4191965C49537c88F764D88318872CE405bE;
+    address LOANS_OWNER;
+    address OPERATOR;
     uint256 TIME_UNTIL_START = 1 days;
     address TRUSTED_FORWARDER;
     IPermit2 PERMIT2;
@@ -80,6 +80,11 @@ contract DeployScript is Script, Sphinx {
     }
 
     function run() public {
+        // Get the operator address.
+        OPERATOR = safeAddress();
+        // Get the loans owner address.
+        LOANS_OWNER = safeAddress();
+
         // Get the deployment addresses for the nana CORE for this chain.
         // We want to do this outside of the `sphinx` modifier.
         core = CoreDeploymentLib.getDeployment(
