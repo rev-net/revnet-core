@@ -12,9 +12,7 @@ import {REVStageConfig} from "./REVStageConfig.sol";
 /// @custom:member premintChainId The ID of the chain on which the premint should be honored.
 /// @custom:member premintStage The stage during which the premint should be honored.
 /// @custom:member splitOperator The address that will receive the token premint and initial production split,
-/// and who
-/// is
-/// allowed to change who the operator is. Only the operator can replace itself after deployment.
+/// and who is allowed to change who the operator is. Only the operator can replace itself after deployment.
 /// @custom:member stageConfigurations The periods of changing constraints.
 /// @custom:member loanSources The sources for loans.
 /// @custom:member loans The loans contract, which can mint the revnet's tokens and use the revnet's balance.

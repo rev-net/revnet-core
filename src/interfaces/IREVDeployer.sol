@@ -63,7 +63,6 @@ interface IREVDeployer {
     function PUBLISHER() external view returns (CTPublisher);
     function HOOK_DEPLOYER() external view returns (IJB721TiersHookDeployer);
 
-    function allowsDeployingSuckersInCurrentRulesetOf(uint256 revnetId) external view returns (bool);
     function amountToAutoIssue(
         uint256 revnetId,
         uint256 stageId,

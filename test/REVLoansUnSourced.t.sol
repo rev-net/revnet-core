@@ -91,6 +91,10 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
         // The project's revnet stage configurations.
         REVStageConfig[] memory stageConfigurations = new REVStageConfig[](3);
 
+        JBSplit[] memory splits = new JBSplit[](1);
+        splits[0].beneficiary = payable(multisig());
+        splits[0].percent = 10_000;
+
         {
             REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](1);
             issuanceConfs[0] = REVAutoIssuance({
@@ -103,6 +107,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
                 startsAtOrAfter: uint40(block.timestamp),
                 autoIssuances: issuanceConfs,
                 splitPercent: 2000, // 20%
+                splits: splits,
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceCutFrequency: 90 days,
                 issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
@@ -115,6 +120,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
             startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 720 days),
             autoIssuances: new REVAutoIssuance[](0),
             splitPercent: 2000, // 20%
+            splits: splits,
             initialIssuance: 0, // inherit from previous cycle.
             issuanceCutFrequency: 180 days,
             issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
@@ -125,6 +131,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
         stageConfigurations[2] = REVStageConfig({
             startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (20 * 365 days)),
             autoIssuances: new REVAutoIssuance[](0),
+            splits: splits,
             splitPercent: 0,
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
             issuanceCutFrequency: 0,
@@ -190,6 +197,10 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
         terminalConfigurations[0] =
             JBTerminalConfig({terminal: jbMultiTerminal(), accountingContextsToAccept: accountingContextsToAccept});
 
+        JBSplit[] memory splits = new JBSplit[](1);
+        splits[0].beneficiary = payable(multisig());
+        splits[0].percent = 10_000;
+
         // The project's revnet stage configurations.
         REVStageConfig[] memory stageConfigurations = new REVStageConfig[](3);
 
@@ -205,6 +216,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
                 startsAtOrAfter: uint40(block.timestamp),
                 autoIssuances: issuanceConfs,
                 splitPercent: 2000, // 20%
+                splits: splits,
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceCutFrequency: 90 days,
                 issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
@@ -217,6 +229,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
             startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 720 days),
             autoIssuances: new REVAutoIssuance[](0),
             splitPercent: 2000, // 20%
+            splits: splits,
             initialIssuance: 0, // inherit from previous cycle.
             issuanceCutFrequency: 180 days,
             issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
@@ -227,6 +240,7 @@ contract REVLoansUnsourcedTests is TestBaseWorkflow, JBTest {
         stageConfigurations[2] = REVStageConfig({
             startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (20 * 365 days)),
             autoIssuances: new REVAutoIssuance[](0),
+            splits: splits,
             splitPercent: 0,
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
             issuanceCutFrequency: 0,

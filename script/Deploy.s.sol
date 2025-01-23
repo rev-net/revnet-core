@@ -17,7 +17,9 @@ import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol
 import {JBSuckerDeployerConfig} from "@bananapus/suckers/src/structs/JBSuckerDeployerConfig.sol";
 import {JBTokenMapping} from "@bananapus/suckers/src/structs/JBTokenMapping.sol";
 import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
+import {IJBSplitHook} from "@bananapus/core/src/interfaces/IJBSplitHook.sol";
 import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
+import {JBSplit} from "@bananapus/core/src/structs/JBSplit.sol";
 
 import {REVDeployer} from "./../src/REVDeployer.sol";
 import {REVAutoIssuance} from "../src/structs/REVAutoIssuance.sol";
@@ -143,6 +145,17 @@ contract DeployScript is Script, Sphinx {
         // The project's revnet stage configurations.
         REVStageConfig[] memory stageConfigurations = new REVStageConfig[](3);
 
+        // Create a split group that assigns all of the splits to the operator.
+        JBSplit[] memory splits = new JBSplit[](1);
+        splits[0] = JBSplit({
+            preferAddToBalance: false,
+            percent: JBConstants.SPLITS_TOTAL_PERCENT,
+            projectId: 0,
+            beneficiary: payable(OPERATOR),
+            lockedUntil: 0,
+            hook: IJBSplitHook(address(0))
+        });
+
         {
             REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](1);
             issuanceConfs[0] = REVAutoIssuance({
@@ -155,6 +168,7 @@ contract DeployScript is Script, Sphinx {
                 startsAtOrAfter: uint40(block.timestamp + TIME_UNTIL_START),
                 autoIssuances: issuanceConfs,
                 splitPercent: 3800, // 38%
+                splits: splits,
                 initialIssuance: uint112(1000 * DECIMAL_MULTIPLIER),
                 issuanceCutFrequency: 90 days,
                 issuanceCutPercent: 380_000_000, // 38%
@@ -172,6 +186,7 @@ contract DeployScript is Script, Sphinx {
                 startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 720 days),
                 autoIssuances: issuanceConfs,
                 splitPercent: 3800, // 40%
+                splits: splits,
                 initialIssuance: 0, // inherit from previous cycle.
                 issuanceCutFrequency: 180 days,
                 issuanceCutPercent: 380_000_000, // 30%
@@ -184,6 +199,7 @@ contract DeployScript is Script, Sphinx {
             startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (7200 days)),
             autoIssuances: new REVAutoIssuance[](0),
             splitPercent: 1000, // 10%
+            splits: splits,
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
             issuanceCutFrequency: 0,
             issuanceCutPercent: 0,
