@@ -446,6 +446,49 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         }
     }
 
+    /// @notice Make a ruleset configuration for a revnet's stage.
+    /// @param baseCurrency The base currency of the revnet.
+    /// @param stageConfiguration The stage configuration to make a ruleset for.
+    /// @param fundAccessLimitGroups The fund access limit groups to set up for the ruleset.
+    /// @return rulesetConfiguration The ruleset configuration.
+    function _makeRulesetConfiguration(
+        uint32 baseCurrency,
+        REVStageConfig calldata stageConfiguration,
+        JBFundAccessLimitGroup[] memory fundAccessLimitGroups
+    )
+        internal
+        view
+        returns (JBRulesetConfig memory)
+    {
+        // Set up the ruleset's metadata.
+        JBRulesetMetadata memory metadata;
+        metadata.reservedPercent = stageConfiguration.splitPercent;
+        metadata.cashOutTaxRate = stageConfiguration.cashOutTaxRate;
+        metadata.baseCurrency = baseCurrency;
+        metadata.useTotalSurplusForCashOuts = true; // Use surplus from all terminals for cash outs.
+        metadata.allowOwnerMinting = true; // Allow this contract to auto-mint tokens as the revnet's owner.
+        metadata.useDataHookForPay = true; // Call this contract's `beforePayRecordedWith(…)` callback on payments.
+        metadata.useDataHookForCashOut = true; // Call this contract's `beforeCashOutRecordedWith(…)` callback on cash
+            // outs.
+        metadata.dataHook = address(this); // This contract is the data hook.
+        metadata.metadata = stageConfiguration.extraMetadata;
+
+        // Package the reserved token splits.
+        JBSplitGroup[] memory splitGroups = new JBSplitGroup[](1);
+        splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: stageConfiguration.splits});
+
+        return JBRulesetConfig({
+            mustStartAtOrAfter: stageConfiguration.startsAtOrAfter,
+            duration: stageConfiguration.issuanceCutFrequency,
+            weight: stageConfiguration.initialIssuance,
+            weightCutPercent: stageConfiguration.issuanceCutPercent,
+            approvalHook: IJBRulesetApprovalHook(address(0)),
+            metadata: metadata,
+            splitGroups: splitGroups,
+            fundAccessLimitGroups: fundAccessLimitGroups
+        });
+    }
+
     /// @notice Returns the currency of the loan source, if a matching terminal configuration is found.
     /// @param terminalConfigurations The terminals to check.
     /// @param loanSource The loan source to check.
@@ -623,14 +666,17 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     {
         // Keep a reference to the revnet ID which was passed in.
         bool shouldDeployNewRevnet = revnetId == 0;
-    
+
         // If the caller is deploying a new revnet, calculate its ID
         // (which will be 1 greater than the current count).
         if (shouldDeployNewRevnet) revnetId = PROJECTS.count() + 1;
 
         // Normalize and encode the configurations.
-        (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash) =
-            _makeRulesetConfigurations({revnetId: revnetId, configuration: configuration, terminalConfigurations: terminalConfigurations});
+        (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash) = _makeRulesetConfigurations({
+            revnetId: revnetId,
+            configuration: configuration,
+            terminalConfigurations: terminalConfigurations
+        });
 
         // Deploy the revnet.
         _deployRevnetFor({
@@ -710,7 +756,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     {
         // Keep a reference to the revnet ID which was passed in.
         bool shouldDeployNewRevnet = revnetId == 0;
-    
+
         // If the caller is deploying a new revnet, calculate its ID
         // (which will be 1 greater than the current count).
         if (shouldDeployNewRevnet) revnetId = PROJECTS.count() + 1;
@@ -810,7 +856,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
     /// @notice Deploy a revnet which sells tiered ERC-721s and (optionally) allows croptop posts to its ERC-721 tiers.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
-    /// @param shouldDeployNewRevnet Whether to deploy a new revnet or convert an existing Juicebox project into a revnet.
+    /// @param shouldDeployNewRevnet Whether to deploy a new revnet or convert an existing Juicebox project into a
+    /// revnet.
     /// @param configuration Core revnet configuration. See `REVConfig`.
     /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
     /// @param buybackHookConfiguration The buyback hook and pools to set up for the revnet.
@@ -834,8 +881,11 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         returns (IJB721TiersHook hook)
     {
         // Normalize and encode the configurations.
-        (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash) =
-        _makeRulesetConfigurations({revnetId: revnetId, configuration: configuration, terminalConfigurations: terminalConfigurations});
+        (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash) = _makeRulesetConfigurations({
+            revnetId: revnetId,
+            configuration: configuration,
+            terminalConfigurations: terminalConfigurations
+        });
 
         // Deploy the tiered ERC-721 hook contract.
         // slither-disable-next-line reentrancy-benign
@@ -893,7 +943,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
     /// @notice Deploy a revnet, or convert an existing Juicebox project into a revnet.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
-    /// @param shouldDeployNewRevnet Whether to deploy a new revnet or convert an existing Juicebox project into a revnet.
+    /// @param shouldDeployNewRevnet Whether to deploy a new revnet or convert an existing Juicebox project into a
+    /// revnet.
     /// @param configuration Core revnet configuration. See `REVConfig`.
     /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
     /// @param buybackHookConfiguration The buyback hook and pools to set up for the revnet.
@@ -1087,9 +1138,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         JBFundAccessLimitGroup[] memory fundAccessLimitGroups =
             _makeLoanFundAccessLimits({configuration: configuration, terminalConfigurations: terminalConfigurations});
 
-        // Keep a reference to the previous ruleset's start time.
-        uint256 previousStartTime;
-
         // Iterate through each stage to set up its ruleset.
         for (uint256 i; i < configuration.stageConfigurations.length; i++) {
             // Set the stage being iterated on.
@@ -1102,7 +1150,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             }
 
             // If the stage's start time is not after the previous stage's start time, revert.
-            if (stageConfiguration.startsAtOrAfter <= previousStartTime) {
+            if (i > 0 && stageConfiguration.startsAtOrAfter <= configuration.stageConfigurations[i - 1].startsAtOrAfter)
+            {
                 revert REVDeployer_StageTimesMustIncrease();
             }
 
@@ -1113,43 +1162,19 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
                 );
             }
 
-            // Scoped section to avoid stack too deep. `metadata` and `splitGroups` only used in this section.
-            {
-                // Set up the ruleset's metadata.
-                JBRulesetMetadata memory metadata;
-                metadata.reservedPercent = stageConfiguration.splitPercent;
-                metadata.cashOutTaxRate = stageConfiguration.cashOutTaxRate;
-                metadata.baseCurrency = configuration.baseCurrency;
-                metadata.useTotalSurplusForCashOuts = true; // Use surplus from all terminals for cash outs.
-                metadata.allowOwnerMinting = true; // Allow this contract to auto-mint tokens as the revnet's owner.
-                metadata.useDataHookForPay = true; // Call this contract's `beforePayRecordedWith(…)` callback on payments.
-                metadata.useDataHookForCashOut = true; // Call this contract's `beforeCashOutRecordedWith(…)` callback on
-                    // cash outs.
-                metadata.dataHook = address(this); // This contract is the data hook.
-                metadata.metadata = stageConfiguration.extraMetadata;
-
-                // Package the reserved token splits.
-                JBSplitGroup[] memory splitGroups = new JBSplitGroup[](1);
-                splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: stageConfiguration.splits});
-
-                // Set up the ruleset.
-                rulesetConfigurations[i] = JBRulesetConfig({
-                    mustStartAtOrAfter: stageConfiguration.startsAtOrAfter,
-                    duration: stageConfiguration.issuanceCutFrequency,
-                    weight: stageConfiguration.initialIssuance,
-                    weightCutPercent: stageConfiguration.issuanceCutPercent,
-                    approvalHook: IJBRulesetApprovalHook(address(0)),
-                    metadata: metadata,
-                    splitGroups: splitGroups,
-                    fundAccessLimitGroups: fundAccessLimitGroups
-                });
-            }
+            // Set up the ruleset.
+            rulesetConfigurations[i] = _makeRulesetConfiguration({
+                baseCurrency: configuration.baseCurrency,
+                stageConfiguration: stageConfiguration,
+                fundAccessLimitGroups: fundAccessLimitGroups
+            });
 
             // Add the stage's properties to the byte-encoded configuration.
             encodedConfiguration = abi.encode(
-                encodedConfiguration, 
+                encodedConfiguration,
                 // If no start time is provided for the first stage, use the current block's timestamp.
-                // In the future, revnets deployed on other networks can match this revnet's encoded stage by specifying the
+                // In the future, revnets deployed on other networks can match this revnet's encoded stage by specifying
+                // the
                 // same start time.
                 (i == 0 && stageConfiguration.startsAtOrAfter == 0)
                     ? block.timestamp
@@ -1194,9 +1219,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
                 // Add to the total unrealized auto-issuance amount.
                 unrealizedAutoIssuanceAmountOf[revnetId] += autoIssuance.count;
             }
-
-            // Store the ruleset's start time for the next iteration.
-            previousStartTime = stageConfiguration.startsAtOrAfter;
         }
 
         // Hash the encoded configuration.
