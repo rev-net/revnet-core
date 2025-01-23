@@ -12,6 +12,7 @@ import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
 import {Script} from "forge-std/Script.sol";
 
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
+import {JBCurrencyIds} from "@bananapus/core/src/libraries/JBCurrencyIds.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
 import {JBTerminalConfig} from "@bananapus/core/src/structs/JBTerminalConfig.sol";
 import {JBSuckerDeployerConfig} from "@bananapus/suckers/src/structs/JBSuckerDeployerConfig.sol";
@@ -55,17 +56,18 @@ contract DeployScript is Script, Sphinx {
 
     uint32 PREMINT_CHAIN_ID = 11_155_111;
     string NAME = "Revnet";
-    string SYMBOL = "$REV";
-    string PROJECT_URI = "ipfs://QmNRHT91HcDgMcenebYX7rJigt77cgNcosvuhX21wkF3tx";
+    string SYMBOL = "REV";
+    string PROJECT_URI = "ipfs://QmSiJhANtkySxt6eBDJS3E5RNJx3QXRNwz6XijdmEXw7JC";
     uint32 NATIVE_CURRENCY = uint32(uint160(JBConstants.NATIVE_TOKEN));
+    uint32 ETH_CURRENCY = 1; //JBCurrencyIds.ETH;
     uint8 DECIMALS = 18;
     uint256 DECIMAL_MULTIPLIER = 10 ** DECIMALS;
     bytes32 ERC20_SALT = "_REV_ERC20_SALT_";
     bytes32 SUCKER_SALT = "_REV_SUCKER_SALT_";
     bytes32 DEPLOYER_SALT = "_REV_DEPLOYER_SALT_";
     bytes32 REVLOANS_SALT = "_REV_LOANS_SALT_";
-    address LOANS_OWNER = 0x823b92d6a4b2AED4b15675c7917c9f922ea8ADAD;
-    address OPERATOR = 0x823b92d6a4b2AED4b15675c7917c9f922ea8ADAD;
+    address LOANS_OWNER;
+    address OPERATOR;
     uint256 TIME_UNTIL_START = 1 days;
     address TRUSTED_FORWARDER;
     IPermit2 PERMIT2;
@@ -78,6 +80,11 @@ contract DeployScript is Script, Sphinx {
     }
 
     function run() public {
+        // Get the operator address.
+        OPERATOR = safeAddress();
+        // Get the loans owner address.
+        LOANS_OWNER = safeAddress();
+
         // Get the deployment addresses for the nana CORE for this chain.
         // We want to do this outside of the `sphinx` modifier.
         core = CoreDeploymentLib.getDeployment(
@@ -125,7 +132,7 @@ contract DeployScript is Script, Sphinx {
         deploy();
     }
 
-    function getFeeProjectConfig(IREVLoans _revloans) internal view returns (FeeProjectConfig memory) {
+    function getFeeProjectConfig(IREVLoans revloans) internal view returns (FeeProjectConfig memory) {
         // The tokens that the project accepts and stores.
         JBAccountingContext[] memory accountingContextsToAccept = new JBAccountingContext[](1);
 
@@ -172,7 +179,7 @@ contract DeployScript is Script, Sphinx {
                 initialIssuance: uint112(1000 * DECIMAL_MULTIPLIER),
                 issuanceCutFrequency: 90 days,
                 issuanceCutPercent: 380_000_000, // 38%
-                cashOutTaxRate: 3000, // 0.3
+                cashOutTaxRate: 2000, // 0.2
                 extraMetadata: 4 // Allow adding suckers.
             });
 
@@ -185,12 +192,12 @@ contract DeployScript is Script, Sphinx {
             stageConfigurations[1] = REVStageConfig({
                 startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 720 days),
                 autoIssuances: issuanceConfs,
-                splitPercent: 3800, // 40%
+                splitPercent: 3800, // 38%
                 splits: splits,
-                initialIssuance: 0, // inherit from previous cycle.
+                initialIssuance: 1, // inherit from previous cycle.
                 issuanceCutFrequency: 180 days,
-                issuanceCutPercent: 380_000_000, // 30%
-                cashOutTaxRate: 3000, // 0.3
+                issuanceCutPercent: 380_000_000, // 38%
+                cashOutTaxRate: 2000, // 0.2
                 extraMetadata: 4 // Allow adding suckers.
             });
         }
@@ -200,7 +207,7 @@ contract DeployScript is Script, Sphinx {
             autoIssuances: new REVAutoIssuance[](0),
             splitPercent: 1000, // 10%
             splits: splits,
-            initialIssuance: 1, // this is a special number that is as close to max price as we can get.
+            initialIssuance: 0, // no more issaunce.
             issuanceCutFrequency: 0,
             issuanceCutPercent: 0,
             cashOutTaxRate: 1000, // 0.1
@@ -210,17 +217,17 @@ contract DeployScript is Script, Sphinx {
         REVConfig memory revnetConfiguration;
         {
             // Thr projects loan configuration.
-            REVLoanSource[] memory _loanSources = new REVLoanSource[](1);
-            _loanSources[0] = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: core.terminal});
+            REVLoanSource[] memory loanSources = new REVLoanSource[](1);
+            loanSources[0] = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: core.terminal});
 
             // The project's revnet configuration
             revnetConfiguration = REVConfig({
                 description: REVDescription(NAME, SYMBOL, PROJECT_URI, ERC20_SALT),
-                baseCurrency: NATIVE_CURRENCY,
+                baseCurrency: ETH_CURRENCY,
                 splitOperator: OPERATOR,
                 stageConfigurations: stageConfigurations,
-                loanSources: _loanSources,
-                loans: address(_revloans)
+                loanSources: loanSources,
+                loans: address(revloans)
             });
         }
 
