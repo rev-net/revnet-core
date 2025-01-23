@@ -101,6 +101,10 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // The project's revnet stage configurations.
         REVStageConfig[] memory stageConfigurations = new REVStageConfig[](3);
 
+        JBSplit[] memory splits = new JBSplit[](1);
+        splits[0].beneficiary = payable(multisig());
+        splits[0].percent = 10_000;
+
         {
             REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](1);
             issuanceConfs[0] = REVAutoIssuance({
@@ -113,6 +117,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
                 startsAtOrAfter: uint40(block.timestamp),
                 autoIssuances: issuanceConfs,
                 splitPercent: 2000, // 20%
+                splits: splits,
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceCutFrequency: 90 days,
                 issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
@@ -126,6 +131,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             autoIssuances: new REVAutoIssuance[](0),
             splitPercent: 2000, // 20%
             initialIssuance: 0, // inherit from previous cycle.
+            splits: splits,
             issuanceCutFrequency: 180 days,
             issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
             cashOutTaxRate: 1000, // 0.1
@@ -137,6 +143,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             autoIssuances: new REVAutoIssuance[](0),
             splitPercent: 0,
             initialIssuance: 1,
+            splits: splits,
             issuanceCutFrequency: 0,
             issuanceCutPercent: 0,
             cashOutTaxRate: 6000, // 0.6
@@ -203,6 +210,10 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         terminalConfigurations[0] =
             JBTerminalConfig({terminal: jbMultiTerminal(), accountingContextsToAccept: accountingContextsToAccept});
 
+        JBSplit[] memory splits = new JBSplit[](1);
+        splits[0].beneficiary = payable(multisig());
+        splits[0].percent = 10_000;
+
         // The project's revnet stage configurations.
         REVStageConfig[] memory stageConfigurations = new REVStageConfig[](3);
 
@@ -218,10 +229,11 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
                 startsAtOrAfter: uint40(block.timestamp),
                 autoIssuances: issuanceConfs,
                 splitPercent: 2000, // 20%
+                splits: splits,
                 initialIssuance: uint112(1000 * decimalMultiplier),
                 issuanceCutFrequency: 90 days,
                 issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
-                cashOutTaxRate: 0, //6000, // 0.6
+                cashOutTaxRate: 0,
                 extraMetadata: 0
             });
         }
@@ -230,10 +242,11 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             startsAtOrAfter: uint40(stageConfigurations[0].startsAtOrAfter + 720 days),
             autoIssuances: new REVAutoIssuance[](0),
             splitPercent: 2000, // 20%
+            splits: splits,
             initialIssuance: 0, // inherit from previous cycle.
             issuanceCutFrequency: 180 days,
             issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
-            cashOutTaxRate: 0, //6000, // 0.6
+            cashOutTaxRate: 0,
             extraMetadata: 0
         });
 
@@ -241,10 +254,11 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (20 * 365 days)),
             autoIssuances: new REVAutoIssuance[](0),
             splitPercent: 0,
+            splits: splits,
             initialIssuance: 1, // this is a special number that is as close to max price as we can get.
             issuanceCutFrequency: 0,
             issuanceCutPercent: 0,
-            cashOutTaxRate: 0, //6000, // 0.6
+            cashOutTaxRate: 0,
             extraMetadata: 0
         });
 
@@ -419,6 +433,134 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Ensure we actually received the token from the borrow
         // Subtract the fee for REV and for the source revnet.
         assertEq(TOKEN.balanceOf(address(USER)), loanable - fees);
+    }
+
+    function test_Cashout(
+        uint104 autoIssuance,
+        uint256 totalSupplyExcludingAutoMint,
+        uint256 nativeSurplus,
+        uint256 tokensToCashout,
+        uint16 cashOutTaxRate
+    )
+        public
+    {
+        // Since we don't actually mint the autoIssuance tokens, we don't have to worry about it exceeding the
+        // `SafeSupply`.
+        vm.assume(cashOutTaxRate <= JBConstants.MAX_FEE);
+        vm.assume(totalSupplyExcludingAutoMint > 0 && totalSupplyExcludingAutoMint <= type(uint208).max);
+        vm.assume(totalSupplyExcludingAutoMint > tokensToCashout);
+
+        // Deploy a new REVNET, that has multiple stages where the fee decrease.
+        // This lets people refinance their loans to get a better rate.
+        uint256 revnetProjectId;
+        {
+            FeeProjectConfig memory projectConfig = getSecondProjectConfig();
+            REVAutoIssuance[] memory issuanceConfs;
+            issuanceConfs = new REVAutoIssuance[](1);
+            issuanceConfs[0] =
+                REVAutoIssuance({chainId: uint32(block.chainid), count: uint104(autoIssuance), beneficiary: multisig()});
+
+            JBSplit[] memory splits = new JBSplit[](1);
+            splits[0].beneficiary = payable(multisig());
+            splits[0].percent = 10_000;
+
+            REVStageConfig[] memory stageConfigurations = new REVStageConfig[](1);
+            stageConfigurations[0] = REVStageConfig({
+                startsAtOrAfter: uint40(block.timestamp),
+                autoIssuances: issuanceConfs,
+                splitPercent: 2000, // 20%
+                splits: splits,
+                initialIssuance: 1000e18,
+                issuanceCutFrequency: 90 days,
+                issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
+                cashOutTaxRate: cashOutTaxRate, // 20%
+                extraMetadata: 0
+            });
+
+            // Replace the configuration.
+            projectConfig.configuration.stageConfigurations = stageConfigurations;
+            projectConfig.configuration.description.salt = "FeeChange";
+
+            revnetProjectId = REV_DEPLOYER.deployFor({
+                revnetId: 0, // Zero to deploy a new revnet
+                configuration: projectConfig.configuration,
+                terminalConfigurations: projectConfig.terminalConfigurations,
+                buybackHookConfiguration: projectConfig.buybackHookConfiguration,
+                suckerDeploymentConfiguration: projectConfig.suckerDeploymentConfiguration
+            });
+        }
+
+        // Add the surplus into the project.
+        vm.deal(USER, nativeSurplus);
+        vm.prank(USER);
+        jbMultiTerminal().addToBalanceOf{value: nativeSurplus}(
+            revnetProjectId, JBConstants.NATIVE_TOKEN, nativeSurplus, false, string(""), bytes("")
+        );
+
+        // Mint the entire supply excluding automint to the user.
+        vm.prank(address(jbController()));
+        jbTokens().mintFor(USER, revnetProjectId, totalSupplyExcludingAutoMint);
+
+        // Check what a borrow would result in more.
+        uint256 loanable = LOANS_CONTRACT.borrowableAmountFrom(
+            revnetProjectId, tokensToCashout, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+        );
+
+        uint256 fullReclaimableSurplus = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
+            projectId: revnetProjectId,
+            tokenCount: tokensToCashout,
+            totalSupply: autoIssuance + totalSupplyExcludingAutoMint,
+            surplus: nativeSurplus
+        });
+
+        assertGe(fullReclaimableSurplus, loanable);
+
+        uint256 feeTokenCount =
+            cashOutTaxRate == 0 ? 0 : mulDiv(tokensToCashout, jbMultiTerminal().FEE(), JBConstants.MAX_FEE);
+
+        uint256 totalSupply = autoIssuance + totalSupplyExcludingAutoMint;
+        uint256 reclaimableSurplus = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
+            projectId: revnetProjectId,
+            tokenCount: tokensToCashout - feeTokenCount,
+            totalSupply: totalSupply,
+            surplus: nativeSurplus
+        });
+
+        uint256 revFee = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
+            projectId: revnetProjectId,
+            tokenCount: feeTokenCount,
+            totalSupply: totalSupply - (tokensToCashout - feeTokenCount),
+            surplus: nativeSurplus - reclaimableSurplus
+        });
+
+        assertGe(fullReclaimableSurplus, mulDiv((reclaimableSurplus + revFee), 995, 1000)); // small marging for curve
+            // rounding.
+
+        uint256 balanceBefore = USER.balance;
+
+        // Ensure that the hook was called.
+        vm.expectCall(address(REV_DEPLOYER), abi.encode(REVDeployer.beforeCashOutRecordedWith.selector));
+
+        // It only adds itself as a `after` cashoutHook if there is a cashout tax rate.
+        if (cashOutTaxRate > 0) {
+            vm.expectCall(address(REV_DEPLOYER), abi.encode(REVDeployer.afterCashOutRecordedWith.selector));
+        }
+
+        // Perform a cashout.
+        vm.prank(USER);
+        jbMultiTerminal().cashOutTokensOf(
+            USER, revnetProjectId, tokensToCashout, JBConstants.NATIVE_TOKEN, 0, payable(USER), bytes("")
+        );
+
+        assertGe(USER.balance, balanceBefore);
+
+        uint256 balance = USER.balance - balanceBefore;
+        uint256 nanaFee =
+            cashOutTaxRate == 0 ? 0 : JBFees.feeAmountFrom({amount: balance, feePercent: jbMultiTerminal().FEE()});
+
+        assertApproxEqAbs(balance, reclaimableSurplus - nanaFee, 1);
+
+        assertGe(reclaimableSurplus + revFee, mulDiv(loanable, 99, 100)); // small marging for curve rounding.
     }
 
     function test_Pay_Borrow_With_Loan_Source() public {
@@ -609,7 +751,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        // loanable amount is (slightly) higher due to fee payment increasing the supply/assets ratio.
         assertGt(loanableSecondStage, loanable);
 
         // we should not have to add collateral
@@ -792,11 +933,16 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
                     REVAutoIssuance({chainId: uint32(block.chainid), count: uint104(premint), beneficiary: multisig()});
             }
 
+            JBSplit[] memory splits = new JBSplit[](1);
+            splits[0].beneficiary = payable(multisig());
+            splits[0].percent = 10_000;
+
             REVStageConfig[] memory stageConfigurations = new REVStageConfig[](1);
             stageConfigurations[0] = REVStageConfig({
                 startsAtOrAfter: uint40(block.timestamp),
                 autoIssuances: new REVAutoIssuance[](0),
                 splitPercent: 0, // 20%
+                splits: splits,
                 initialIssuance: 1000e18,
                 issuanceCutFrequency: 180 days,
                 issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
@@ -874,11 +1020,16 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // This lets people refinance their loans to get a better rate.
         FeeProjectConfig memory projectConfig = getSecondProjectConfig();
 
+        JBSplit[] memory splits = new JBSplit[](1);
+        splits[0].beneficiary = payable(multisig());
+        splits[0].percent = 10_000;
+
         REVStageConfig[] memory stageConfigurations = new REVStageConfig[](2);
         stageConfigurations[0] = REVStageConfig({
             startsAtOrAfter: uint40(block.timestamp),
             autoIssuances: new REVAutoIssuance[](0),
             splitPercent: 2000, // 20%
+            splits: splits,
             initialIssuance: 1000e18,
             issuanceCutFrequency: 180 days,
             issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
@@ -890,6 +1041,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             startsAtOrAfter: uint40(block.timestamp + 720 days),
             autoIssuances: new REVAutoIssuance[](0),
             splitPercent: 2000, // 20%
+            splits: splits,
             initialIssuance: 0, // inherit from previous cycle.
             issuanceCutFrequency: 180 days,
             issuanceCutPercent: JBConstants.MAX_WEIGHT_CUT_PERCENT / 2,
