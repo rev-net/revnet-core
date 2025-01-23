@@ -845,17 +845,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             salt: keccak256(abi.encode(tiered721HookConfiguration.salt, encodedConfigurationHash, _msgSender()))
         });
 
-        _deployRevnetFor({
-            revnetId: revnetId,
-            shouldDeployNewRevnet: shouldDeployNewRevnet,
-            configuration: configuration,
-            terminalConfigurations: terminalConfigurations,
-            buybackHookConfiguration: buybackHookConfiguration,
-            suckerDeploymentConfiguration: suckerDeploymentConfiguration,
-            rulesetConfigurations: rulesetConfigurations,
-            encodedConfigurationHash: encodedConfigurationHash
-        });
-
         // Store the tiered ERC-721 hook.
         tiered721HookOf[revnetId] = hook;
 
@@ -889,6 +878,17 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
                 permissionId: JBPermissionIds.ADJUST_721_TIERS
             });
         }
+
+        _deployRevnetFor({
+            revnetId: revnetId,
+            shouldDeployNewRevnet: shouldDeployNewRevnet,
+            configuration: configuration,
+            terminalConfigurations: terminalConfigurations,
+            buybackHookConfiguration: buybackHookConfiguration,
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration,
+            rulesetConfigurations: rulesetConfigurations,
+            encodedConfigurationHash: encodedConfigurationHash
+        });
     }
 
     /// @notice Deploy a revnet, or convert an existing Juicebox project into a revnet.
@@ -918,7 +918,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     {
         if (shouldDeployNewRevnet) {
             // If we're deploying a new revnet, launch a Juicebox project for it.
-            // slither-disable-next-line reentrancy-benign,reentrancy-events
+            // slither-disable-next-line reentrancy-benign,reentrancy-events,unused-return
             CONTROLLER.launchProjectFor({
                 owner: address(this),
                 projectUri: configuration.description.uri,
