@@ -790,7 +790,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         _setPermissionsFor({
             account: address(this),
             operator: _msgSender(),
-            revnetId: uint56(revnetId),
+            revnetId: revnetId,
             permissionIds: new uint8[](0)
         });
 
@@ -1316,7 +1316,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         _setPermissionsFor({
             account: address(this),
             operator: operator,
-            revnetId: uint56(revnetId),
+            revnetId: revnetId,
             permissionIds: permissionIds
         });
     }
