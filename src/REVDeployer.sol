@@ -66,14 +66,14 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
     error REVDeployer_LoanSourceDoesntMatchTerminalConfigurations(address token, address terminal);
     error REVDeployer_AutoIssuanceBeneficiaryZeroAddress();
-    error REVDeployer_CashOutDelayNotFinished();
-    error REVDeployer_CashOutsCantBeTurnedOffCompletely();
+    error REVDeployer_CashOutDelayNotFinished(uint256 cashOutDelay, uint256 blockTimestamp);
+    error REVDeployer_CashOutsCantBeTurnedOffCompletely(uint256 cashOutTaxRate, uint256 maxCashOutTaxRate);
     error REVDeployer_MustHaveSplits();
     error REVDeployer_RulesetDoesNotAllowDeployingSuckers();
-    error REVDeployer_StageNotStarted();
+    error REVDeployer_StageNotStarted(uint256 stageStartTime, uint256 blockTimestamp);
     error REVDeployer_StagesRequired();
     error REVDeployer_StageTimesMustIncrease();
-    error REVDeployer_Unauthorized();
+    error REVDeployer_Unauthorized(uint256 revnetId, address caller);
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -142,6 +142,12 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @dev Only applies to existing revnets which are deploying onto a new network.
     /// @custom:param revnetId The ID of the revnet to get the cash out delay for.
     mapping(uint256 revnetId => uint256 cashOutDelay) public override cashOutDelayOf;
+
+    /// @notice The hashed encoded configuration of each revnet.
+    /// @dev This is used to ensure that the encoded configuration of a revnet is the same when deploying suckers for
+    /// omnichain operations.
+    /// @custom:param revnetId The ID of the revnet to get the hashed encoded configuration for.
+    mapping(uint256 revnetId => bytes32 hashedEncodedConfiguration) public override hashedEncodedConfigurationOf;
 
     /// @notice Each revnet's loan contract.
     /// @dev Revnets can offer loans to their participants, collateralized by their tokens.
@@ -280,9 +286,12 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             return (0, context.cashOutCount, context.totalSupply, hookSpecifications);
         }
 
+        // Keep a reference to the cash out delay of the revnet.
+        uint256 cashOutDelay = cashOutDelayOf[context.projectId];
+
         // Enforce the cash out delay.
-        if (cashOutDelayOf[context.projectId] > block.timestamp) {
-            revert REVDeployer_CashOutDelayNotFinished();
+        if (cashOutDelay > block.timestamp) {
+            revert REVDeployer_CashOutDelayNotFinished(cashOutDelay, block.timestamp);
         }
 
         // Get the terminal that will receive the cash out fee.
@@ -380,48 +389,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @param revnetId The ID of the revnet to check split operator status for.
     /// @param operator The address being checked.
     function _checkIfIsSplitOperatorOf(uint256 revnetId, address operator) internal view {
-        if (!isSplitOperatorOf(revnetId, operator)) revert REVDeployer_Unauthorized();
-    }
-
-    /// @notice Encodes an auto-issuance.
-    /// @param autoIssuance The auto-issuance to encode.
-    /// @return encodedAutoIssuance The encoded auto-issuance.
-    function _encodedAutoIssuance(REVAutoIssuance calldata autoIssuance) private pure returns (bytes memory) {
-        return abi.encode(autoIssuance.chainId, autoIssuance.beneficiary, autoIssuance.count);
-    }
-
-    /// @notice Encodes a revnet stage. This is used for sucker deployment salts.
-    /// @param stageConfiguration The stage's configuration.
-    /// @param stageNumber The stage's number/ID.
-    /// @return encodedConfiguration The encoded stage.
-    function _encodedStageConfig(
-        REVStageConfig calldata stageConfiguration,
-        uint256 stageNumber
-    )
-        internal
-        view
-        returns (bytes memory encodedConfiguration)
-    {
-        // Encode the stage.
-        encodedConfiguration = abi.encode(
-            // If no start time is provided for the first stage, use the current block's timestamp.
-            // In the future, revnets deployed on other networks can match this revnet's encoded stage by specifying the
-            // same start time.
-            (stageNumber == 0 && stageConfiguration.startsAtOrAfter == 0)
-                ? block.timestamp
-                : stageConfiguration.startsAtOrAfter,
-            stageConfiguration.splitPercent,
-            stageConfiguration.initialIssuance,
-            stageConfiguration.issuanceCutFrequency,
-            stageConfiguration.issuanceCutPercent,
-            stageConfiguration.cashOutTaxRate
-        );
-
-        // Add each auto-mint to the byte-encoded representation.
-        for (uint256 i; i < stageConfiguration.autoIssuances.length; i++) {
-            encodedConfiguration =
-                abi.encode(encodedConfiguration, _encodedAutoIssuance(stageConfiguration.autoIssuances[i]));
-        }
+        if (!isSplitOperatorOf(revnetId, operator)) revert REVDeployer_Unauthorized(revnetId, operator);
     }
 
     /// @notice A flag indicating whether an address is a revnet's sucker.
@@ -478,100 +446,47 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         }
     }
 
-    /// @notice Convert a revnet's stages into a series of Juicebox project rulesets.
-    /// @param configuration The configuration containing the revnet's stages.
-    /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
-    /// @return rulesetConfigurations A list of ruleset configurations defined by the stages.
-    /// @return encodedConfiguration A byte-encoded representation of the revnet's configuration. Used for sucker
-    /// deployment salts.
-    function _makeRulesetConfigurations(
-        REVConfig calldata configuration,
-        JBTerminalConfig[] calldata terminalConfigurations
+    /// @notice Make a ruleset configuration for a revnet's stage.
+    /// @param baseCurrency The base currency of the revnet.
+    /// @param stageConfiguration The stage configuration to make a ruleset for.
+    /// @param fundAccessLimitGroups The fund access limit groups to set up for the ruleset.
+    /// @return rulesetConfiguration The ruleset configuration.
+    function _makeRulesetConfiguration(
+        uint32 baseCurrency,
+        REVStageConfig calldata stageConfiguration,
+        JBFundAccessLimitGroup[] memory fundAccessLimitGroups
     )
         internal
         view
-        returns (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration)
+        returns (JBRulesetConfig memory)
     {
-        // If there are no stages, revert.
-        if (configuration.stageConfigurations.length == 0) revert REVDeployer_StagesRequired();
+        // Set up the ruleset's metadata.
+        JBRulesetMetadata memory metadata;
+        metadata.reservedPercent = stageConfiguration.splitPercent;
+        metadata.cashOutTaxRate = stageConfiguration.cashOutTaxRate;
+        metadata.baseCurrency = baseCurrency;
+        metadata.useTotalSurplusForCashOuts = true; // Use surplus from all terminals for cash outs.
+        metadata.allowOwnerMinting = true; // Allow this contract to auto-mint tokens as the revnet's owner.
+        metadata.useDataHookForPay = true; // Call this contract's `beforePayRecordedWith(…)` callback on payments.
+        metadata.useDataHookForCashOut = true; // Call this contract's `beforeCashOutRecordedWith(…)` callback on cash
+            // outs.
+        metadata.dataHook = address(this); // This contract is the data hook.
+        metadata.metadata = stageConfiguration.extraMetadata;
 
-        // Initialize the array of rulesets.
-        rulesetConfigurations = new JBRulesetConfig[](configuration.stageConfigurations.length);
+        // Package the reserved token splits.
+        JBSplitGroup[] memory splitGroups = new JBSplitGroup[](1);
+        splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: stageConfiguration.splits});
 
-        // Add the base configuration to the byte-encoded configuration.
-        encodedConfiguration = abi.encode(
-            configuration.baseCurrency,
-            configuration.loans,
-            configuration.description.name,
-            configuration.description.ticker,
-            configuration.description.salt
-        );
-
-        // Initialize fund access limit groups for the loan contract to use.
-        JBFundAccessLimitGroup[] memory fundAccessLimitGroups =
-            _makeLoanFundAccessLimits({configuration: configuration, terminalConfigurations: terminalConfigurations});
-
-        // Keep a reference to the previous ruleset's start time.
-        uint256 previousStartTime;
-
-        // Iterate through each stage to set up its ruleset.
-        for (uint256 i; i < configuration.stageConfigurations.length; i++) {
-            // Set the stage being iterated on.
-            REVStageConfig calldata stageConfiguration = configuration.stageConfigurations[i];
-
-            // Make sure the revnet has at least one split if it has a split percent.
-            // Otherwise, the split would go to this contract since its the revnet's owner.
-            if (stageConfiguration.splitPercent > 0 && stageConfiguration.splits.length == 0) {
-                revert REVDeployer_MustHaveSplits();
-            }
-
-            // If the stage's start time is not after the previous stage's start time, revert.
-            if (stageConfiguration.startsAtOrAfter <= previousStartTime) {
-                revert REVDeployer_StageTimesMustIncrease();
-            }
-
-            // Make sure the revnet doesn't prevent cashouts all together.
-            if (stageConfiguration.cashOutTaxRate >= JBConstants.MAX_CASH_OUT_TAX_RATE) {
-                revert REVDeployer_CashOutsCantBeTurnedOffCompletely();
-            }
-
-            // Set up the ruleset's metadata.
-            JBRulesetMetadata memory metadata;
-            metadata.reservedPercent = stageConfiguration.splitPercent;
-            metadata.cashOutTaxRate = stageConfiguration.cashOutTaxRate;
-            metadata.baseCurrency = configuration.baseCurrency;
-            metadata.useTotalSurplusForCashOuts = true; // Use surplus from all terminals for cash outs.
-            metadata.allowOwnerMinting = true; // Allow this contract to auto-mint tokens as the revnet's owner.
-            metadata.useDataHookForPay = true; // Call this contract's `beforePayRecordedWith(…)` callback on payments.
-            metadata.useDataHookForCashOut = true; // Call this contract's `beforeCashOutRecordedWith(…)` callback on
-                // cash outs.
-            metadata.dataHook = address(this); // This contract is the data hook.
-            metadata.metadata = stageConfiguration.extraMetadata;
-
-            // Package the reserved token splits.
-            JBSplitGroup[] memory splitGroups = new JBSplitGroup[](1);
-            splitGroups[0] = JBSplitGroup({groupId: JBSplitGroupIds.RESERVED_TOKENS, splits: stageConfiguration.splits});
-
-            // Set up the ruleset.
-            rulesetConfigurations[i] = JBRulesetConfig({
-                mustStartAtOrAfter: stageConfiguration.startsAtOrAfter,
-                duration: stageConfiguration.issuanceCutFrequency,
-                weight: stageConfiguration.initialIssuance,
-                weightCutPercent: stageConfiguration.issuanceCutPercent,
-                approvalHook: IJBRulesetApprovalHook(address(0)),
-                metadata: metadata,
-                splitGroups: splitGroups,
-                fundAccessLimitGroups: fundAccessLimitGroups
-            });
-
-            // Add the stage's properties to the byte-encoded configuration.
-            encodedConfiguration = abi.encode(
-                encodedConfiguration, _encodedStageConfig({stageConfiguration: stageConfiguration, stageNumber: i})
-            );
-
-            // Store the ruleset's start time for the next iteration.
-            previousStartTime = stageConfiguration.startsAtOrAfter;
-        }
+        return JBRulesetConfig({
+            mustStartAtOrAfter: stageConfiguration.startsAtOrAfter,
+            duration: stageConfiguration.issuanceCutFrequency,
+            weight: stageConfiguration.initialIssuance,
+            weightCutPercent: stageConfiguration.issuanceCutPercent,
+            approvalHook: IJBRulesetApprovalHook(address(0)),
+            metadata: metadata,
+            splitGroups: splitGroups,
+            fundAccessLimitGroups: fundAccessLimitGroups
+        });
     }
 
     /// @notice Returns the currency of the loan source, if a matching terminal configuration is found.
@@ -627,16 +542,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         }
     }
 
-    /// @notice Converts a `uint256` array to a `uint8` array.
-    /// @param array The array to convert.
-    /// @return result The converted array.
-    function _uint256ArrayToUint8Array(uint256[] memory array) internal pure returns (uint8[] memory result) {
-        result = new uint8[](array.length);
-        for (uint256 i; i < array.length; i++) {
-            result[i] = uint8(array[i]);
-        }
-    }
-
     //*********************************************************************//
     // --------------------- external transactions ----------------------- //
     //*********************************************************************//
@@ -646,7 +551,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     function afterCashOutRecordedWith(JBAfterCashOutRecordedContext calldata context) external payable {
         // If there's sufficient approval, transfer normally.
         if (context.forwardedAmount.token != JBConstants.NATIVE_TOKEN) {
-            return IERC20(context.forwardedAmount.token).safeTransferFrom({
+            IERC20(context.forwardedAmount.token).safeTransferFrom({
                 from: msg.sender,
                 to: address(this),
                 value: context.forwardedAmount.value
@@ -707,9 +612,12 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @param stageId The ID of the stage auto-mint tokens are available from.
     /// @param beneficiary The address to auto-mint tokens to.
     function autoIssueFor(uint256 revnetId, uint256 stageId, address beneficiary) external override {
+        // Keep a reference to the stage's start time.
+        uint256 stageStartTime = CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId).start;
+
         // Make sure the stage has started.
-        if (CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId).start > block.timestamp) {
-            revert REVDeployer_StageNotStarted();
+        if (stageStartTime > block.timestamp) {
+            revert REVDeployer_StageNotStarted(stageStartTime, block.timestamp);
         }
 
         // Get a reference to the number of tokens to auto-issue.
@@ -756,26 +664,43 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         override
         returns (uint256)
     {
-        // Deploy the revnet.
-        return _deployRevnetFor({
+        // Keep a reference to the revnet ID which was passed in.
+        bool shouldDeployNewRevnet = revnetId == 0;
+
+        // If the caller is deploying a new revnet, calculate its ID
+        // (which will be 1 greater than the current count).
+        if (shouldDeployNewRevnet) revnetId = PROJECTS.count() + 1;
+
+        // Normalize and encode the configurations.
+        (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash) = _makeRulesetConfigurations({
             revnetId: revnetId,
+            configuration: configuration,
+            terminalConfigurations: terminalConfigurations
+        });
+
+        // Deploy the revnet.
+        _deployRevnetFor({
+            revnetId: revnetId,
+            shouldDeployNewRevnet: shouldDeployNewRevnet,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
-            suckerDeploymentConfiguration: suckerDeploymentConfiguration
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration,
+            rulesetConfigurations: rulesetConfigurations,
+            encodedConfigurationHash: encodedConfigurationHash
         });
+
+        return revnetId;
     }
 
     /// @notice Deploy new suckers for an existing revnet.
     /// @dev Only the revnet's split operator can deploy new suckers.
     /// @param revnetId The ID of the revnet to deploy suckers for.
-    /// @param encodedConfiguration A byte-encoded representation of the revnet's configuration.
     /// See `_makeRulesetConfigurations(…)` for encoding details. Clients can read the encoded configuration
     /// from the `DeployRevnet` event emitted by this contract.
     /// @param suckerDeploymentConfiguration The suckers to set up for the revnet.
     function deploySuckersFor(
         uint256 revnetId,
-        bytes calldata encodedConfiguration,
         REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
     )
         external
@@ -799,7 +724,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         // Deploy the suckers.
         suckers = _deploySuckersFor({
             revnetId: revnetId,
-            encodedConfiguration: encodedConfiguration,
+            encodedConfigurationHash: hashedEncodedConfigurationOf[revnetId],
             suckerDeploymentConfiguration: suckerDeploymentConfiguration
         });
     }
@@ -829,9 +754,17 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         override
         returns (uint256, IJB721TiersHook hook)
     {
+        // Keep a reference to the revnet ID which was passed in.
+        bool shouldDeployNewRevnet = revnetId == 0;
+
+        // If the caller is deploying a new revnet, calculate its ID
+        // (which will be 1 greater than the current count).
+        if (shouldDeployNewRevnet) revnetId = PROJECTS.count() + 1;
+
         // Deploy the revnet with the specified tiered ERC-721 hook and croptop posting criteria.
-        (revnetId, hook) = _deploy721RevnetFor({
+        hook = _deploy721RevnetFor({
             revnetId: revnetId,
+            shouldDeployNewRevnet: shouldDeployNewRevnet,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
@@ -857,7 +790,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         _setPermissionsFor({
             account: address(this),
             operator: _msgSender(),
-            revnetId: uint56(revnetId),
+            revnetId: revnetId,
             permissionIds: new uint8[](0)
         });
 
@@ -923,6 +856,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
     /// @notice Deploy a revnet which sells tiered ERC-721s and (optionally) allows croptop posts to its ERC-721 tiers.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
+    /// @param shouldDeployNewRevnet Whether to deploy a new revnet or convert an existing Juicebox project into a
+    /// revnet.
     /// @param configuration Core revnet configuration. See `REVConfig`.
     /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
     /// @param buybackHookConfiguration The buyback hook and pools to set up for the revnet.
@@ -931,10 +866,10 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// token transfers between peer revnets on different networks.
     /// @param tiered721HookConfiguration How to set up the tiered ERC-721 hook for the revnet.
     /// @param allowedPosts Restrictions on which croptop posts are allowed on the revnet's ERC-721 tiers.
-    /// @return revnetId The ID of the newly created revnet.
     /// @return hook The address of the tiered ERC-721 hook that was deployed for the revnet.
     function _deploy721RevnetFor(
         uint256 revnetId,
+        bool shouldDeployNewRevnet,
         REVConfig calldata configuration,
         JBTerminalConfig[] calldata terminalConfigurations,
         REVBuybackHookConfig calldata buybackHookConfiguration,
@@ -943,21 +878,21 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         REVCroptopAllowedPost[] calldata allowedPosts
     )
         internal
-        returns (uint256, IJB721TiersHook hook)
+        returns (IJB721TiersHook hook)
     {
-        // Keep a reference to the revnet ID which was passed in.
-        uint256 originalRevnetId = revnetId;
-
-        // If the caller is deploying a new revnet, calculate its ID
-        // (which will be 1 greater than the current count).
-        if (originalRevnetId == 0) revnetId = PROJECTS.count() + 1;
+        // Normalize and encode the configurations.
+        (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash) = _makeRulesetConfigurations({
+            revnetId: revnetId,
+            configuration: configuration,
+            terminalConfigurations: terminalConfigurations
+        });
 
         // Deploy the tiered ERC-721 hook contract.
         // slither-disable-next-line reentrancy-benign
         hook = HOOK_DEPLOYER.deployHookFor({
             projectId: revnetId,
             deployTiersHookConfig: tiered721HookConfiguration.baseline721HookConfiguration,
-            salt: keccak256(abi.encode(tiered721HookConfiguration.salt, _msgSender()))
+            salt: keccak256(abi.encode(tiered721HookConfiguration.salt, encodedConfigurationHash, _msgSender()))
         });
 
         // Store the tiered ERC-721 hook.
@@ -995,55 +930,62 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         }
 
         _deployRevnetFor({
-            revnetId: originalRevnetId,
+            revnetId: revnetId,
+            shouldDeployNewRevnet: shouldDeployNewRevnet,
             configuration: configuration,
             terminalConfigurations: terminalConfigurations,
             buybackHookConfiguration: buybackHookConfiguration,
-            suckerDeploymentConfiguration: suckerDeploymentConfiguration
+            suckerDeploymentConfiguration: suckerDeploymentConfiguration,
+            rulesetConfigurations: rulesetConfigurations,
+            encodedConfigurationHash: encodedConfigurationHash
         });
-
-        return (revnetId, hook);
     }
 
     /// @notice Deploy a revnet, or convert an existing Juicebox project into a revnet.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
+    /// @param shouldDeployNewRevnet Whether to deploy a new revnet or convert an existing Juicebox project into a
+    /// revnet.
     /// @param configuration Core revnet configuration. See `REVConfig`.
     /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
     /// @param buybackHookConfiguration The buyback hook and pools to set up for the revnet.
     /// The buyback hook buys tokens from a Uniswap pool if minting new tokens would be more expensive.
     /// @param suckerDeploymentConfiguration The suckers to set up for the revnet. Suckers facilitate cross-chain
     /// token transfers between peer revnets on different networks.
-    /// @return revnetId The ID of the newly created revnet.
+    /// @param rulesetConfigurations The rulesets to set up for the revnet.
+    /// @param encodedConfigurationHash A hash that represents the revnet's configuration.
+    /// See `_makeRulesetConfigurations(…)` for encoding details. Clients can read the encoded configuration
+    /// from the `DeployRevnet` event emitted by this contract.
     function _deployRevnetFor(
         uint256 revnetId,
+        bool shouldDeployNewRevnet,
         REVConfig calldata configuration,
         JBTerminalConfig[] calldata terminalConfigurations,
         REVBuybackHookConfig calldata buybackHookConfiguration,
-        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
+        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration,
+        JBRulesetConfig[] memory rulesetConfigurations,
+        bytes32 encodedConfigurationHash
     )
         internal
-        returns (uint256)
     {
-        // Normalize and encode the configurations.
-        (JBRulesetConfig[] memory rulesetConfigurations, bytes memory encodedConfiguration) =
-            _makeRulesetConfigurations({configuration: configuration, terminalConfigurations: terminalConfigurations});
-
-        if (revnetId == 0) {
+        if (shouldDeployNewRevnet) {
             // If we're deploying a new revnet, launch a Juicebox project for it.
+            // Sanity check that we deployed the `revnetId` that we expected to deploy.
             // slither-disable-next-line reentrancy-benign,reentrancy-events
-            revnetId = CONTROLLER.launchProjectFor({
-                owner: address(this),
-                projectUri: configuration.description.uri,
-                rulesetConfigurations: rulesetConfigurations,
-                terminalConfigurations: terminalConfigurations,
-                memo: ""
-            });
+            assert(
+                CONTROLLER.launchProjectFor({
+                    owner: address(this),
+                    projectUri: configuration.description.uri,
+                    rulesetConfigurations: rulesetConfigurations,
+                    terminalConfigurations: terminalConfigurations,
+                    memo: ""
+                }) == revnetId
+            );
         } else {
             // Keep a reference to the Juicebox project's owner.
             address owner = PROJECTS.ownerOf(revnetId);
 
             // Make sure the caller is the owner of the Juicebox project.
-            if (_msgSender() != owner) revert REVDeployer_Unauthorized();
+            if (_msgSender() != owner) revert REVDeployer_Unauthorized(revnetId, _msgSender());
 
             // If we're converting an existing Juicebox project into a revnet,
             // transfer the `JBProjects` NFT to this deployer.
@@ -1070,12 +1012,28 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             projectId: revnetId,
             name: configuration.description.name,
             symbol: configuration.description.ticker,
-            salt: keccak256(abi.encode(configuration.description.salt, _msgSender()))
+            salt: keccak256(abi.encode(configuration.description.salt, encodedConfigurationHash, _msgSender()))
         });
 
         // If specified, set up the buyback hook.
         if (buybackHookConfiguration.hook != IJBBuybackHook(address(0))) {
-            _setupBuybackHookOf(revnetId, buybackHookConfiguration);
+            // Store the buyback hook.
+            buybackHookOf[revnetId] = buybackHookConfiguration.hook;
+
+            for (uint256 i; i < buybackHookConfiguration.poolConfigurations.length; i++) {
+                // Set the pool being iterated on.
+                REVBuybackPoolConfig calldata poolConfig = buybackHookConfiguration.poolConfigurations[i];
+
+                // Register the pool within the buyback contract.
+                // slither-disable-next-line unused-return
+                buybackHookConfiguration.hook.setPoolFor({
+                    projectId: revnetId,
+                    fee: poolConfig.fee,
+                    twapWindow: poolConfig.twapWindow,
+                    twapSlippageTolerance: poolConfig.twapSlippageTolerance,
+                    terminalToken: poolConfig.token
+                });
+            }
         }
 
         // If specified, set up the loan contract.
@@ -1088,9 +1046,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             loansOf[revnetId] = configuration.loans;
         }
 
-        // Store the auto-issuance amounts.
-        _storeAutoIssuanceAmounts({revnetId: revnetId, configuration: configuration});
-
         // Give the split operator their permissions.
         _setSplitOperatorOf({revnetId: revnetId, operator: configuration.splitOperator});
 
@@ -1098,10 +1053,13 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         if (suckerDeploymentConfiguration.salt != bytes32(0)) {
             _deploySuckersFor({
                 revnetId: revnetId,
-                encodedConfiguration: encodedConfiguration,
+                encodedConfigurationHash: encodedConfigurationHash,
                 suckerDeploymentConfiguration: suckerDeploymentConfiguration
             });
         }
+
+        // Store the hashed encoded configuration.
+        hashedEncodedConfigurationOf[revnetId] = encodedConfigurationHash;
 
         emit DeployRevnet({
             revnetId: revnetId,
@@ -1110,34 +1068,32 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             buybackHookConfiguration: buybackHookConfiguration,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration,
             rulesetConfigurations: rulesetConfigurations,
-            encodedConfiguration: encodedConfiguration,
+            encodedConfigurationHash: encodedConfigurationHash,
             caller: _msgSender()
         });
-
-        return revnetId;
     }
 
     /// @notice Deploy suckers for a revnet.
     /// @param revnetId The ID of the revnet to deploy suckers for.
-    /// @param encodedConfiguration A byte-encoded representation of the revnet's configuration.
+    /// @param encodedConfigurationHash A hash that represents the revnet's configuration.
     /// See `_makeRulesetConfigurations(…)` for encoding details. Clients can read the encoded configuration
     /// from the `DeployRevnet` event emitted by this contract.
     /// @param suckerDeploymentConfiguration The suckers to set up for the revnet.
     function _deploySuckersFor(
         uint256 revnetId,
-        bytes memory encodedConfiguration,
+        bytes32 encodedConfigurationHash,
         REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
     )
         internal
         returns (address[] memory suckers)
     {
         // Compose the salt.
-        bytes32 salt = keccak256(abi.encode(encodedConfiguration, suckerDeploymentConfiguration.salt));
+        bytes32 salt = keccak256(abi.encode(encodedConfigurationHash, suckerDeploymentConfiguration.salt, _msgSender()));
 
         emit DeploySuckers({
             revnetId: revnetId,
             salt: salt,
-            encodedConfiguration: encodedConfiguration,
+            encodedConfigurationHash: encodedConfigurationHash,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration,
             caller: _msgSender()
         });
@@ -1149,6 +1105,127 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             salt: salt,
             configurations: suckerDeploymentConfiguration.deployerConfigurations
         });
+    }
+
+    /// @notice Convert a revnet's stages into a series of Juicebox project rulesets.
+    /// @param revnetId The ID of the revnet to make rulesets for.
+    /// @param configuration The configuration containing the revnet's stages.
+    /// @param terminalConfigurations The terminals to set up for the revnet. Used for payments and cash outs.
+    /// @return rulesetConfigurations A list of ruleset configurations defined by the stages.
+    /// @return encodedConfigurationHash A hash that represents the revnet's configuration. Used for sucker
+    /// deployment salts.
+    function _makeRulesetConfigurations(
+        uint256 revnetId,
+        REVConfig calldata configuration,
+        JBTerminalConfig[] calldata terminalConfigurations
+    )
+        internal
+        returns (JBRulesetConfig[] memory rulesetConfigurations, bytes32 encodedConfigurationHash)
+    {
+        // If there are no stages, revert.
+        if (configuration.stageConfigurations.length == 0) revert REVDeployer_StagesRequired();
+
+        // Initialize the array of rulesets.
+        rulesetConfigurations = new JBRulesetConfig[](configuration.stageConfigurations.length);
+
+        // Add the base configuration to the byte-encoded configuration.
+        bytes memory encodedConfiguration = abi.encode(
+            configuration.baseCurrency,
+            configuration.loans,
+            configuration.description.name,
+            configuration.description.ticker,
+            configuration.description.salt
+        );
+
+        // Initialize fund access limit groups for the loan contract to use.
+        JBFundAccessLimitGroup[] memory fundAccessLimitGroups =
+            _makeLoanFundAccessLimits({configuration: configuration, terminalConfigurations: terminalConfigurations});
+
+        // Iterate through each stage to set up its ruleset.
+        for (uint256 i; i < configuration.stageConfigurations.length; i++) {
+            // Set the stage being iterated on.
+            REVStageConfig calldata stageConfiguration = configuration.stageConfigurations[i];
+
+            // Make sure the revnet has at least one split if it has a split percent.
+            // Otherwise, the split would go to this contract since its the revnet's owner.
+            if (stageConfiguration.splitPercent > 0 && stageConfiguration.splits.length == 0) {
+                revert REVDeployer_MustHaveSplits();
+            }
+
+            // If the stage's start time is not after the previous stage's start time, revert.
+            if (i > 0 && stageConfiguration.startsAtOrAfter <= configuration.stageConfigurations[i - 1].startsAtOrAfter)
+            {
+                revert REVDeployer_StageTimesMustIncrease();
+            }
+
+            // Make sure the revnet doesn't prevent cashouts all together.
+            if (stageConfiguration.cashOutTaxRate >= JBConstants.MAX_CASH_OUT_TAX_RATE) {
+                revert REVDeployer_CashOutsCantBeTurnedOffCompletely(
+                    stageConfiguration.cashOutTaxRate, JBConstants.MAX_CASH_OUT_TAX_RATE
+                );
+            }
+
+            // Set up the ruleset.
+            rulesetConfigurations[i] = _makeRulesetConfiguration({
+                baseCurrency: configuration.baseCurrency,
+                stageConfiguration: stageConfiguration,
+                fundAccessLimitGroups: fundAccessLimitGroups
+            });
+
+            // Add the stage's properties to the byte-encoded configuration.
+            encodedConfiguration = abi.encode(
+                encodedConfiguration,
+                // If no start time is provided for the first stage, use the current block's timestamp.
+                // In the future, revnets deployed on other networks can match this revnet's encoded stage by specifying
+                // the
+                // same start time.
+                (i == 0 && stageConfiguration.startsAtOrAfter == 0)
+                    ? block.timestamp
+                    : stageConfiguration.startsAtOrAfter,
+                stageConfiguration.splitPercent,
+                stageConfiguration.initialIssuance,
+                stageConfiguration.issuanceCutFrequency,
+                stageConfiguration.issuanceCutPercent,
+                stageConfiguration.cashOutTaxRate
+            );
+
+            // Add each auto-mint to the byte-encoded representation.
+            for (uint256 j; j < stageConfiguration.autoIssuances.length; j++) {
+                REVAutoIssuance calldata autoIssuance = stageConfiguration.autoIssuances[j];
+
+                // Make sure the beneficiary is not the zero address.
+                if (autoIssuance.beneficiary == address(0)) revert REVDeployer_AutoIssuanceBeneficiaryZeroAddress();
+
+                // If there's nothing to auto-mint, continue.
+                if (autoIssuance.count == 0) continue;
+
+                encodedConfiguration =
+                    abi.encode(encodedConfiguration, autoIssuance.chainId, autoIssuance.beneficiary, autoIssuance.count);
+
+                // If the issuance config is for another chain, skip it.
+                if (autoIssuance.chainId != block.chainid) continue;
+
+                emit StoreAutoIssuanceAmount({
+                    revnetId: revnetId,
+                    stageId: block.timestamp + i,
+                    beneficiary: autoIssuance.beneficiary,
+                    count: autoIssuance.count,
+                    caller: _msgSender()
+                });
+
+                // Store the amount of tokens that can be auto-minted on this chain during this stage.
+                // The first stage ID is stored at this block's timestamp,
+                // and further stage IDs have incrementally increasing IDs
+                // slither-disable-next-line reentrancy-events
+                amountToAutoIssue[revnetId][block.timestamp + i][autoIssuance.beneficiary] += autoIssuance.count;
+
+                // Add to the total unrealized auto-issuance amount.
+                unrealizedAutoIssuanceAmountOf[revnetId] += autoIssuance.count;
+            }
+        }
+
+        // Hash the encoded configuration.
+        encodedConfigurationHash = keccak256(encodedConfiguration);
     }
 
     /// @notice Mints a revnet's tokens.
@@ -1228,103 +1305,19 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @param revnetId The ID of the revnet to set the split operator of.
     /// @param operator The new split operator's address.
     function _setSplitOperatorOf(uint256 revnetId, address operator) internal {
+        // Get the permission indexes for the split operator.
+        uint256[] memory permissionIndexes = _splitOperatorPermissionIndexesOf(revnetId);
+        uint8[] memory permissionIds = new uint8[](permissionIndexes.length);
+
+        for (uint256 i; i < permissionIndexes.length; i++) {
+            permissionIds[i] = uint8(permissionIndexes[i]);
+        }
+
         _setPermissionsFor({
             account: address(this),
             operator: operator,
-            revnetId: uint56(revnetId),
-            permissionIds: _uint256ArrayToUint8Array(_splitOperatorPermissionIndexesOf(revnetId))
+            revnetId: revnetId,
+            permissionIds: permissionIds
         });
-    }
-
-    /// @notice Sets up a buyback hook and pools for a revnet.
-    /// @param revnetId The ID of the revnet to set up the buyback hook for.
-    /// @param buybackHookConfiguration The address of the hook and a list of pools to use for buybacks.
-    function _setupBuybackHookOf(uint256 revnetId, REVBuybackHookConfig calldata buybackHookConfiguration) internal {
-        // Store the buyback hook.
-        buybackHookOf[revnetId] = buybackHookConfiguration.hook;
-
-        for (uint256 i; i < buybackHookConfiguration.poolConfigurations.length; i++) {
-            // Set the pool being iterated on.
-            REVBuybackPoolConfig calldata poolConfig = buybackHookConfiguration.poolConfigurations[i];
-
-            // Register the pool within the buyback contract.
-            // slither-disable-next-line unused-return
-            buybackHookConfiguration.hook.setPoolFor({
-                projectId: revnetId,
-                fee: poolConfig.fee,
-                twapWindow: poolConfig.twapWindow,
-                twapSlippageTolerance: poolConfig.twapSlippageTolerance,
-                terminalToken: poolConfig.token
-            });
-        }
-    }
-
-    /// @notice Stores the auto-issuance amounts for each of a revnet's stages.
-    /// @param revnetId The ID of the revnet to store the auto-mint amounts for.
-    /// @param configuration The revnet's configuration. See `REVConfig`.
-    function _storeAutoIssuanceAmounts(uint256 revnetId, REVConfig calldata configuration) internal {
-        // Keep a reference to the total amount of tokens which can be auto-minted.
-        uint256 totalUnrealizedAutoIssuanceAmount;
-
-        // Loop through each stage to store its auto-issuance amounts.
-        for (uint256 i; i < configuration.stageConfigurations.length; i++) {
-            // Set the stage configuration being iterated on.
-            REVStageConfig calldata stageConfiguration = configuration.stageConfigurations[i];
-
-            // Loop through each mint to store its amount.
-            for (uint256 j; j < stageConfiguration.autoIssuances.length; j++) {
-                // Set the mint config being iterated on.
-                REVAutoIssuance calldata issuanceConfig = stageConfiguration.autoIssuances[j];
-
-                // If the issuance config is for another chain, skip it.
-                if (issuanceConfig.chainId != block.chainid) continue;
-
-                // If there's nothing to auto-mint, continue.
-                if (issuanceConfig.count == 0) continue;
-
-                // Make sure the beneficiary is not the zero address.
-                if (issuanceConfig.beneficiary == address(0)) revert REVDeployer_AutoIssuanceBeneficiaryZeroAddress();
-
-                emit StoreAutoIssuanceAmount({
-                    revnetId: revnetId,
-                    stageId: block.timestamp + i,
-                    beneficiary: issuanceConfig.beneficiary,
-                    count: issuanceConfig.count,
-                    caller: _msgSender()
-                });
-
-                // If the auto-issuance is for the first stage, or a stage which has already started,
-                // mint the tokens right away.
-                if (i == 0 || stageConfiguration.startsAtOrAfter <= block.timestamp) {
-                    emit AutoIssue({
-                        revnetId: revnetId,
-                        stageId: block.timestamp + i,
-                        beneficiary: issuanceConfig.beneficiary,
-                        count: issuanceConfig.count,
-                        caller: _msgSender()
-                    });
-
-                    // slither-disable-next-line reentrancy-events,reentrancy-no-eth,reentrancy-benign
-                    _mintTokensOf({
-                        revnetId: revnetId,
-                        tokenCount: issuanceConfig.count,
-                        beneficiary: issuanceConfig.beneficiary
-                    });
-                }
-                // Otherwise, store the amount of tokens that can be auto-minted on this chain during this stage.
-                else {
-                    // The first stage ID is stored at this block's timestamp,
-                    // and further stage IDs have incrementally increasing IDs
-                    // slither-disable-next-line reentrancy-events
-                    amountToAutoIssue[revnetId][block.timestamp + i][issuanceConfig.beneficiary] += issuanceConfig.count;
-
-                    // Add to the total unrealized auto-issuance amount.
-                    totalUnrealizedAutoIssuanceAmount += issuanceConfig.count;
-                }
-            }
-        }
-
-        // Store the unrealized auto-issuance amount.
-        unrealizedAutoIssuanceAmountOf[revnetId] = totalUnrealizedAutoIssuanceAmount;
     }
 }

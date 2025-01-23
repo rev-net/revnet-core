@@ -24,7 +24,7 @@ interface IREVDeployer {
     event DeploySuckers(
         uint256 indexed revnetId,
         bytes32 indexed salt,
-        bytes encodedConfiguration,
+        bytes32 encodedConfigurationHash,
         REVSuckerDeploymentConfig suckerDeploymentConfiguration,
         address caller
     );
@@ -36,7 +36,7 @@ interface IREVDeployer {
         REVBuybackHookConfig buybackHookConfiguration,
         REVSuckerDeploymentConfig suckerDeploymentConfiguration,
         JBRulesetConfig[] rulesetConfigurations,
-        bytes encodedConfiguration,
+        bytes32 encodedConfigurationHash,
         address caller
     );
 
@@ -63,13 +63,29 @@ interface IREVDeployer {
     function PUBLISHER() external view returns (CTPublisher);
     function HOOK_DEPLOYER() external view returns (IJB721TiersHookDeployer);
 
+    function amountToAutoIssue(
+        uint256 revnetId,
+        uint256 stageId,
+        address beneficiary
+    )
+        external
+        view
+        returns (uint256);
     function buybackHookOf(uint256 revnetId) external view returns (IJBRulesetDataHook);
     function cashOutDelayOf(uint256 revnetId) external view returns (uint256);
+    function deploySuckersFor(
+        uint256 revnetId,
+        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
+    )
+        external
+        returns (address[] memory suckers);
+    function hashedEncodedConfigurationOf(uint256 revnetId) external view returns (bytes32);
     function isSplitOperatorOf(uint256 revnetId, address addr) external view returns (bool);
     function loansOf(uint256 revnetId) external view returns (address);
     function tiered721HookOf(uint256 revnetId) external view returns (IJB721TiersHook);
     function unrealizedAutoIssuanceAmountOf(uint256 revnetId) external view returns (uint256);
 
+    function autoIssueFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
     function deployFor(
         uint256 revnetId,
         REVConfig memory configuration,
@@ -93,21 +109,4 @@ interface IREVDeployer {
         returns (uint256, IJB721TiersHook hook);
 
     function setSplitOperatorOf(uint256 revnetId, address newSplitOperator) external;
-    function autoIssueFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
-    function deploySuckersFor(
-        uint256 revnetId,
-        bytes calldata encodedConfiguration,
-        REVSuckerDeploymentConfig calldata suckerDeploymentConfiguration
-    )
-        external
-        returns (address[] memory suckers);
-
-    function amountToAutoIssue(
-        uint256 revnetId,
-        uint256 stageId,
-        address beneficiary
-    )
-        external
-        view
-        returns (uint256);
 }

@@ -257,12 +257,21 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         assertGt(REVNET_ID, 0);
     }
 
-    function test_preMint() public view {
+    function test_preMint() public {
+        uint256 perStageMintAmount = 70_000 * decimalMultiplier;
+        vm.expectEmit();
+        emit IREVDeployer.AutoIssue(REVNET_ID, firstStageId, multisig(), perStageMintAmount, address(this));
+        REV_DEPLOYER.autoIssueFor(REVNET_ID, firstStageId, multisig());
+
         assertEq(70_000 * decimalMultiplier, IJBToken(jbTokens().tokenOf(REVNET_ID)).balanceOf(multisig()));
     }
 
     function test_realize_autoissuance() public {
         uint256 perStageMintAmount = 70_000 * decimalMultiplier;
+
+        vm.expectEmit();
+        emit IREVDeployer.AutoIssue(REVNET_ID, firstStageId, multisig(), perStageMintAmount, address(this));
+        REV_DEPLOYER.autoIssueFor(REVNET_ID, firstStageId, multisig());
 
         assertEq(perStageMintAmount, IJBToken(jbTokens().tokenOf(REVNET_ID)).balanceOf(multisig()));
 
@@ -312,7 +321,7 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         // which wil call the balanceOf to check its own balance.
         vm.mockCall(address(token), abi.encodeWithSelector(IERC20.balanceOf.selector), abi.encode(0));
 
-        address[] memory suckers = REV_DEPLOYER.deploySuckersFor(REVNET_ID, ENCODED_CONFIG, revConfig);
+        address[] memory suckers = REV_DEPLOYER.deploySuckersFor(REVNET_ID, revConfig);
 
         // Ensure it's registered
         bool isSucker = SUCKER_REGISTRY.isSuckerOf(REVNET_ID, suckers[0]);
@@ -389,7 +398,9 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         // Build the config.
         FeeProjectConfig memory feeProjectConfig = getFeeProjectConfig();
 
-        vm.expectRevert(REVDeployer.REVDeployer_Unauthorized.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(REVDeployer.REVDeployer_Unauthorized.selector, FEE_PROJECT_ID, address(this))
+        );
         // Configure the project.
         REVNET_ID = REV_DEPLOYER.deployFor({
             revnetId: FEE_PROJECT_ID, // Zero to deploy a new revnet
