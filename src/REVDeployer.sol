@@ -1113,6 +1113,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
                 );
             }
 
+            // Scoped section to avoid stack too deep. `metadata` and `splitGroups` only used in this section.
             {
                 // Set up the ruleset's metadata.
                 JBRulesetMetadata memory metadata;
