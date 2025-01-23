@@ -969,14 +969,17 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     {
         if (shouldDeployNewRevnet) {
             // If we're deploying a new revnet, launch a Juicebox project for it.
-            // slither-disable-next-line reentrancy-benign,reentrancy-events,unused-return
-            CONTROLLER.launchProjectFor({
-                owner: address(this),
-                projectUri: configuration.description.uri,
-                rulesetConfigurations: rulesetConfigurations,
-                terminalConfigurations: terminalConfigurations,
-                memo: ""
-            });
+            // Sanity check that we deployed the `revnetId` that we expected to deploy.
+            // slither-disable-next-line reentrancy-benign,reentrancy-events
+            assert(
+                CONTROLLER.launchProjectFor({
+                    owner: address(this),
+                    projectUri: configuration.description.uri,
+                    rulesetConfigurations: rulesetConfigurations,
+                    terminalConfigurations: terminalConfigurations,
+                    memo: ""
+                }) == revnetId
+            );
         } else {
             // Keep a reference to the Juicebox project's owner.
             address owner = PROJECTS.ownerOf(revnetId);
