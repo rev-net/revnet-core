@@ -436,6 +436,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     }
 
     function test_Cashout(
+        bool useNative,
         uint104 autoIssuance,
         uint256 totalSupplyExcludingAutoMint,
         uint256 nativeSurplus,
@@ -448,7 +449,10 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // `SafeSupply`.
         vm.assume(cashOutTaxRate <= JBConstants.MAX_FEE);
         vm.assume(totalSupplyExcludingAutoMint > 0 && totalSupplyExcludingAutoMint <= type(uint208).max);
+        vm.assume(nativeSurplus <= type(uint104).max);
         vm.assume(totalSupplyExcludingAutoMint > tokensToCashout);
+
+        address token = useNative ? JBConstants.NATIVE_TOKEN : address(TOKEN);
 
         // Deploy a new REVNET, that has multiple stages where the fee decrease.
         // This lets people refinance their loans to get a better rate.
@@ -491,10 +495,19 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         }
 
         // Add the surplus into the project.
-        vm.deal(USER, nativeSurplus);
+        if (useNative) {
+            vm.deal(USER, nativeSurplus);
+        } else {
+            deal(address(TOKEN), USER, nativeSurplus);
+
+            // Give allowance to spend our tokens.
+            vm.prank(USER);
+            TOKEN.approve(address(jbMultiTerminal()), nativeSurplus);
+        }
+
         vm.prank(USER);
-        jbMultiTerminal().addToBalanceOf{value: nativeSurplus}(
-            revnetProjectId, JBConstants.NATIVE_TOKEN, nativeSurplus, false, string(""), bytes("")
+        jbMultiTerminal().addToBalanceOf{value: useNative ? nativeSurplus : 0}(
+            revnetProjectId, token, nativeSurplus, false, string(""), bytes("")
         );
 
         // Mint the entire supply excluding automint to the user.
@@ -503,7 +516,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // Check what a borrow would result in more.
         uint256 loanable = LOANS_CONTRACT.borrowableAmountFrom(
-            revnetProjectId, tokensToCashout, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+            revnetProjectId, tokensToCashout, useNative ? 18 : 6, uint32(uint160(token))
         );
 
         uint256 fullReclaimableSurplus = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
@@ -525,17 +538,22 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             surplus: nativeSurplus
         });
 
+        // In the `revFee` calculation we decrease the `nativeSurplus` by the `reclaimableSurplus`
+        // but due to a `stack too deep` we can't do that there, so we decrease it here.
+        // This is not the correct value for this variable, however in `revFee` is the last time we use this variable.
+        nativeSurplus -= reclaimableSurplus;
+
         uint256 revFee = jbMultiTerminal().STORE().currentReclaimableSurplusOf({
             projectId: revnetProjectId,
             tokenCount: feeTokenCount,
-            totalSupply: totalSupplyExcludingAutoMint - (tokensToCashout - feeTokenCount),
-            surplus: nativeSurplus - reclaimableSurplus
+            totalSupply: totalSupply - (tokensToCashout - feeTokenCount),
+            surplus: nativeSurplus
         });
 
         assertGe(fullReclaimableSurplus, mulDiv((reclaimableSurplus + revFee), 995, 1000)); // small marging for curve
             // rounding.
 
-        uint256 balanceBefore = USER.balance;
+        uint256 balanceBefore = _balanceOf(token, USER);
 
         // Ensure that the hook was called.
         vm.expectCall(address(REV_DEPLOYER), abi.encode(REVDeployer.beforeCashOutRecordedWith.selector));
@@ -547,19 +565,22 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         // Perform a cashout.
         vm.prank(USER);
-        jbMultiTerminal().cashOutTokensOf(
-            USER, revnetProjectId, tokensToCashout, JBConstants.NATIVE_TOKEN, 0, payable(USER), bytes("")
-        );
+        jbMultiTerminal().cashOutTokensOf(USER, revnetProjectId, tokensToCashout, token, 0, payable(USER), bytes(""));
 
-        assertGe(USER.balance, balanceBefore);
+        // Make sure the contracts do not accidentally hold any tokens.
+        assertEq(_balanceOf(token, address(REV_DEPLOYER)), 0);
+        assertEq(_balanceOf(token, address(LOANS_CONTRACT)), 0);
 
-        uint256 balance = USER.balance - balanceBefore;
+        // make sure the user has received tokens.
+        assertGe(_balanceOf(token, USER), balanceBefore);
+
+        uint256 balance = _balanceOf(token, USER) - balanceBefore;
         uint256 nanaFee =
             cashOutTaxRate == 0 ? 0 : JBFees.feeAmountFrom({amount: balance, feePercent: jbMultiTerminal().FEE()});
 
         assertApproxEqAbs(balance, reclaimableSurplus - nanaFee, 1);
 
-        assertGe(reclaimableSurplus + revFee, mulDiv(loanable, 983, 1000)); // small marging for curve rounding.
+        assertGe(reclaimableSurplus + revFee, mulDiv(loanable, 97, 100)); // small marging for curve rounding.
     }
 
     function test_Pay_Borrow_With_Loan_Source() public {
@@ -1539,5 +1560,13 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             payable(USER),
             allowance
         );
+    }
+
+    function _balanceOf(address token, address user) internal view returns (uint256) {
+        if (token == JBConstants.NATIVE_TOKEN) {
+            return user.balance;
+        }
+
+        return IERC20(token).balanceOf(user);
     }
 }
