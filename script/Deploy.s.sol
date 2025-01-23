@@ -189,7 +189,7 @@ contract DeployScript is Script, Sphinx {
                 autoIssuances: issuanceConfs,
                 splitPercent: 3800, // 38%
                 splits: splits,
-                initialIssuance: 0, // inherit from previous cycle.
+                initialIssuance: 1, // inherit from previous cycle.
                 issuanceCutFrequency: 180 days,
                 issuanceCutPercent: 380_000_000, // 38%
                 cashOutTaxRate: 2000, // 0.2
