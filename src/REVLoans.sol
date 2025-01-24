@@ -510,7 +510,8 @@ contract REVLoans is ERC721, ERC2771Context, Ownable, IREVLoans {
         // A loan needs to have collateral.
         if (collateralCount == 0) revert REVLoans_ZeroCollateralLoanIsInvalid();
 
-        // Make sure the prepaid fee percent is between 0 and 20%. Meaning an 16 year loan can be paid upfront with a
+        // Make sure the prepaid fee percent is between `MIN_PREPAID_FEE_PERCENT` and `MAX_PREPAID_FEE_PERCENT`. Meaning
+        // an 16 year loan can be paid upfront with a
         // payment of 50% of the borrowed assets, the cheapest possible rate.
         if (prepaidFeePercent < MIN_PREPAID_FEE_PERCENT || prepaidFeePercent > MAX_PREPAID_FEE_PERCENT) {
             revert REVLoans_InvalidPrepaidFeePercent(
