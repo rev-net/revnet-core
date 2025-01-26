@@ -154,12 +154,12 @@ contract REVLoansCallHandler is JBTest {
             if (timeSinceLoanCreated > latestLoan.prepaidDuration) {
                 // Calculate the prepaid fee for the amount being paid back.
                 uint256 prepaidAmount =
-                    JBFees.feeAmountFrom({amount: amountDiff, feePercent: latestLoan.prepaidFeePercent});
+                    JBFees.feeAmountFrom({amountBeforeFee: amountDiff, feePercent: latestLoan.prepaidFeePercent});
 
                 // Calculate the fee as a linear proportion given the amount of time that has passed.
                 // sourceFeeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION) - prepaidAmount;
                 amountPaidDown += JBFees.feeAmountFrom({
-                    amount: amountDiff - prepaidAmount,
+                    amountBeforeFee: amountDiff - prepaidAmount,
                     feePercent: mulDiv(timeSinceLoanCreated, JBConstants.MAX_FEE, 3650 days)
                 });
             }

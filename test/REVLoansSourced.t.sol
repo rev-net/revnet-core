@@ -422,12 +422,13 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(TOKEN.balanceOf(address(LOANS_CONTRACT)), 0);
 
         // The fees to be paid to NANA.
-        uint256 allowance_fees = JBFees.feeAmountIn({amount: loanable, feePercent: jbMultiTerminal().FEE()});
+        uint256 allowance_fees =
+            JBFees.feeAmountResultingIn({amountAfterFee: loanable, feePercent: jbMultiTerminal().FEE()});
         // The fees to be paid to REV.
         uint256 rev_fees =
-            JBFees.feeAmountFrom({amount: loanable, feePercent: LOANS_CONTRACT.REV_PREPAID_FEE_PERCENT()});
+            JBFees.feeAmountFrom({amountBeforeFee: loanable, feePercent: LOANS_CONTRACT.REV_PREPAID_FEE_PERCENT()});
         // The fees to be paid to the Project we are taking a loan from.
-        uint256 source_fees = JBFees.feeAmountFrom({amount: loanable, feePercent: prepaidFee});
+        uint256 source_fees = JBFees.feeAmountFrom({amountBeforeFee: loanable, feePercent: prepaidFee});
         uint256 fees = allowance_fees + rev_fees + source_fees;
 
         // Ensure we actually received the token from the borrow
@@ -575,8 +576,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertGe(_balanceOf(token, USER), balanceBefore);
 
         uint256 balance = _balanceOf(token, USER) - balanceBefore;
-        uint256 nanaFee =
-            cashOutTaxRate == 0 ? 0 : JBFees.feeAmountFrom({amount: balance, feePercent: jbMultiTerminal().FEE()});
+        uint256 nanaFee = cashOutTaxRate == 0
+            ? 0
+            : JBFees.feeAmountFrom({amountBeforeFee: balance, feePercent: jbMultiTerminal().FEE()});
 
         assertApproxEqAbs(balance, reclaimableSurplus - nanaFee, 1);
 
@@ -691,12 +693,13 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             // If the loan period has passed the prepaid time frame, take a fee.
             if (timeSinceLoanCreated > loan.prepaidDuration) {
                 // Calculate the prepaid fee for the amount being paid back.
-                uint256 prepaidAmount = JBFees.feeAmountFrom({amount: amountDiff, feePercent: loan.prepaidFeePercent});
+                uint256 prepaidAmount =
+                    JBFees.feeAmountFrom({amountBeforeFee: amountDiff, feePercent: loan.prepaidFeePercent});
 
                 // Calculate the fee as a linear proportion given the amount of time that has passed.
                 // sourceFeeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION) - prepaidAmount;
                 maxAmountPaidDown += JBFees.feeAmountFrom({
-                    amount: amountDiff - prepaidAmount,
+                    amountBeforeFee: amountDiff - prepaidAmount,
                     feePercent: mulDiv(timeSinceLoanCreated, JBConstants.MAX_FEE, 3650 days)
                 });
             }
@@ -1466,12 +1469,13 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             // If the loan period has passed the prepaid time frame, take a fee.
             if (timeSinceLoanCreated > loan.prepaidDuration) {
                 // Calculate the prepaid fee for the amount being paid back.
-                uint256 prepaidAmount = JBFees.feeAmountFrom({amount: amountDiff, feePercent: loan.prepaidFeePercent});
+                uint256 prepaidAmount =
+                    JBFees.feeAmountFrom({amountBeforeFee: amountDiff, feePercent: loan.prepaidFeePercent});
 
                 // Calculate the fee as a linear proportion given the amount of time that has passed.
                 // sourceFeeAmount = mulDiv(amount, timeSinceLoanCreated, LOAN_LIQUIDATION_DURATION) - prepaidAmount;
                 amountPaidDown += JBFees.feeAmountFrom({
-                    amount: amountDiff - prepaidAmount,
+                    amountBeforeFee: amountDiff - prepaidAmount,
                     feePercent: mulDiv(timeSinceLoanCreated, JBConstants.MAX_FEE, 3650 days)
                 });
             }

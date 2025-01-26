@@ -59,7 +59,7 @@ contract DeployScript is Script, Sphinx {
     string SYMBOL = "REV";
     string PROJECT_URI = "ipfs://QmSiJhANtkySxt6eBDJS3E5RNJx3QXRNwz6XijdmEXw7JC";
     uint32 NATIVE_CURRENCY = uint32(uint160(JBConstants.NATIVE_TOKEN));
-    uint32 ETH_CURRENCY = 1; //JBCurrencyIds.ETH;
+    uint32 ETH_CURRENCY = JBCurrencyIds.ETH;
     uint8 DECIMALS = 18;
     uint256 DECIMAL_MULTIPLIER = 10 ** DECIMALS;
     bytes32 ERC20_SALT = "_REV_ERC20_SALT_";
