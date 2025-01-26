@@ -396,10 +396,10 @@ contract REVLoans is ERC721, ERC2771Context, Ownable, IREVLoans {
             }
 
             // Get a reference to the amount prepaid for the full loan.
-            uint256 prepaid = JBFees.feeAmountFrom({amount: loan.amount, feePercent: loan.prepaidFeePercent});
+            uint256 prepaid = JBFees.feeAmountFrom({amountBeforeFee: loan.amount, feePercent: loan.prepaidFeePercent});
 
             uint256 fullSourceFeeAmount = JBFees.feeAmountFrom({
-                amount: loan.amount - prepaid,
+                amountBeforeFee: loan.amount - prepaid,
                 feePercent: mulDiv(timeSinceLoanCreated, JBConstants.MAX_FEE, LOAN_LIQUIDATION_DURATION)
             });
 
@@ -538,7 +538,7 @@ contract REVLoans is ERC721, ERC2771Context, Ownable, IREVLoans {
         if (borrowAmount < minBorrowAmount) revert REVLoans_UnderMinBorrowAmount(minBorrowAmount, borrowAmount);
 
         // Get the amount of additional fee to take for the revnet issuing the loan.
-        uint256 sourceFeeAmount = JBFees.feeAmountFrom({amount: borrowAmount, feePercent: prepaidFeePercent});
+        uint256 sourceFeeAmount = JBFees.feeAmountFrom({amountBeforeFee: borrowAmount, feePercent: prepaidFeePercent});
 
         // Borrow the amount.
         _adjust({
@@ -826,7 +826,8 @@ contract REVLoans is ERC721, ERC2771Context, Ownable, IREVLoans {
         }
 
         // Get the amount of additional fee to take for REV.
-        uint256 revFeeAmount = JBFees.feeAmountFrom({amount: addedBorrowAmount, feePercent: REV_PREPAID_FEE_PERCENT});
+        uint256 revFeeAmount =
+            JBFees.feeAmountFrom({amountBeforeFee: addedBorrowAmount, feePercent: REV_PREPAID_FEE_PERCENT});
 
         // Increase the allowance for the beneficiary.
         uint256 payValue = _beforeTransferTo({to: address(feeTerminal), token: loan.source.token, amount: revFeeAmount});
