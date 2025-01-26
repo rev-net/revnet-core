@@ -422,8 +422,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(TOKEN.balanceOf(address(LOANS_CONTRACT)), 0);
 
         // The fees to be paid to NANA.
-        uint256 allowance_fees =
-            JBFees.feeAmountResultingIn({amountAfterFee: loanable, feePercent: jbMultiTerminal().FEE()});
+        uint256 allowance_fees = JBFees.feeAmountFrom({amountBeforeFee: loanable, feePercent: jbMultiTerminal().FEE()});
         // The fees to be paid to REV.
         uint256 rev_fees =
             JBFees.feeAmountFrom({amountBeforeFee: loanable, feePercent: LOANS_CONTRACT.REV_PREPAID_FEE_PERCENT()});
@@ -578,7 +577,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         uint256 balance = _balanceOf(token, USER) - balanceBefore;
         uint256 nanaFee = cashOutTaxRate == 0
             ? 0
-            : JBFees.feeAmountFrom({amountBeforeFee: balance, feePercent: jbMultiTerminal().FEE()});
+            : JBFees.feeAmountResultingIn({amountAfterFee: balance, feePercent: jbMultiTerminal().FEE()});
 
         assertApproxEqAbs(balance, reclaimableSurplus - nanaFee, 1);
 
