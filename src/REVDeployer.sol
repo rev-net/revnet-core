@@ -538,7 +538,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
         // Copy the custom permissions into the array.
         for (uint256 i; i < customSplitOperatorPermissionIndexes.length; i++) {
-            allOperatorPermissions[3 + i] = customSplitOperatorPermissionIndexes[i];
+            allOperatorPermissions[4 + i] = customSplitOperatorPermissionIndexes[i];
         }
     }
 
