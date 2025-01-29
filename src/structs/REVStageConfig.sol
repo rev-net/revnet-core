@@ -22,7 +22,7 @@ import {REVAutoIssuance} from "./REVAutoIssuance.sol";
 /// out.
 /// @custom:member extraMetadata Extra info to attach set into this stage that may affect hooks.
 struct REVStageConfig {
-    uint40 startsAtOrAfter;
+    uint48 startsAtOrAfter;
     REVAutoIssuance[] autoIssuances;
     uint16 splitPercent;
     JBSplit[] splits;

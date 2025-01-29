@@ -12,7 +12,7 @@ import {REVLoanSource} from "./REVLoanSource.sol";
 struct REVLoan {
     uint112 amount;
     uint112 collateral;
-    uint40 createdAt;
+    uint48 createdAt;
     uint16 prepaidFeePercent;
     uint32 prepaidDuration;
     REVLoanSource source;
