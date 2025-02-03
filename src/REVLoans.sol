@@ -1129,9 +1129,6 @@ contract REVLoans is ERC721, ERC2771Context, Ownable, IREVLoans {
         // Get a reference to the replacement loan ID.
         reallocatedLoanId = _generateLoanId(revnetId, ++numberOfLoansFor[revnetId]);
 
-        // Mint the replacement loan.
-        _mint({to: _msgSender(), tokenId: reallocatedLoanId});
-
         // Get a reference to the loan being created.
         reallocatedLoan = _loanOf[reallocatedLoanId];
 
@@ -1153,6 +1150,9 @@ contract REVLoans is ERC721, ERC2771Context, Ownable, IREVLoans {
             beneficiary: payable(_msgSender()) // use the msgSender as the beneficiary, who will have the returned
                 // collateral tokens debited from their balance for the new loan.
         });
+
+        // Mint the replacement loan.
+        _mint({to: _msgSender(), tokenId: reallocatedLoanId});
 
         emit ReallocateCollateral({
             loanId: loanId,
