@@ -305,7 +305,7 @@ contract REVLoans is ERC721, ERC2771Context, Ownable, IREVLoans {
         (JBRuleset memory currentStage,) = CONTROLLER.currentRulesetOf(revnetId);
 
         // Keep a reference to the pending auto issuance tokens.
-        uint256 pendingAutoIssuanceTokens = REVNETS.unrealizedAutoIssuanceAmountOf(revnetId);
+        uint256 pendingAutoIssuanceTokens = REVNETS.unrealizedAutoIssuanceAmountForStageOf(revnetId, currentStage.id);
 
         // Get the surplus of all the revnet's terminals in terms of the native currency.
         uint256 totalSurplus = JBSurplus.currentSurplusOf({
