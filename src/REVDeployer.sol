@@ -160,11 +160,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     // slither-disable-next-line uninitialized-state
     mapping(uint256 revnetId => IJB721TiersHook tiered721Hook) public override tiered721HookOf;
 
-    /// @notice The amount of auto-mint tokens which have not been minted yet, including future stages, for each revnet.
-    /// @dev These tokens can be realized (minted) with `autoIssueFor(…)`.
-    /// @custom:param revnetId The ID of the revnet to get the unrealized auto-issuance amount for.
-    mapping(uint256 revnetId => uint256) public override unrealizedAutoIssuanceAmountOf;
-
     //*********************************************************************//
     // ------------------- internal stored properties -------------------- //
     //*********************************************************************//
@@ -628,9 +623,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
 
         // Reset the auto-mint amount.
         amountToAutoIssue[revnetId][stageId][beneficiary] = 0;
-
-        // Decrease the amount of unrealized auto-issuance tokens.
-        unrealizedAutoIssuanceAmountOf[revnetId] -= count;
 
         emit AutoIssue({
             revnetId: revnetId,
@@ -1218,9 +1210,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
                 // and further stage IDs have incrementally increasing IDs
                 // slither-disable-next-line reentrancy-events
                 amountToAutoIssue[revnetId][block.timestamp + i][autoIssuance.beneficiary] += autoIssuance.count;
-
-                // Add to the total unrealized auto-issuance amount.
-                unrealizedAutoIssuanceAmountOf[revnetId] += autoIssuance.count;
             }
         }
 

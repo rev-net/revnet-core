@@ -83,7 +83,6 @@ interface IREVDeployer {
     function isSplitOperatorOf(uint256 revnetId, address addr) external view returns (bool);
     function loansOf(uint256 revnetId) external view returns (address);
     function tiered721HookOf(uint256 revnetId) external view returns (IJB721TiersHook);
-    function unrealizedAutoIssuanceAmountOf(uint256 revnetId) external view returns (uint256);
 
     function autoIssueFor(uint256 revnetId, uint256 stageId, address beneficiary) external;
     function deployFor(
