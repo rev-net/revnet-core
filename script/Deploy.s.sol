@@ -167,7 +167,7 @@ contract DeployScript is Script, Sphinx {
             REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](1);
             issuanceConfs[0] = REVAutoIssuance({
                 chainId: PREMINT_CHAIN_ID,
-                count: uint104(75_000 * DECIMAL_MULTIPLIER),
+                count: uint104(85_000 * DECIMAL_MULTIPLIER),
                 beneficiary: OPERATOR
             });
 
@@ -182,10 +182,13 @@ contract DeployScript is Script, Sphinx {
                 cashOutTaxRate: 2000, // 0.2
                 extraMetadata: 4 // Allow adding suckers.
             });
+        }
 
+        {
+            REVAutoIssuance[] memory issuanceConfs = new REVAutoIssuance[](1);
             issuanceConfs[0] = REVAutoIssuance({
                 chainId: PREMINT_CHAIN_ID,
-                count: uint104(135_000 * DECIMAL_MULTIPLIER),
+                count: uint104(155_000 * DECIMAL_MULTIPLIER),
                 beneficiary: OPERATOR
             });
 
