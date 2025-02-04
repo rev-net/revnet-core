@@ -272,12 +272,12 @@ contract REVnet_Integrations is TestBaseWorkflow, JBTest {
         vm.expectEmit();
         emit IREVDeployer.AutoIssue(REVNET_ID, firstStageId, multisig(), perStageMintAmount, address(this));
         REV_DEPLOYER.autoIssueFor(REVNET_ID, firstStageId, multisig());
+        assertEq(REV_DEPLOYER.amountToAutoIssue(REVNET_ID, firstStageId, multisig()), 0);
 
         assertEq(perStageMintAmount, IJBToken(jbTokens().tokenOf(REVNET_ID)).balanceOf(multisig()));
 
         vm.warp(firstStageId + 720 days);
-
-        assertEq(perStageMintAmount, REV_DEPLOYER.unrealizedAutoIssuanceAmountOf(REVNET_ID));
+        assertEq(perStageMintAmount, REV_DEPLOYER.amountToAutoIssue(REVNET_ID, firstStageId + 1, multisig()));
 
         vm.expectEmit();
         emit IREVDeployer.AutoIssue(REVNET_ID, firstStageId + 1, multisig(), perStageMintAmount, address(this));

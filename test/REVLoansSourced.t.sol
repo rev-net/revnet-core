@@ -742,6 +742,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     }
 
     function test_Refinance_Excess_Collateral() public {
+        // peform the auto issuance.
+        REV_DEPLOYER.autoIssueFor(REVNET_ID, block.timestamp, multisig());
+
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
 
@@ -773,6 +776,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
+        // loanable amount is slightly higher due to fee payment increasing the supply/assets ratio.
         assertGt(loanableSecondStage, loanable);
 
         // we should not have to add collateral
@@ -820,6 +824,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     }
 
     function test_Refinance_Not_Enough_Collateral() public {
+        // peform the auto issuance.
+        REV_DEPLOYER.autoIssueFor(REVNET_ID, block.timestamp, multisig());
+
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
 
@@ -851,7 +858,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        // loanable amount is (slightly) higher due to fee payment increasing the supply/assets ratio.
+        // loanable amount is slightly higher due to fee payment increasing the supply/assets ratio.
         assertGt(loanableSecondStage, loanable);
 
         // we should not have to add collateral
@@ -880,6 +887,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     }
 
     function test_Refinance_Unauthorized() public {
+        // peform the auto issuance.
+        REV_DEPLOYER.autoIssueFor(REVNET_ID, block.timestamp, multisig());
+
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
 
@@ -911,7 +921,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        // loanable amount is (slightly) higher due to fee payment increasing the supply/assets ratio.
+        // loanable amount is slightly higher due to fee payment increasing the supply/assets ratio.
         assertGt(loanableSecondStage, loanable);
 
         // we should not have to add collateral
@@ -1146,6 +1156,9 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     }
 
     function test_Refinance_Collateral_Required() public {
+        // peform the auto issuance.
+        REV_DEPLOYER.autoIssueFor(REVNET_ID, block.timestamp, multisig());
+
         vm.prank(USER);
         uint256 tokens = jbMultiTerminal().pay{value: 1e18}(REVNET_ID, JBConstants.NATIVE_TOKEN, 1e18, USER, 0, "", "");
 
@@ -1180,7 +1193,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
             REVNET_ID, loan.collateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
         );
 
-        // loanable amount is (slightly) higher due to fee payment increasing the supply/assets ratio.
+        // loanable amount is slightly higher due to fee payment increasing the supply/assets ratio.
         assertGt(loanableSecondStage, loanable);
 
         // we should not have to add collateral

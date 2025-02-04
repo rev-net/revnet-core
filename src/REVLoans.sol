@@ -304,9 +304,6 @@ contract REVLoans is ERC721, ERC2771Context, Ownable, IREVLoans {
         // slither-disable-next-line unused-return
         (JBRuleset memory currentStage,) = CONTROLLER.currentRulesetOf(revnetId);
 
-        // Keep a reference to the pending auto issuance tokens.
-        uint256 pendingAutoIssuanceTokens = REVNETS.unrealizedAutoIssuanceAmountForStageOf(revnetId, currentStage.id);
-
         // Get the surplus of all the revnet's terminals in terms of the native currency.
         uint256 totalSurplus = JBSurplus.currentSurplusOf({
             projectId: revnetId,
@@ -330,7 +327,7 @@ contract REVLoans is ERC721, ERC2771Context, Ownable, IREVLoans {
         return JBCashOuts.cashOutFrom({
             surplus: totalSurplus + totalBorrowed,
             cashOutCount: collateralCount,
-            totalSupply: totalSupply + totalCollateral + pendingAutoIssuanceTokens,
+            totalSupply: totalSupply + totalCollateral,
             cashOutTaxRate: currentStage.cashOutTaxRate()
         });
     }
