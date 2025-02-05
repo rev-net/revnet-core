@@ -991,6 +991,9 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
                 terminalConfigurations: terminalConfigurations,
                 memo: ""
             });
+
+            // Set the revnet's URI.
+            CONTROLLER.setUriOf({projectId: revnetId, uri: configuration.description.uri});
         }
 
         // Store the cash out delay of the revnet if its stages are already in progress.
