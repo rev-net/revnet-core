@@ -23,7 +23,7 @@ polygon_mumbai = "${RPC_POLYGON_MUMBAI}"
 base_sepolia = "${RPC_BASE_SEPOLIA}"
 
 [profile.ci_sizes]
-optimizer_runs = 580 
+optimizer_runs = 500 
 
 [invariant] 
 fail_on_revert = false
