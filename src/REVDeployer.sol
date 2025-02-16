@@ -69,6 +69,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     error REVDeployer_CashOutDelayNotFinished(uint256 cashOutDelay, uint256 blockTimestamp);
     error REVDeployer_CashOutsCantBeTurnedOffCompletely(uint256 cashOutTaxRate, uint256 maxCashOutTaxRate);
     error REVDeployer_MustHaveSplits();
+    error REVDeployer_NothingToAutoIssue();
     error REVDeployer_RulesetDoesNotAllowDeployingSuckers();
     error REVDeployer_StageNotStarted(uint256 stageStartTime, uint256 blockTimestamp);
     error REVDeployer_StagesRequired();
@@ -619,7 +620,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         uint256 count = amountToAutoIssue[revnetId][stageId][beneficiary];
 
         // If there's nothing to auto-mint, return.
-        if (count == 0) return;
+        if (count == 0) revert REVDeployer_NothingToAutoIssue();
 
         // Reset the auto-mint amount.
         amountToAutoIssue[revnetId][stageId][beneficiary] = 0;
@@ -633,7 +634,14 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         });
 
         // Mint the tokens.
-        _mintTokensOf({revnetId: revnetId, tokenCount: count, beneficiary: beneficiary});
+        // slither-disable-next-line unused-return
+        CONTROLLER.mintTokensOf({
+            projectId: revnetId,
+            tokenCount: count,
+            beneficiary: beneficiary,
+            memo: "",
+            useReservedPercent: false
+        });
     }
 
     /// @notice Launch a revnet, or convert an existing Juicebox project into a revnet.
@@ -807,45 +815,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         return 0;
     }
 
-    /// @notice Configure croptop posting.
-    /// @param hook The hook that will be posted to.
-    /// @param allowedPosts The type of posts that the revent should allow.
-    /// @return flag A flag indicating if posts were configured. Returns false if there were no posts to set up.
-    function _configurePostingCriteriaFor(
-        address hook,
-        REVCroptopAllowedPost[] calldata allowedPosts
-    )
-        internal
-        returns (bool)
-    {
-        // If there are no posts to allow, return.
-        if (allowedPosts.length == 0) return false;
-
-        // Keep a reference to the formatted allowed posts.
-        CTAllowedPost[] memory formattedAllowedPosts = new CTAllowedPost[](allowedPosts.length);
-
-        // Iterate through each post to add it to the formatted list.
-        for (uint256 i; i < allowedPosts.length; i++) {
-            // Set the post being iterated on.
-            REVCroptopAllowedPost calldata post = allowedPosts[i];
-
-            // Set the formatted post.
-            formattedAllowedPosts[i] = CTAllowedPost({
-                hook: hook,
-                category: post.category,
-                minimumPrice: post.minimumPrice,
-                minimumTotalSupply: post.minimumTotalSupply,
-                maximumTotalSupply: post.maximumTotalSupply,
-                allowedAddresses: post.allowedAddresses
-            });
-        }
-
-        // Set up the allowed posts in the publisher.
-        PUBLISHER.configurePostingCriteriaFor({allowedPosts: formattedAllowedPosts});
-
-        return true;
-    }
-
     /// @notice Deploy a revnet which sells tiered ERC-721s and (optionally) allows croptop posts to its ERC-721 tiers.
     /// @param revnetId The ID of the Juicebox project to turn into a revnet. Send 0 to deploy a new revnet.
     /// @param shouldDeployNewRevnet Whether to deploy a new revnet or convert an existing Juicebox project into a
@@ -911,8 +880,30 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
             _extraOperatorPermissions[revnetId].push(JBPermissionIds.SET_721_DISCOUNT_PERCENT);
         }
 
-        // Set up croptop posting criteria as specified.
-        if (_configurePostingCriteriaFor({hook: address(hook), allowedPosts: allowedPosts})) {
+        // If there are posts to allow, configure them.
+        if (allowedPosts.length != 0) {
+            // Keep a reference to the formatted allowed posts.
+            CTAllowedPost[] memory formattedAllowedPosts = new CTAllowedPost[](allowedPosts.length);
+
+            // Iterate through each post to add it to the formatted list.
+            for (uint256 i; i < allowedPosts.length; i++) {
+                // Set the post being iterated on.
+                REVCroptopAllowedPost calldata post = allowedPosts[i];
+
+                // Set the formatted post.
+                formattedAllowedPosts[i] = CTAllowedPost({
+                    hook: address(hook),
+                    category: post.category,
+                    minimumPrice: post.minimumPrice,
+                    minimumTotalSupply: post.minimumTotalSupply,
+                    maximumTotalSupply: post.maximumTotalSupply,
+                    allowedAddresses: post.allowedAddresses
+                });
+            }
+
+            // Set up the allowed posts in the publisher.
+            PUBLISHER.configurePostingCriteriaFor({allowedPosts: formattedAllowedPosts});
+
             // Give the croptop publisher permission to post new ERC-721 tiers on this contract's behalf.
             _setPermission({
                 operator: address(PUBLISHER),
@@ -1082,12 +1073,8 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         internal
         returns (address[] memory suckers)
     {
-        // Compose the salt.
-        bytes32 salt = keccak256(abi.encode(encodedConfigurationHash, suckerDeploymentConfiguration.salt, _msgSender()));
-
         emit DeploySuckers({
             revnetId: revnetId,
-            salt: salt,
             encodedConfigurationHash: encodedConfigurationHash,
             suckerDeploymentConfiguration: suckerDeploymentConfiguration,
             caller: _msgSender()
@@ -1097,7 +1084,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         // slither-disable-next-line unused-return
         suckers = SUCKER_REGISTRY.deploySuckersFor({
             projectId: revnetId,
-            salt: salt,
+            salt: keccak256(abi.encode(encodedConfigurationHash, suckerDeploymentConfiguration.salt, _msgSender())),
             configurations: suckerDeploymentConfiguration.deployerConfigurations
         });
     }
@@ -1220,21 +1207,6 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         encodedConfigurationHash = keccak256(encodedConfiguration);
     }
 
-    /// @notice Mints a revnet's tokens.
-    /// @param revnetId The ID of the revnet to mint tokens for.
-    /// @param tokenCount The number of tokens to mint.
-    /// @param beneficiary The address to send the tokens to.
-    function _mintTokensOf(uint256 revnetId, uint256 tokenCount, address beneficiary) internal {
-        // slither-disable-next-line unused-return
-        CONTROLLER.mintTokensOf({
-            projectId: revnetId,
-            tokenCount: tokenCount,
-            beneficiary: beneficiary,
-            memo: "",
-            useReservedPercent: false
-        });
-    }
-
     /// @notice Sets the cash out delay if the revnet's stages are already in progress.
     /// @dev This prevents cash out liquidity/arbitrage issues for existing revnets which
     /// are deploying to a new chain.
@@ -1286,7 +1258,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     {
         // Set up the permission data.
         JBPermissionsData memory permissionData =
-            JBPermissionsData({operator: operator, projectId: uint56(revnetId), permissionIds: permissionIds});
+            JBPermissionsData({operator: operator, projectId: uint64(revnetId), permissionIds: permissionIds});
 
         // Set the permissions.
         PERMISSIONS.setPermissionsFor({account: account, permissionsData: permissionData});
