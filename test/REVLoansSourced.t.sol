@@ -1139,7 +1139,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // we should not have to add collateral
         uint256 collateralToAdd = 0;
 
-        // this should be a 0.5% gain to be reallocated
+        // this should be a .5% gain to be reallocated
         uint256 collateralToTransfer = mulDiv(loan.collateral, 50, 10_000);
 
         // get the new amount to borrow
