@@ -47,7 +47,7 @@ uint256 public constant override MAX_PREPAID_FEE_PERCENT = 500;
 
 
 ### REV_PREPAID_FEE_PERCENT
-*A fee of 2.5% is charged by the $REV revnet.*
+*A fee of 0.5% is charged by the $REV revnet.*
 
 
 ```solidity
