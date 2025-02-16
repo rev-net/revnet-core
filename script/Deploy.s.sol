@@ -206,7 +206,7 @@ contract DeployScript is Script, Sphinx {
         }
 
         stageConfigurations[2] = REVStageConfig({
-            startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + (3600 days)),
+            startsAtOrAfter: uint40(stageConfigurations[1].startsAtOrAfter + 3600 days),
             autoIssuances: new REVAutoIssuance[](0),
             splitPercent: 3800, // 38%
             splits: splits,
