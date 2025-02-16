@@ -71,7 +71,7 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     error REVDeployer_MustHaveSplits();
     error REVDeployer_NothingToAutoIssue();
     error REVDeployer_RulesetDoesNotAllowDeployingSuckers();
-    error REVDeployer_StageNotStarted(uint256 stageStartTime, uint256 blockTimestamp);
+    error REVDeployer_StageNotStarted(uint256 stageId);
     error REVDeployer_StagesRequired();
     error REVDeployer_StageTimesMustIncrease();
     error REVDeployer_Unauthorized(uint256 revnetId, address caller);
@@ -526,15 +526,16 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
         uint256[] memory customSplitOperatorPermissionIndexes = _extraOperatorPermissions[revnetId];
 
         // Make the array that merges the default and custom operator permissions.
-        allOperatorPermissions = new uint256[](4 + customSplitOperatorPermissionIndexes.length);
+        allOperatorPermissions = new uint256[](5 + customSplitOperatorPermissionIndexes.length);
         allOperatorPermissions[0] = JBPermissionIds.SET_SPLIT_GROUPS;
         allOperatorPermissions[1] = JBPermissionIds.SET_BUYBACK_POOL;
         allOperatorPermissions[2] = JBPermissionIds.SET_PROJECT_URI;
         allOperatorPermissions[3] = JBPermissionIds.ADD_PRICE_FEED;
+        allOperatorPermissions[4] = JBPermissionIds.SUCKER_SAFETY;
 
         // Copy the custom permissions into the array.
         for (uint256 i; i < customSplitOperatorPermissionIndexes.length; i++) {
-            allOperatorPermissions[4 + i] = customSplitOperatorPermissionIndexes[i];
+            allOperatorPermissions[5 + i] = customSplitOperatorPermissionIndexes[i];
         }
     }
 
@@ -608,12 +609,9 @@ contract REVDeployer is ERC2771Context, IREVDeployer, IJBRulesetDataHook, IJBCas
     /// @param stageId The ID of the stage auto-mint tokens are available from.
     /// @param beneficiary The address to auto-mint tokens to.
     function autoIssueFor(uint256 revnetId, uint256 stageId, address beneficiary) external override {
-        // Keep a reference to the stage's start time.
-        uint256 stageStartTime = CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId).start;
-
         // Make sure the stage has started.
-        if (stageStartTime > block.timestamp) {
-            revert REVDeployer_StageNotStarted(stageStartTime, block.timestamp);
+        if (CONTROLLER.RULESETS().getRulesetOf(revnetId, stageId).start > block.timestamp) {
+            revert REVDeployer_StageNotStarted(stageId);
         }
 
         // Get a reference to the number of tokens to auto-issue.
