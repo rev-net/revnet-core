@@ -54,7 +54,7 @@ contract DeployScript is Script, Sphinx {
     /// @notice tracks the deployment of the swap terminal.
     SwapTerminalDeployment swapTerminal;
 
-    uint32 PREMINT_CHAIN_ID = 11_155_111;
+    uint32 PREMINT_CHAIN_ID = 1;
     string NAME = "Revnet";
     string SYMBOL = "REV";
     string PROJECT_URI = "ipfs://QmSiJhANtkySxt6eBDJS3E5RNJx3QXRNwz6XijdmEXw7JC";
