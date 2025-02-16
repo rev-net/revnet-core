@@ -85,8 +85,8 @@ contract REVLoans is ERC721, ERC2771Context, Ownable, IREVLoans {
     /// @dev The maximum amount of a loan that can be prepaid at the time of borrowing, in terms of JBConstants.MAX_FEE.
     uint256 public constant override MAX_PREPAID_FEE_PERCENT = 500;
 
-    /// @dev A fee of 2.5% is charged by the $REV revnet.
-    uint256 public constant override REV_PREPAID_FEE_PERCENT = 25; // 2.5%
+    /// @dev A fee of 1% is charged by the $REV revnet.
+    uint256 public constant override REV_PREPAID_FEE_PERCENT = 10; // 1%
 
     /// @dev A fee of 2.5% is charged by the loan's source upfront.
     uint256 public constant override MIN_PREPAID_FEE_PERCENT = 25; // 2.5%
