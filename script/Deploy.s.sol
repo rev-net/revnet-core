@@ -68,7 +68,7 @@ contract DeployScript is Script, Sphinx {
     bytes32 REVLOANS_SALT = "_REV_LOANS_SALT_";
     address LOANS_OWNER;
     address OPERATOR;
-    uint256 TIME_UNTIL_START = 1 days;
+    uint256 TIME_UNTIL_START = 3 days;
     address TRUSTED_FORWARDER;
     IPermit2 PERMIT2;
 
@@ -121,7 +121,8 @@ contract DeployScript is Script, Sphinx {
         // Because of the cross-chain allowing components of nana-core, all chains require the same start_time,
         // for this reason we can't rely on the simulations block.time and we need a shared timestamp across all
         // simulations.
-        uint256 _realTimestamp = vm.envUint("START_TIME");
+        // uint256 _realTimestamp = vm.envUint("START_TIME");
+        uint256 _realTimestamp = 1739830244;  // timestamp hardcoded at time of deploy. 
         if (_realTimestamp <= block.timestamp - TIME_UNTIL_START) {
             revert("Something went wrong while setting the 'START_TIME' environment variable.");
         }

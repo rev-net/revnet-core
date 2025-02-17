@@ -45,9 +45,9 @@ library RevnetCoreDeploymentLib {
         returns (RevnetCoreDeployment memory deployment)
     {
         deployment.basic_deployer =
-            IREVDeployer(_getDeploymentAddress(path, "revnet-core-testnet", network_name, "REVDeployer"));
+            IREVDeployer(_getDeploymentAddress(path, "revnet-core", network_name, "REVDeployer"));
 
-        deployment.loans = IREVLoans(_getDeploymentAddress(path, "revnet-core-testnet", network_name, "REVLoans"));
+        deployment.loans = IREVLoans(_getDeploymentAddress(path, "revnet-core", network_name, "REVLoans"));
     }
 
     /// @notice Get the address of a contract that was deployed by the Deploy script.
