@@ -375,7 +375,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
     function test_Borrow_Duration(uint256 payableAmount) public {
         vm.assume(payableAmount > 0 && payableAmount <= type(uint112).max);
-        
+
         // Upfront fee plus another month (25 min + 4)
         uint256 prepaidFee = 29;
 
@@ -430,7 +430,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
     function test_Borrow_Duration_Max(uint256 payableAmount) public {
         vm.assume(payableAmount > 0 && payableAmount <= type(uint112).max);
-        
+
         // Upfront fee plus another month
         uint256 prepaidFee = 500;
 
