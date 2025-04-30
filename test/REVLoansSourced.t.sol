@@ -376,13 +376,13 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     function test_Borrow_Duration(uint256 payableAmount) public {
         vm.assume(payableAmount > 0 && payableAmount <= type(uint112).max);
         
-        // Upfront fee plus another month
+        // Upfront fee plus another month (25 min + 4)
         uint256 prepaidFee = 29;
 
         // Calculate the duration based upon the prepaidFee.
         uint32 duration = uint32(mulDiv(3650 days, prepaidFee, LOANS_CONTRACT.MAX_PREPAID_FEE_PERCENT()));
 
-        // Calculate the duration based upon the minimum prepaidFee.
+        // Calculate the duration with a minimum prepaidFee.
         uint32 minDuration = uint32(mulDiv(3650 days, 25, LOANS_CONTRACT.MAX_PREPAID_FEE_PERCENT()));
 
         // Deal the user some tokens.
@@ -424,7 +424,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertApproxEqAbs(loan.prepaidDuration - minDuration, 30 days, 1 days);
 
         // Looks like its +- 2 days approx with this config.
-        // This is 6 months (25 as prepaidFee) + (4 as a month more prepaid).
+        // This is 6 months (25 as prepaidFee + 4 as a month extra prepaid).
         assertApproxEqAbs(loan.prepaidDuration, 210 days, 2 days);
     }
 
