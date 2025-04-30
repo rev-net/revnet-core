@@ -373,6 +373,109 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         vm.deal(USER, 100e18);
     }
 
+    function test_Borrow_Duration(uint256 payableAmount) public {
+        vm.assume(payableAmount > 0 && payableAmount <= type(uint112).max);
+        
+        // Upfront fee plus another month
+        uint256 prepaidFee = 29;
+
+        // Calculate the duration based upon the prepaidFee.
+        uint32 duration = uint32(mulDiv(3650 days, prepaidFee, LOANS_CONTRACT.MAX_PREPAID_FEE_PERCENT()));
+
+        // Calculate the duration based upon the minimum prepaidFee.
+        uint32 minDuration = uint32(mulDiv(3650 days, 25, LOANS_CONTRACT.MAX_PREPAID_FEE_PERCENT()));
+
+        // Deal the user some tokens.
+        deal(address(TOKEN), USER, payableAmount);
+
+        // Approve the terminal to spend the tokens.
+        vm.prank(USER);
+        TOKEN.approve(address(jbMultiTerminal()), payableAmount);
+
+        vm.prank(USER);
+        uint256 tokens = jbMultiTerminal().pay(REVNET_ID, address(TOKEN), payableAmount, USER, 0, "", "");
+
+        uint256 loanable = LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 6, uint32(uint160(address(TOKEN))));
+        // If there is no loanable amount, we can't continue.
+        vm.assume(loanable > 0);
+
+        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
+        REVLoanSource memory sauce = REVLoanSource({token: address(TOKEN), terminal: jbMultiTerminal()});
+
+        vm.prank(USER);
+        (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), prepaidFee);
+
+        REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
+        assertEq(loan.amount, loanable);
+        assertEq(loan.collateral, tokens);
+        assertEq(loan.createdAt, block.timestamp);
+        assertEq(loan.prepaidFeePercent, prepaidFee);
+        assertEq(loan.prepaidDuration, duration);
+        assertEq(loan.source.token, address(TOKEN));
+        assertEq(address(loan.source.terminal), address(jbMultiTerminal()));
+
+        // If we remove the minimum prepaid duration, we can see that we're still +- a day.
+        assertApproxEqAbs(loan.prepaidDuration - minDuration, 30 days, 1 days);
+
+        // Looks like its +- 2 days approx with this config.
+        // This is 6 months (25 as prepaidFee) + (4 as a month more prepaid).
+        assertApproxEqAbs(loan.prepaidDuration, 210 days, 2 days);
+    }
+
+    function test_Borrow_Duration_Max(uint256 payableAmount) public {
+        vm.assume(payableAmount > 0 && payableAmount <= type(uint112).max);
+        
+        // Upfront fee plus another month
+        uint256 prepaidFee = 500;
+
+        // Calculate the duration based upon the prepaidFee.
+        uint32 duration = uint32(mulDiv(3650 days, prepaidFee, LOANS_CONTRACT.MAX_PREPAID_FEE_PERCENT()));
+
+        // Deal the user some tokens.
+        deal(address(TOKEN), USER, payableAmount);
+
+        // Approve the terminal to spend the tokens.
+        vm.prank(USER);
+        TOKEN.approve(address(jbMultiTerminal()), payableAmount);
+
+        vm.prank(USER);
+        uint256 tokens = jbMultiTerminal().pay(REVNET_ID, address(TOKEN), payableAmount, USER, 0, "", "");
+
+        uint256 loanable = LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 6, uint32(uint160(address(TOKEN))));
+        // If there is no loanable amount, we can't continue.
+        vm.assume(loanable > 0);
+
+        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
+        REVLoanSource memory sauce = REVLoanSource({token: address(TOKEN), terminal: jbMultiTerminal()});
+
+        vm.prank(USER);
+        (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, sauce, loanable, tokens, payable(USER), prepaidFee);
+
+        REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
+        assertEq(loan.amount, loanable);
+        assertEq(loan.collateral, tokens);
+        assertEq(loan.createdAt, block.timestamp);
+        assertEq(loan.prepaidFeePercent, prepaidFee);
+        assertEq(loan.prepaidDuration, duration);
+        assertEq(loan.source.token, address(TOKEN));
+        assertEq(address(loan.source.terminal), address(jbMultiTerminal()));
+
+        // Max duration is correct at ten years.
+        assertEq(loan.prepaidDuration, 3650 days);
+    }
+
     function test_Pay_ERC20_Borrow_With_Loan_Source(uint256 payableAmount, uint32 prepaidFee) public {
         vm.assume(payableAmount > 0 && payableAmount <= type(uint112).max);
         vm.assume(
