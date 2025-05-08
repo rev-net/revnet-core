@@ -476,6 +476,61 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(loan.prepaidDuration, 3650 days);
     }
 
+    function test_Borrow_Duration_Max_Repay() public {
+        uint256 payableAmount = 100e18;
+
+        // Pay the minimum upfront fee.
+        uint256 prepaidFee = LOANS_CONTRACT.MIN_PREPAID_FEE_PERCENT();
+
+        // Calculate the duration based upon the prepaidFee.
+        uint32 duration = uint32(mulDiv(3650 days, prepaidFee, LOANS_CONTRACT.MAX_PREPAID_FEE_PERCENT()));
+
+        // Deal the user some tokens.
+        deal(address(TOKEN), USER, payableAmount * 2);
+
+        // Approve the terminal to spend the tokens.
+        vm.prank(USER);
+        TOKEN.approve(address(jbMultiTerminal()), payableAmount);
+
+        vm.prank(USER);
+        uint256 tokens = jbMultiTerminal().pay(REVNET_ID, address(TOKEN), payableAmount, USER, 0, "", "");
+
+        uint256 loanable = LOANS_CONTRACT.borrowableAmountFrom(REVNET_ID, tokens, 6, uint32(uint160(address(TOKEN))));
+        // If there is no loanable amount, we can't continue.
+        vm.assume(loanable > 0);
+
+        // User must give the loans contract permission, similar to an "approve" call, we're just spoofing to save time.
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), USER, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
+        REVLoanSource memory source = REVLoanSource({token: address(TOKEN), terminal: jbMultiTerminal()});
+
+        // Create the new loan.
+        vm.prank(USER);
+        (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, source, loanable, tokens, payable(USER), prepaidFee);
+
+        // Forward time to right before the loan reaches liquidation.
+        vm.warp(block.timestamp + 3650 days);
+        vm.startPrank(USER);
+
+        // Repay the loan.
+        uint256 balanceBefore = TOKEN.balanceOf(USER);
+        JBSingleAllowance memory allowance;
+        TOKEN.approve(address(LOANS_CONTRACT), type(uint256).max);
+        LOANS_CONTRACT.repayLoan(newLoanId, loan.amount * 15 / 10, loan.collateral, payable(USER), allowance);
+
+        // Track what amount we end up paying.
+        uint256 amountPaid = balanceBefore - TOKEN.balanceOf(USER);
+
+        // We expect the fee to be 50% for the min prepaid with the max duration.
+        uint256 expectedFee = loan.collateral * 50 / 100;
+        // The fee may deviate 1%.
+        assertApproxEqRel(amountPaid, loan.collateral + expectedFee, 0.01 ether);
+    }
+
     function test_Pay_ERC20_Borrow_With_Loan_Source(uint256 payableAmount, uint32 prepaidFee) public {
         vm.assume(payableAmount > 0 && payableAmount <= type(uint112).max);
         vm.assume(
