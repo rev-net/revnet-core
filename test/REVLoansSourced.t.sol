@@ -476,8 +476,8 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(loan.prepaidDuration, 3650 days);
     }
 
-    function test_Borrow_Duration_Max_Repay() public {
-        uint256 payableAmount = 100e18;
+    function test_Borrow_Duration_Max_Repay(uint256 payableAmount) public {
+        vm.assume(payableAmount > 1 gwei && payableAmount <= type(uint96).max);
 
         // Pay the minimum upfront fee.
         uint256 prepaidFee = LOANS_CONTRACT.MIN_PREPAID_FEE_PERCENT();
