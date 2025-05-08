@@ -482,9 +482,6 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Pay the minimum upfront fee.
         uint256 prepaidFee = LOANS_CONTRACT.MIN_PREPAID_FEE_PERCENT();
 
-        // Calculate the duration based upon the prepaidFee.
-        uint32 duration = uint32(mulDiv(3650 days, prepaidFee, LOANS_CONTRACT.MAX_PREPAID_FEE_PERCENT()));
-
         // Deal the user some tokens.
         deal(address(TOKEN), USER, payableAmount * 2);
 
@@ -511,6 +508,7 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         // Create the new loan.
         vm.prank(USER);
         (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, source, loanable, tokens, payable(USER), prepaidFee);
+        REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
 
         // Forward time to right before the loan reaches liquidation.
         vm.warp(block.timestamp + 3650 days);
