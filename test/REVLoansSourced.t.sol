@@ -517,9 +517,19 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
 
         REVLoanSource memory source = REVLoanSource({token: address(TOKEN), terminal: jbMultiTerminal()});
 
+        // Get the balance before we receive the loan.
+        uint256 balanceBeforeLoan = TOKEN.balanceOf(USER);
+
         // Create the new loan.
         (uint256 newLoanId,) = LOANS_CONTRACT.borrowFrom(REVNET_ID, source, loanable, tokens, payable(USER), prepaidFee);
         REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
+
+        // Check what amount we actually received.
+        uint256 receivedFromLoan = TOKEN.balanceOf(USER) - balanceBeforeLoan;
+
+        // Check that we prepaid the expected percentage.
+        uint256 otherFees = LOANS_CONTRACT.REV_PREPAID_FEE_PERCENT() + 25; // 25 is protocol fee.
+        assertApproxEqAbs(loanable * (1000 - otherFees - prepaidFee) / 1000, receivedFromLoan, 100);
 
         // Forward time to right before the loan reaches liquidation.
         vm.warp(block.timestamp + 3650 days);
