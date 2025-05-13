@@ -41,6 +41,9 @@ struct FeeProjectConfig {
 }
 
 contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
+    // Log file for output and graphing later
+    string constant LOG_FILE_PATH = "./logs/fuzz_data.csv";
+
     /// @notice the salts that are used to deploy the contracts.
     bytes32 REV_DEPLOYER_SALT = "REVDeployer";
     bytes32 ERC20_SALT = "REV_TOKEN";
@@ -299,6 +302,12 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
     }
 
     function setUp() public override {
+
+        // Prep header for CSV
+        string memory header = "prePaidFee,initialCapital,daysUntilPaid,nonFeelessPaid\n";
+        // Use vm.writeFile to create/overwrite the file with the header
+        vm.writeFile(LOG_FILE_PATH, header);
+
         super.setUp();
 
         FEE_PROJECT_ID = jbProjects().createFor(multisig());
@@ -802,6 +811,203 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertGt(USER.balance - balanceBefore, 0);
     }
 
+    function get_fee_percent_RNG(uint8 selector) internal pure returns (uint256) {
+        // Explicitly cast each element to uint256 during initialization
+        uint256[3] memory feeChoices = [uint256(25), uint256(250), uint256(500)];
+        uint8 choiceIndex = selector % 3;
+        return feeChoices[choiceIndex];
+    }
+
+    // --- Helper Function Definitions ---
+
+    /// @notice Helper to perform initial setup: user pays to get tokens.
+    function _setupAndPay(uint256 _revnetId, address _user, uint256 _amount) internal returns (uint256 tokensReceived) {
+        vm.prank(_user);
+        tokensReceived = jbMultiTerminal().pay{value: _amount}(_revnetId, JBConstants.NATIVE_TOKEN, _amount, _user, 0, "", "");
+        assertGt(tokensReceived, 0, "Should receive tokens");
+    }
+
+    /// @notice Helper to borrow the initial loan.
+    function _borrowInitialLoan(
+        uint256 _revnetId,
+        address _user,
+        uint256 _tokens,
+        uint256 _prepaidFeePercent
+    )
+        internal
+        returns (uint256 loanId, uint256 loanAmount)
+    {
+        // Calculate borrowable amount
+        loanAmount = LOANS_CONTRACT.borrowableAmountFrom(
+            _revnetId, _tokens, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+        );
+        assertGt(loanAmount, 0, "Loanable amount should be greater than 0");
+
+        // Mock permission
+        mockExpect(
+            address(jbPermissions()),
+            abi.encodeCall(IJBPermissions.hasPermission, (address(LOANS_CONTRACT), _user, 2, 10, true, true)),
+            abi.encode(true)
+        );
+
+        // Prepare source and borrow
+        REVLoanSource memory sauce = REVLoanSource({token: JBConstants.NATIVE_TOKEN, terminal: jbMultiTerminal()});
+        vm.prank(_user);
+        (loanId,) = LOANS_CONTRACT.borrowFrom(
+            _revnetId, sauce, loanAmount, _tokens, payable(_user), _prepaidFeePercent
+        );
+        assertTrue(loanId > 0, "Should receive valid loan ID");
+    }
+
+    // Struct to hold details needed for repayment calculation and checks
+    struct RepaymentDetails {
+        uint256 maxAmountToRepay;     // Max value needed for the repay call (including fees)
+        uint256 collateralToReturn;
+        uint256 expectedReducedAmount;  // Expected loan amount AFTER successful repayment
+        uint256 amountDiff;           // The calculated difference in loan amount due to collateral removal
+        bool expectRevert;            // Flag if revert is expected
+        bytes expectedRevertData;     // Expected revert data if applicable
+    }
+
+    /// @notice Helper to calculate details needed for the repayment step after time warp.
+    function _calculateRepaymentDetails(
+        REVLoan memory _loan,
+        uint256 _daysToWarp, // Original days warped
+        uint256 _percentOfCollateralToRemove,
+        uint256 _revnetId
+    )
+        internal
+        view
+        returns (RepaymentDetails memory details)
+    {
+        details.collateralToReturn = mulDiv(_loan.collateral, _percentOfCollateralToRemove, 10_000);
+        uint256 newCollateral = _loan.collateral - details.collateralToReturn;
+
+        // Calculate new borrowable amount based on remaining collateral
+        uint256 borrowableFromNewCollateral = LOANS_CONTRACT.borrowableAmountFrom(
+            _revnetId, newCollateral, 18, uint32(uint160(JBConstants.NATIVE_TOKEN))
+        );
+
+        // Determine the difference in loan principal amount this collateral change implies
+        details.amountDiff = borrowableFromNewCollateral >= _loan.amount ? 0 : _loan.amount - borrowableFromNewCollateral;
+
+        // Start with the principal amount being paid down
+        details.maxAmountToRepay = details.amountDiff;
+
+        // Check if a revert is expected due to increasing loan amount
+        if (borrowableFromNewCollateral > _loan.amount) {
+            details.expectRevert = true;
+            details.expectedRevertData = abi.encodeWithSelector(
+                REVLoans.REVLoans_NewBorrowAmountGreaterThanLoanAmount.selector,
+                borrowableFromNewCollateral,
+                _loan.amount
+            );
+             // No need to calculate fees if we expect revert here
+            return details;
+        }
+
+        // Calculate additional fees if applicable
+        uint256 timeSinceLoanCreated = block.timestamp - _loan.createdAt; // block.timestamp already reflects warp
+        if (timeSinceLoanCreated > _loan.prepaidDuration) {
+             // Note: The Solidity logic calculates fee based on amountDiff, not the full loan amount.
+             // We replicate that here.
+            uint256 prepaidAmountPortion = JBFees.feeAmountFrom({
+                amountBeforeFee: details.amountDiff, feePercent: _loan.prepaidFeePercent
+            });
+
+            uint256 additionalFee = JBFees.feeAmountFrom({
+                amountBeforeFee: details.amountDiff - prepaidAmountPortion,
+                feePercent: mulDiv(timeSinceLoanCreated, 1000, 3650 days) // Assuming JBConstants.MAX_FEE = 1000
+            });
+            details.maxAmountToRepay += additionalFee;
+        }
+
+        details.expectedReducedAmount = _loan.amount - details.amountDiff;
+        return details;
+    }
+
+    // --- Main Fuzz Test Function (Refactored) ---
+
+    function testFuzz_Pay_Borrow_PayOff_Full_With_Loan_Source(
+        uint256 percentOfCollateralToRemove, // Keep original param names
+        uint256 rawPrepaidFeePercent, // Use a different name to avoid confusion
+        uint256 rawDaysToWarp,       // Use a different name
+        uint8 selector
+    )
+        public
+    {
+        // --- Setup Phase ---
+        // Apply bounds and selections
+        percentOfCollateralToRemove = 10_000; // Fixed for full payoff in this test name
+        uint256 prepaidFeePercent = get_fee_percent_RNG(selector);
+        uint256 daysToWarp = bound(rawDaysToWarp, 0, 3650);
+        uint256 warpDuration = daysToWarp * 1 days; // Keep duration for assertions
+
+        // Initial payment to get tokens
+        uint256 tokens = _setupAndPay(REVNET_ID, USER, 1e18);
+
+        // --- Borrow Phase ---
+        (uint256 newLoanId, uint256 expectedLoanAmount) = _borrowInitialLoan(
+            REVNET_ID, USER, tokens, prepaidFeePercent
+        );
+
+        // Fetch loan and perform initial assertions
+        REVLoan memory loan = LOANS_CONTRACT.loanOf(newLoanId);
+        uint48 initialTimestamp = loan.createdAt; // Store for later assertion
+
+        assertEq(loan.amount, expectedLoanAmount, "Initial loan amount mismatch");
+        assertEq(loan.collateral, tokens, "Initial collateral mismatch");
+        // createdAt checked implicitly by initialTimestamp
+        assertEq(loan.prepaidFeePercent, prepaidFeePercent, "Initial prepaid fee % mismatch");
+        assertEq(loan.prepaidDuration, mulDiv(prepaidFeePercent, 3650 days, 500), "Initial prepaid duration mismatch");
+        assertEq(loan.source.token, JBConstants.NATIVE_TOKEN, "Initial source token mismatch");
+        assertEq(address(loan.source.terminal), address(jbMultiTerminal()), "Initial source terminal mismatch");
+
+        // --- Time Warp ---
+        vm.warp(block.timestamp + warpDuration);
+
+        // --- Repayment Calculation Phase ---
+        RepaymentDetails memory details = _calculateRepaymentDetails(
+            loan, warpDuration, percentOfCollateralToRemove, REVNET_ID
+        );
+
+        // Log fees if applicable (fee calculation happened inside helper)
+        // Note: Fee calculation depends on timeSinceLoanCreated > loan.prepaidDuration
+        if (block.timestamp - initialTimestamp > loan.prepaidDuration && !details.expectRevert) {
+            log_stuff(prepaidFeePercent, expectedLoanAmount, daysToWarp, details.maxAmountToRepay);
+        }
+
+        // Ensure user has funds for repayment
+        vm.deal(USER, details.maxAmountToRepay);
+
+        // --- Repayment Phase ---
+        // Handle expected revert
+        if (details.expectRevert) {
+            vm.expectRevert(details.expectedRevertData);
+        }
+
+        // Prepare for call
+        JBSingleAllowance memory allowance; // empty allowance data
+        vm.prank(USER);
+        (, REVLoan memory reducedLoan) = LOANS_CONTRACT.repayLoan{value: details.maxAmountToRepay}(
+            newLoanId, details.maxAmountToRepay, details.collateralToReturn, payable(USER), allowance
+        );
+
+        // If revert was expected, the test stops above. If not, proceed with assertions.
+        if (details.expectRevert) {
+            return; // Should not be reached if vm.expectRevert worked
+        }
+
+        // --- Final Assertions ---
+        assertApproxEqAbs(reducedLoan.amount, details.expectedReducedAmount, 1, "Reduced loan amount mismatch");
+        assertEq(reducedLoan.collateral, loan.collateral - details.collateralToReturn, "Reduced collateral mismatch");
+        assertEq(reducedLoan.createdAt, initialTimestamp, "Reduced loan createdAt should match original"); // Repay shouldn't change createdAt
+        assertEq(reducedLoan.prepaidFeePercent, prepaidFeePercent, "Reduced loan fee % mismatch");
+        assertEq(reducedLoan.prepaidDuration, mulDiv(prepaidFeePercent, 3650 days, 500), "Reduced loan duration mismatch");
+        assertEq(reducedLoan.source.token, JBConstants.NATIVE_TOKEN, "Reduced loan token mismatch");
+        assertEq(address(reducedLoan.source.terminal), address(jbMultiTerminal()), "Reduced loan terminal mismatch");
+    }
+
     function testFuzz_Pay_Borrow_PayOff_With_Loan_Source(
         uint256 percentOfCollateralToRemove,
         uint256 prepaidFeePercent,
@@ -918,6 +1124,14 @@ contract REVLoansSourcedTests is TestBaseWorkflow, JBTest {
         assertEq(reducedLoan.prepaidDuration, mulDiv(prepaidFeePercent, 3650 days, 500));
         assertEq(reducedLoan.source.token, JBConstants.NATIVE_TOKEN);
         assertEq(address(reducedLoan.source.terminal), address(jbMultiTerminal()));
+    }
+
+    function log_stuff(uint256 prepaidFeePercent, uint256 loanable, uint256 daysToWarp, uint256 excessFeesPaid) public {
+        // --- Format the log line (CSV example) ---
+        string memory logLine = string.concat(vm.toString(prepaidFeePercent), ",", vm.toString(loanable), ",", vm.toString(daysToWarp), ",", vm.toString(excessFeesPaid));
+
+        // --- Append the log line to the file ---
+        vm.writeLine(LOG_FILE_PATH, logLine);
     }
 
     function test_Refinance_Excess_Collateral() public {
