@@ -665,7 +665,7 @@ contract REVLoans is ERC721, ERC2771Context, Ownable, IREVLoans {
     /// @param loanId The ID of the loan being adjusted.
     /// @param maxRepayBorrowAmount The maximum amount being paid off, denominated in the token of the source's
     /// accounting context.
-    /// @param collateralCountToReturn The amount of collateral to return being returned from the loan.
+    /// @param collateralCountToReturn The amount of collateral being returned from the loan.
     /// @param beneficiary The address receiving the returned collateral and any tokens resulting from paying fees.
     /// @param allowance An allowance to faciliate permit2 interactions.
     /// @return paidOffLoanId The ID of the loan after it's been paid off.
